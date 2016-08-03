@@ -1,0 +1,50 @@
+
+................................................................................................
+
+1. EXCLUSIVE_MSG has been deleted, it is non-exclusive when registered a ~BLOCK msg, exclusive when registered as a BLOCK msg.
+we don't need to #define an EXCLUSIVE_MSG when compiling the code any more. the refering code has been removed.
+
+2. when using emi_msg_send_highlevel_block to get an extra data from receiver, the ret_size should be larger or equal than the sender
+	actually sent. the sender can send data as much as possible, keep in mind when using this function. the returned extra data
+	size should be awared of before coding.
+
+
+
+
+............................................old....................................................
+
+
+
+emi_core uses share memory for sharing of informations ,the sharing space is arranged in such way. 
+--------------------------------------------------------------------------------------------------------------------
+ ||				   ||         !                            |         !                                 |
+ || msg index area || emi_msg !  msg->data                 | emi_msg ! msg->data                       |  .......
+ ||				   ||         !                            |         !                                 |
+--------------------------------------------------------------------------------------------------------------------
+ ^				   ^						
+ |				   |						
+ |				   |						
+   "base address"                                      "msg split"
+
+ |	
+ |
+ | 
+BASE_ADDR
+
+
+"base address" area is used for indexing the struct emi_msg space in "msg split" area. for any process, the offset address (BASE_ADDR+pid) in "base address" is used to store the emi_msg address in "msg split" area. some functions such as emi_obtain_msg_space( __emi_obtain_space ) can alloc a emi_msg structure including its data area from the head of list_head (__msg_list ), and added it to the tail of this list_head to indicate this structure space has been used.
+
+
+
+
+for the sake of siplification, all biases should be took as the smallest memory unit,
+namely, char.
+
+
+
+
+
+
+
+
+2:EXCLUSIVE_MSG means one msg number can be used to register many times within one process. for example, if a process register a number 0x100 msg to close a motor, the process can use the same msg number to register another function to light a LED.

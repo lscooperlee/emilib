@@ -1,0 +1,3 @@
+CROSS =
+DEBUG = y
+STATIC = 

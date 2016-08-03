@@ -1,0 +1,10 @@
+*.o
+*.gch
+*.pch
+*.a
+*.la
+*.lo
+*.so
+*.so.*
+
+__pycache__
