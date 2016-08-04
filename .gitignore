@@ -7,5 +7,7 @@
 *.so
 *.so.*
 
+*.pyc
+
 __pycache__
 .out
