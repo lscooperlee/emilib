@@ -59,50 +59,14 @@ void sig_release(pid_t pid){
 	exit(0);
 }
 
-int runing_check(char *name){
-	int fd;
-	char buf[16];
-	struct flock fl;
-	if((fd=open(name,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH))<0){
-		coreprt("lock file open error\n");
-		return -1;
-	}
-	lock_fd=fd;
-	fl.l_type=F_WRLCK;
-	fl.l_start=0;
-	fl.l_whence=SEEK_SET;
-	fl.l_len=0;
-	if(fcntl(fd,F_SETLK,&fl)<0){
-		coreprt("can not lock\n");
-		close(fd);
-		return -1;
-	}
-	if(ftruncate(fd,0)){
-		coreprt("ftruncate error\n");
-		close(fd);
-		return -1;
-	}
-	sprintf(buf,"%ld",(long)getpid());
-	if(write(fd,buf,strlen(buf)+1)<0){
-		coreprt("write error\n");
-		close(fd);
-		return -1;
-	}
-	return 0;
-}
-
-
 void print_usage(void){
-	printf("usage:emi_core [-d/-s]\n");
-	printf("	by default,emi_core will work at exclusive mode,whitch request root priority.\n\n");
+	printf("usage:emi_core [-d]\n");
 	printf("	-d	run as a daemon\n");
-	printf("	-s	run singly,which means different user can run independently without interacting with each other.note that this mode should just be used locally,if you mean to transfer message between machines,run exclusively.meanwhile,this may affect connecting efficiency slightly\n\n");
 }
 
 
 int main(int argc,char **argv){
 	struct sigaction sa;
-	char lock_name[128];
 
 	int option=0,opt;
 
@@ -114,39 +78,18 @@ int main(int argc,char **argv){
 				case 'd':
 					option|=DAEMONIZE;
 					break;
-				case 's':
-					option|=SINGLIZE;
-					break;
-				default:
-					option=0;
+				case 'h':
 					print_usage();
 					return 0;
+				default:
+					option=0;
 			}
 		}
-	}
-
-	if((!(option&SINGLIZE))&&getuid()){
-		print_usage();
-		return 0;
 	}
 
 	config=get_config();
 	if(config==NULL)
 		config=emi_config;
-
-	if(option&SINGLIZE){
-		construct_local_lock_name(lock_name);
-		if(runing_check(lock_name)){
-			coreprt("emi_core may already running\n");
-			return -1;
-		}
-	}else{
-		if(runing_check(LOCK)){
-			coreprt("emi_core may already running\n");
-			return -1;
-		}
-	}
-
 
 	umask(0);
 
@@ -161,8 +104,6 @@ int main(int argc,char **argv){
 	}
 
 	setsid();
-
-
 
 	sa.sa_handler=sig_release;
 	sa.sa_flags=0;
