@@ -119,13 +119,6 @@ extern int emi_fill_msg(struct emi_msg *msg,char *dest_ip,void *data,eu32 cmd,eu
  */
 extern int emi_fill_addr(struct emi_addr *addr,char *ip,int port);
 
-
-/**
- *
- *
- */
-extern struct emi_msg *emi_obtain_msg(char *dest_ip,void *data,eu32 size,eu32 cmd,eu32 defined_msg,eu32 flag);
-
 /**
  *
  *

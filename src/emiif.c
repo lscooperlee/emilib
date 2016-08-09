@@ -128,37 +128,6 @@ int emi_fill_addr(struct emi_addr *addr,char *ip,int port){
     return 0;
 }
 
-
-struct emi_msg *emi_obtain_msg(char *dest_ip,void *data,eu32 size,eu32 cmd,eu32 defined_msg,eu32 flag){
-    struct emi_msg *msg;
-
-
-    if((msg=emi_msg_alloc(size))==NULL){
-        dbg("emi_obtain_msg error\n");
-        return NULL;
-    }
-    if(emi_fill_addr(&(msg->src_addr),"127.0.0.1",emi_config->emi_port))
-        return NULL;
-    if(dest_ip!=NULL){
-        char newip[16];
-        int port;
-        split_ipaddr(dest_ip,newip,&port);
-        if(emi_fill_addr(&(msg->dest_addr),dest_ip,port))
-            return NULL;
-    }
-    if(data!=NULL){
-        memcpy(msg->data,data,msg->size);
-        (msg)->flag|=EMI_MSG_TYPE_DATA;
-    }
-
-    (msg)->cmd=cmd;
-    (msg)->msg=defined_msg;
-    (msg)->flag|=flag;
-
-    return msg;
-};
-
-
 int emi_fill_msg(struct emi_msg *msg,char *dest_ip,void *data,eu32 cmd,eu32 defined_msg,eu32 flag){
     struct emi_addr *p=&(msg)->src_addr;
     if(emi_fill_addr(p,"127.0.0.1",emi_config->emi_port))
@@ -181,10 +150,6 @@ int emi_fill_msg(struct emi_msg *msg,char *dest_ip,void *data,eu32 cmd,eu32 defi
     (msg)->flag|=flag;
     return 0;
 }
-
-
-/*
-*/
 
 void func_sterotype(int no_use){
     int id,nth,pid;

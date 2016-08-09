@@ -38,7 +38,7 @@ CORELDFLAGS = -L$(LIBDIR) -lemi -lpthread
 LIBLDFLAGS = -shared
 
 
-LIBSRCS=src/emi_if.c src/emi_sock.c src/emi_config.c src/emi_dbg.c src/emi_shmem.c src/emi_core.c
+LIBSRCS=src/emiif.c src/emi_sock.c src/emi_config.c src/emi_dbg.c src/emi_shmem.c src/emi_core.c
 LIBOBJS=$(patsubst %,$(TMPDIR)/%,$(LIBSRCS:.c=.o))
 
 CORESRCS=src/main.c
