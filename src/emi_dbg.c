@@ -1,5 +1,5 @@
 /*
-EMI:	embedded message interface
+EMI:    embedded message interface
 Copyright (C) 2009  Cooper <davidontech@gmail.com>
 
 This program is free software: you can redistribute it and/or modify
@@ -26,202 +26,202 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 
 
 struct msgandnum{
-	char msg[128];
-	eu32 num;
+    char msg[128];
+    eu32 num;
 };
 
 struct msgandnum msgtonum[]={
-	[0]={
-		.msg="EMI_MSG_TYPE_CMD",
-		.num=0x00000001,
-		},
-	
-	[1]={
-		.msg="EMI_MSG_TYPE_DATA",
-		.num=0x00000002,
-		},
-	[2]={.msg="EMI_MSG_TYPE_BIN",
-		.num=0x00000004,
-		},
-	[3]={
-		.msg="EMI_MSG_FLAG_UNIDIRECTION",
-		.num=0x00000010,
-		},
-	[4]={
-		.msg="EMI_MSG_FLAG_BIDIRECTION",
-		.num=0x00000020,
-		},
-	[5]={
-		.msg="EMI_MSG_FLAG_LOCAL",
-		.num=0x00000040,
-		},
-	[6]={
-		.msg="EMI_MSG_FLAG_REMOTE",
-		.num=0x00000080,
-		},
-	[7]={
-		.msg="EMI_MSG_FLAG_BLOCK",
-		.num=0x00000100,
-		},
-	[8]={
-		.msg="EMI_MSG_FLAG_BLOCK_RETURN",
-		.num=0x00000200,
-		},
-	[9]={
-		.msg="EMI_MSG_FLAG_NONBLOCK",
-		.num=0x00000400,
-		},
-	[10]={
-		.msg="EMI_MSG_FLAG_CREATE",
-		.num=0x00002000,
-		},
-	[11]={
-		.msg="EMICORE_CMD_REGISTER",
-		.num=0x00004000,
-		},
-	[12]={
-		.msg="EMICORE_CMD_GET",
-		.num=0x00008000,
-		},
-	[13]={
-		.msg="EMI_MSG_CMD_SUCCEEDED",
-		.num=0x00010000,
-		},
-	[14]={
-		.msg="EMI_MSG_CMD_FAILED",
-		.num=0x00020000,
-		},
+    [0]={
+        .msg="EMI_MSG_TYPE_CMD",
+        .num=0x00000001,
+        },
+
+    [1]={
+        .msg="EMI_MSG_TYPE_DATA",
+        .num=0x00000002,
+        },
+    [2]={.msg="EMI_MSG_TYPE_BIN",
+        .num=0x00000004,
+        },
+    [3]={
+        .msg="EMI_MSG_FLAG_UNIDIRECTION",
+        .num=0x00000010,
+        },
+    [4]={
+        .msg="EMI_MSG_FLAG_BIDIRECTION",
+        .num=0x00000020,
+        },
+    [5]={
+        .msg="EMI_MSG_FLAG_LOCAL",
+        .num=0x00000040,
+        },
+    [6]={
+        .msg="EMI_MSG_FLAG_REMOTE",
+        .num=0x00000080,
+        },
+    [7]={
+        .msg="EMI_MSG_FLAG_BLOCK",
+        .num=0x00000100,
+        },
+    [8]={
+        .msg="EMI_MSG_FLAG_BLOCK_RETURN",
+        .num=0x00000200,
+        },
+    [9]={
+        .msg="EMI_MSG_FLAG_NONBLOCK",
+        .num=0x00000400,
+        },
+    [10]={
+        .msg="EMI_MSG_FLAG_CREATE",
+        .num=0x00002000,
+        },
+    [11]={
+        .msg="EMICORE_CMD_REGISTER",
+        .num=0x00004000,
+        },
+    [12]={
+        .msg="EMICORE_CMD_GET",
+        .num=0x00008000,
+        },
+    [13]={
+        .msg="EMI_MSG_CMD_SUCCEEDED",
+        .num=0x00010000,
+        },
+    [14]={
+        .msg="EMI_MSG_CMD_FAILED",
+        .num=0x00020000,
+        },
 };
 
 
 
 
-#define ARRAY_SIZE(array)	(sizeof(array)/sizeof(array[0]))
+#define ARRAY_SIZE(array)    (sizeof(array)/sizeof(array[0]))
 
 void debug_flag(eu32 flag){
-	int i,j;
-	for(i=0,j=0;i<ARRAY_SIZE(msgtonum);i++){
-		if(flag&(msgtonum[i].num)){
-			j++;
-			printf("		flag include %s,%X\n",msgtonum[i].msg,msgtonum[i].num);
-		}
-	}
-	if(!j)
-		printf("no flag matched\n");
-	
+    int i,j;
+    for(i=0,j=0;i<ARRAY_SIZE(msgtonum);i++){
+        if(flag&(msgtonum[i].num)){
+            j++;
+            printf("        flag include %s,%X\n",msgtonum[i].msg,msgtonum[i].num);
+        }
+    }
+    if(!j)
+        printf("no flag matched\n");
+
 }
 
 
 void debug_addr(struct emi_addr *addr,char *p){
-	printf("	%s debuging:	",p);
-	printf("address=%lX, ",(long)addr);
-	printf("ip=%s, ",inet_ntoa(addr->ipv4.sin_addr));
-	printf("port=%d, ",ntohs(addr->ipv4.sin_port));
-	printf("pid=%d\n",addr->pid);
+    printf("    %s debuging:    ",p);
+    printf("address=%lX, ",(long)addr);
+    printf("ip=%s, ",inet_ntoa(addr->ipv4.sin_addr));
+    printf("port=%d, ",ntohs(addr->ipv4.sin_port));
+    printf("pid=%d\n",addr->pid);
 
 }
 
 void debug_msg_body(struct emi_msg *msg){
-	printf("msg->size is %d\n",msg->size);
-	if(msg->size){
-		if(!(msg->flag&EMI_MSG_TYPE_DATA))
-			printf("warning:!!!!!!!!!!!msg flag unmatched\n");
-		printf(" date size is %d,content is %s:\n",msg->size,msg->data);
-		int i;
+    printf("msg->size is %d\n",msg->size);
+    if(msg->size){
+        if(!(msg->flag&EMI_MSG_TYPE_DATA))
+            printf("warning:!!!!!!!!!!!msg flag unmatched\n");
+        printf(" date size is %d,content is %s:\n",msg->size,msg->data);
+        int i;
 
-		for(i=0;i<msg->size;i++){
-			printf("%d ",msg->data[i]);
-		}
-	}
-	printf(" emi_msg cmd is %X\n",msg->cmd);
-	printf(" msg is %X\n",msg->msg);
-	printf(" flag=%X\n",msg->flag);
-	return;
+        for(i=0;i<msg->size;i++){
+            printf("%d ",msg->data[i]);
+        }
+    }
+    printf(" emi_msg cmd is %X\n",msg->cmd);
+    printf(" msg is %X\n",msg->msg);
+    printf(" flag=%X\n",msg->flag);
+    return;
 }
 
 void debug_msg(struct emi_msg *msg,int more){
-	printf("emi_msg debuging\n");
-	printf(" emi_msg address is %lX\n",(long)msg);
+    printf("emi_msg debuging\n");
+    printf(" emi_msg address is %lX\n",(long)msg);
 
-	if(!more)
-		return;
+    if(!more)
+        return;
 
-	debug_addr(&msg->src_addr,"src_addr");
-//	printf("%s\n",inet_ntoa((msg->dest_addr->ipv4.sin_addr)));
-//	if(msg->dest_addr!=NULL)
-//		debug_addr(msg->dest_addr,"dest_addr");
+    debug_addr(&msg->src_addr,"src_addr");
+//    printf("%s\n",inet_ntoa((msg->dest_addr->ipv4.sin_addr)));
+//    if(msg->dest_addr!=NULL)
+//        debug_addr(msg->dest_addr,"dest_addr");
 
-	debug_msg_body(msg);
+    debug_msg_body(msg);
 
-	debug_flag(msg->flag);
-	return;
+    debug_flag(msg->flag);
+    return;
 }
 
 void debug_single_map(struct msg_map *map){
-	if(map!=NULL)
-		printf("	single_map debuging:msg=%X,pid=%d,next=%lX\n",map->msg,map->pid,(long)map->next);
-	else
-		printf("	single_map is NULL\n");
-	return;
+    if(map!=NULL)
+        printf("    single_map debuging:msg=%X,pid=%d,next=%lX\n",map->msg,map->pid,(long)map->next);
+    else
+        printf("    single_map is NULL\n");
+    return;
 }
 void debug_msg_map(struct msg_map **table,struct msg_map *map){
-	eu32 i;
-	struct msg_map *tmp;
-	printf("msg_map debugging:\n");
-	i=emi_hash(map);
-	printf("	hash value is %d\n",i);
-	if((tmp=emi_hsearch(table,map))==NULL){
-		printf("	map is not in the table\n");
-	}else{
-		debug_single_map(tmp);
-	}
+    eu32 i;
+    struct msg_map *tmp;
+    printf("msg_map debugging:\n");
+    i=emi_hash(map);
+    printf("    hash value is %d\n",i);
+    if((tmp=emi_hsearch(table,map))==NULL){
+        printf("    map is not in the table\n");
+    }else{
+        debug_single_map(tmp);
+    }
 }
 
 void debug_msg_chain(struct msg_map **table,struct msg_map *map){
-	printf("\n");
-	int j;
-	struct msg_map *tmp;
-	printf("msg_chain debugging:\n");
-	for(j=0,tmp=(*(table+emi_hash(map)));tmp!=NULL;tmp=tmp->next,j++){
-		printf("	chan %d: ",j);
-		debug_single_map(tmp);
-	}
-	printf("\n");
+    printf("\n");
+    int j;
+    struct msg_map *tmp;
+    printf("msg_chain debugging:\n");
+    for(j=0,tmp=(*(table+emi_hash(map)));tmp!=NULL;tmp=tmp->next,j++){
+        printf("    chan %d: ",j);
+        debug_single_map(tmp);
+    }
+    printf("\n");
 }
 
 void debug_msg_table(struct msg_map **table){
-	int i,j;
-	struct msg_map *tmp;
-	
-	printf("printing msg_table\n");
-	for(i=0;i<EMI_MAX_MSG;i++){
-			printf("  line %d",i);
-			for(j=0,tmp=(*(table+i));tmp!=NULL;tmp=tmp->next,j++){
-				printf("\n		chan %d: ",j);
-				debug_single_map(tmp);
-			}
-			printf("\n");
-	}
-	return;
+    int i,j;
+    struct msg_map *tmp;
+
+    printf("printing msg_table\n");
+    for(i=0;i<EMI_MAX_MSG;i++){
+            printf("  line %d",i);
+            for(j=0,tmp=(*(table+i));tmp!=NULL;tmp=tmp->next,j++){
+                printf("\n        chan %d: ",j);
+                debug_single_map(tmp);
+            }
+            printf("\n");
+    }
+    return;
 }
 
 void debug_msg_full_table(struct msg_map **table){
-	int i,j;
-	struct msg_map *tmp;
-	
-	printf("printing full msg_table\n");
-	for(i=0;i<EMI_MAX_MSG;i++){
-		if(*(table+i)!=NULL){
-			printf("  line %d",i);
-			for(j=0,tmp=(*(table+i));tmp!=NULL;tmp=tmp->next,j++){
-				printf("\n		chan %d: ",j);
-				debug_single_map(tmp);
-			}
-			printf("\n");
-		}else{
-			continue;
-		}
-	}
-	return;
+    int i,j;
+    struct msg_map *tmp;
+
+    printf("printing full msg_table\n");
+    for(i=0;i<EMI_MAX_MSG;i++){
+        if(*(table+i)!=NULL){
+            printf("  line %d",i);
+            for(j=0,tmp=(*(table+i));tmp!=NULL;tmp=tmp->next,j++){
+                printf("\n        chan %d: ",j);
+                debug_single_map(tmp);
+            }
+            printf("\n");
+        }else{
+            continue;
+        }
+    }
+    return;
 }
 

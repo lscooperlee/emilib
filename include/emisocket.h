@@ -1,5 +1,5 @@
 /*
-EMI:	embedded message interface
+EMI:    embedded message interface
 Copyright (C) 2009  Cooper <davidontech@gmail.com>
 
 This program is free software: you can redistribute it and/or modify
@@ -21,21 +21,21 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi.h"
 
 struct sk_dpr {
-	int d;
-	int af;
+    int d;
+    int af;
 };
 
 union emi_sock_addr {
-	struct sockaddr_in inet;
+    struct sockaddr_in inet;
 };
 
 
 //#define GET_PORT (getuid(getuid()%SYSPORT+SYSPORT))
 #define SYSPORT 1024
-#define GET_PORT	({\
-						long _u_id_=getuid();\
-						_u_id_==0?EMI_PORT:_u_id_%SYSPORT+SYSPORT;\
-					})
+#define GET_PORT    ({\
+                        long _u_id_=getuid();\
+                        _u_id_==0?EMI_PORT:_u_id_%SYSPORT+SYSPORT;\
+                    })
 
 
 

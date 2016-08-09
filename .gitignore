@@ -11,3 +11,8 @@
 
 __pycache__
 .out
+
+.cproject
+.project
+.settings
+.pydevproject

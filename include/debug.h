@@ -1,5 +1,5 @@
 /*
-EMI:	embedded message interface
+EMI:    embedded message interface
 Copyright (C) 2009  Cooper <davidontech@gmail.com>
 
 This program is free software: you can redistribute it and/or modify
@@ -16,8 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
-#ifndef	__DEBUG_H__
-#define	__DEBUG_H__
+#ifndef    __DEBUG_H__
+#define    __DEBUG_H__
 
 
 #ifdef DEBUG
@@ -30,10 +30,10 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 /*
  * dbg is just a printf in console
  */
-#define dbg(format, arg...)											\
-	do {															\
-		printf("EMIDEBUG:	%s: %s: " format,__FILE__, __func__, ## arg); 		\
-	} while (0)
+#define dbg(format, arg...)                                            \
+    do {                                                            \
+        printf("EMIDEBUG:    %s: %s: " format,__FILE__, __func__, ## arg);         \
+    } while (0)
 
 /*
  * emiprt can be changed into a log file, so emiprt should be used for emi_core only.

@@ -1,5 +1,5 @@
 /*
-EMI:	embedded message interface
+EMI:    embedded message interface
 Copyright (C) 2009  Cooper <davidontech@gmail.com>
 
 This program is free software: you can redistribute it and/or modify
@@ -24,23 +24,23 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi_types.h"
 
 
-#define EMI_KEY				((key_t)0x0FE02570)
+#define EMI_KEY                ((key_t)0x0FE02570)
 
-#define LOCK	"/var/run/emi_core.pid"
-#define LOCKBASENAME	"/tmp/emi_core."
+#define LOCK    "/var/run/emi_core.pid"
+#define LOCKBASENAME    "/tmp/emi_core."
 
 
 struct emi_transfer_buf{
-	struct list_head list;
-	int busy;
-	void *addr;
-	eu32 offset;
-	eu32 size;
+    struct list_head list;
+    int busy;
+    void *addr;
+    eu32 offset;
+    eu32 size;
 };
 
 enum{
-	SPACE_FREE,
-	SPACE_BUSY,
+    SPACE_FREE,
+    SPACE_BUSY,
 };
 
 extern struct list_head __msg_list;
@@ -60,78 +60,78 @@ extern elock_t critical_shmem_lock;
 #define obtain_space_msg_num(base,addr) __obtain_space_num(base,addr,1)
 
 
-#define emi_data_space_query(null)	(__num_busy_data)
+#define emi_data_space_query(null)    (__num_busy_data)
 
 
 
 static inline int __obtain_space_num(void *base,void *addr,int size){
-	return ((char *)addr-(char *)base)/size;
+    return ((char *)addr-(char *)base)/size;
 }
 
 /*
-*	at present the msg_data area is managered by list. the whole msg_data area is divided into pieces
+*    at present the msg_data area is managered by list. the whole msg_data area is divided into pieces
 * */
 static inline void *__emi_obtain_space(void *base,int size,struct list_head *head,eu32 *num,elock_t *lock){
-	struct emi_transfer_buf *buf;
-	buf=container_of(head->next,struct emi_transfer_buf,list);
-	if(buf->busy)
-		return NULL;
-	emi_lock(lock);
-	list_move_tail(&buf->list,head);
-	buf->busy=SPACE_BUSY;
-	emi_unlock(lock);
-	buf->addr=(void *)((char *)base+buf->offset*size);
-	(*num)++;
-	return buf->addr;
+    struct emi_transfer_buf *buf;
+    buf=container_of(head->next,struct emi_transfer_buf,list);
+    if(buf->busy)
+        return NULL;
+    emi_lock(lock);
+    list_move_tail(&buf->list,head);
+    buf->busy=SPACE_BUSY;
+    emi_unlock(lock);
+    buf->addr=(void *)((char *)base+buf->offset*size);
+    (*num)++;
+    return buf->addr;
 }
 
 
 static inline int __emi_return_space(void *addr,struct list_head *head,eu32 *num,elock_t *lock){
-	struct list_head *lh;
-	struct emi_transfer_buf *buf;
-	list_for_each_tail(lh,head){
-		buf=container_of(lh,struct emi_transfer_buf,list);
-		if(buf->addr==addr){
-			emi_lock(lock);
-			list_move(&buf->list,head);
-			emi_unlock(lock);
-			buf->busy=SPACE_FREE;
-			(*num)--;
-			return 0;
-		}
-	}
-	return -1;
+    struct list_head *lh;
+    struct emi_transfer_buf *buf;
+    list_for_each_tail(lh,head){
+        buf=container_of(lh,struct emi_transfer_buf,list);
+        if(buf->addr==addr){
+            emi_lock(lock);
+            list_move(&buf->list,head);
+            emi_unlock(lock);
+            buf->busy=SPACE_FREE;
+            (*num)--;
+            return 0;
+        }
+    }
+    return -1;
 }
 
 
 static inline void *__emi_obtain_consecutive_space(void *base,int size,struct list_head *head,eu32 *num,elock_t *lock,eu32 consec_num){
-	struct emi_transfer_buf *buf;
-	int i=0;
-	struct list_head *tmp,*h;
-	
-	list_for_each(tmp,head){
-		buf=container_of(tmp,struct emi_transfer_buf,list);
-		if(i==consec_num)
-			break;
-		if(buf->busy==SPACE_FREE)
-			i++;
-		else
-			i=0;
-	}
-	if(i<consec_num)
-		return NULL;
+    struct emi_transfer_buf *buf;
+    int i=0;
+    struct list_head *tmp,*h;
 
-	*num+=i;
-	emi_lock(lock);
-	for(h=tmp;i<=0;i--,h=tmp->prev){
-		list_move_tail(h,head);
-		buf=container_of(h,struct emi_transfer_buf,list);
-		buf->busy=SPACE_BUSY;
-	}
-	emi_unlock(lock);
+    list_for_each(tmp,head){
+        buf=container_of(tmp,struct emi_transfer_buf,list);
+        if(i==consec_num)
+            break;
+        if(buf->busy==SPACE_FREE)
+            i++;
+        else
+            i=0;
+    }
+    if(i<consec_num)
+        return NULL;
 
-	buf->addr=(void *)((char *)base+buf->offset*size);
-	return buf->addr;
+    *num+=i;
+    emi_lock(lock);
+    for(h=tmp;i<=0;i--,h=tmp->prev){
+        list_move_tail(h,head);
+        buf=container_of(h,struct emi_transfer_buf,list);
+        buf->busy=SPACE_BUSY;
+    }
+    emi_unlock(lock);
+
+    buf->addr=(void *)((char *)base+buf->offset*size);
+    return buf->addr;
 }
 
 
