@@ -90,7 +90,7 @@ struct emi_config *get_config(void){
 				p=p+strlen(terms[i]);
 				memset(stack,0,sizeof(stack));
 				for(j=0;*p!='#'&&*p!='\n';p=(*p=='='?p+1:p),stack[j++]=*p++);
-					*((int *)(config)+i)=atoi(stack);
+				*((int *)(config)+i)=atoi(stack);
 			}
 		}
 	}
