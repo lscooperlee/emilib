@@ -1,3 +1,3 @@
 CROSS =
-DEBUG = y
-STATIC = 
+DEBUG = y #y/n
+STATIC = #y/n

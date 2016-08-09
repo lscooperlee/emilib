@@ -1,22 +1,31 @@
+include ../config.mk
 
 CC=$(CROSS)gcc
 
-CFLAGS=-I../include/ -g
-
-LDFLAGS= -L../lib/ -lemi
-
-ifneq ($(DEBUG),)
-CFLAGS+=$(DEBUG)
+ifeq ($(strip $(STATIC)),y)
+STATIC = -static
 endif
 
-all:autotest_receiver autotest_sender sar
+ifeq ($(strip $(DEBUG)),y)
+DEBUG = -g -DDEBUG
+endif
 
-autotest_receiver:autotest_receiver.c
-	$(CC) $(CFLAGS) -static -o $@ $< $(LDFLAGS)
-autotest_sender:autotest_sender.c
-	$(CC) $(CFLAGS) -static -o $@ $< $(LDFLAGS)
-sar:sar.c
-	$(CC) $(CFLAGS) -static -o $@ $< $(LDFLAGS)
+CFLAGS=-Wall $(DEBUG) -I../include/ 
+
+LDFLAGS=-L../.out/lib/ -lemi -pthread
+
+
+SRCS=$(shell find . -name "*.c")
+OBJS=$(patsubst ./%.c, $(BUILDPATH)%.o, $(SRCS))
+EXES=$(patsubst %.o, $(BUILDPATH)%, $(OBJS))
+
+all: $(EXES)
+
+$(BUILDPATH)%: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(STATIC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+
 
 clean:
-	rm autotest_sender autotest_receiver sar -f
+	rm -rf $(OBJS) $(EXES)
+	

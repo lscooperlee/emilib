@@ -15,6 +15,7 @@ RM = rm -rf
 TMPDIR = ./.out
 LIBDIR = $(TMPDIR)/lib
 BINDIR = $(TMPDIR)/bin
+TEST = test
 
 CORE = emi_core
 DYNAMICLIB = libemi.so
@@ -43,9 +44,9 @@ LIBOBJS=$(patsubst %,$(TMPDIR)/%,$(LIBSRCS:.c=.o))
 CORESRCS=src/main.c
 COREOBJS=$(patsubst %,$(TMPDIR)/%,$(CORESRCS:.c=.o))
 
-.PHONY:all clean install
+.PHONY:all clean
 
-all:$(DYNAMICLIB) $(STATICLIB) $(CORE)
+all:$(DYNAMICLIB) $(STATICLIB) $(CORE) TEST
 
 $(DYNAMICLIB):$(LIBOBJS)
 	@echo LD		$(DYNAMICLIB)
@@ -72,16 +73,9 @@ $(LIBOBJS):$(TMPDIR)/%.o:%.c
 	@$(MKDIR) `$(DIRNAME) $@`
 	@$(CC) $(LIBCFLAGS) -c -o $@ $<
 
-install:
-	@echo emi_core install
-	@$(STRIP) -s ./lib/* emi_core
-	@cp -av emi_core $(PREFIX)/bin
-	@cp -av ./tools/clemi.sh $(PREFIX)/bin
-	@mkdir -p $(PREFIX)/include/emi
-	@cp -av ./include/*.h $(PREFIX)/include/emi/
-	@cp -av $(LIBFILES) $(PREFIX)/lib
-	@cp -av python/emilib.py $(PREFIX)/lib/python3.2/dist-packages/	#this is not right
+TEST:
+	@make -C $(TEST)
 
 clean:
-	$(RM) $(TMPDIR) ./python/__pycache__
-	make -C test clean
+	$(RM) $(TMPDIR)
+	make -C $(TEST) clean
