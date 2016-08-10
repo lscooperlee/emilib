@@ -9,7 +9,7 @@
 
 #include "emi.h"
 #include "emi_config.h"
-#include "debug.h"
+#include "emi_dbg.h"
 #include "emisocket.h"
 #include "emiif.h"
 

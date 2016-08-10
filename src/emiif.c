@@ -35,8 +35,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "list.h"
 #include "emi_semaphore.h"
 #include "emi_config.h"
-
-#include "debug.h"
+#include "emi_dbg.h"
 
 
 #ifdef BLUETOOTH
@@ -376,13 +375,12 @@ int emi_msg_prepare_return_data(struct emi_msg *msg,void *data,eu32 size){
 }
 
 
-static int __emi_msg_register(eu32 defined_msg,emi_func func,eu32 flag){
+static int __emi_msg_register(eu32 defined_msg,emi_func func){
     struct sk_dpr *sd;
     int ret;
     struct sigaction act, old_act;
     struct func_list *fl;
     struct emi_msg cmd;
-    cmd.flag=flag;
 
     if((sd=emi_open(AF_INET))==NULL){
         dbg("emi_open error\n");
@@ -437,11 +435,7 @@ static int __emi_msg_register(eu32 defined_msg,emi_func func,eu32 flag){
 }
 
 int emi_msg_register(eu32 defined_msg,emi_func func){
-    return __emi_msg_register(defined_msg,func,0);
-}
-
-int emi_msg_register_exclusive(eu32 defined_msg,emi_func func){
-    return __emi_msg_register(defined_msg,func,EMI_MSG_MODE_BLOCK);
+    return __emi_msg_register(defined_msg,func);
 }
 
 void emi_msg_unregister(eu32 defined_msg,emi_func func){

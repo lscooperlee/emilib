@@ -78,15 +78,6 @@ extern int emi_msg_send(struct emi_msg *msg);
  */
 extern int emi_msg_register(eu32 defined_msg,emi_func func);
 
-
-/**
- * emi_msg_register - register a msg and the attached function to the emi_core.
- * @defined_msg:    registered msg.
- * @func:            the attached function.
- *
- * @return:    a minus value indicates the process failed.
- */
-int emi_msg_register_exclusive(eu32 defined_msg,emi_func func);
 #define emi_msg_register_blockreturn(msg,func)    emi_msg_register_exclusive(msg,func)
 
 /**

@@ -37,7 +37,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "shmem.h"
 #include "emisocket.h"
 #include "emi_semaphore.h"
-#include "debug.h"
+#include "emi_dbg.h"
 #include "emi_config.h"
 
 

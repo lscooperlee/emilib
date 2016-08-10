@@ -20,10 +20,11 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <stdio.h>
 #include <string.h>
 #include <emiif.h>
+#include <emi_dbg.h>
 
 
 int func(struct emi_msg *tmp){
-    debug_msg_body(tmp);
+    return 0;
 }
 
 void usage(void){
@@ -39,16 +40,14 @@ void usage(void){
 
 int main(int argc,char **argv){
 
-
     char opt;
     int option=0;
-    int ret;
     int size=0;
     char datap[1024]={0};
     char retdatap[1024]={0};
 
     unsigned long cmd=0,msgr=-1,msgnum=-1;
-    unsigned char addr[32]={0};
+    char addr[32]={0};
 
     if(argc==1){
         usage();
@@ -100,19 +99,15 @@ int main(int argc,char **argv){
         if(emi_init()){
             printf("emi_init error\n");
         }
-        if(option&BLOCK_MODE){
-            emi_msg_register_exclusive(msgr,func);
-        }else{
-            emi_msg_register(msgr,func);
-        }
+        emi_msg_register(msgr,func);
         emi_loop();
 
     }else if(option&(SEND_MSG|MSG_NUM)){
         if(option&BLOCK_MODE){
-            ret=emi_msg_send_highlevel_block(addr,msgnum,datap,size, retdatap, 1024, cmd);
+            emi_msg_send_highlevel_block(addr,msgnum,datap,size, retdatap, 1024, cmd);
             printf("%s\n",retdatap);
         }else{
-            ret=emi_msg_send_highlevel_nonblock(addr,msgnum,datap,size, cmd);
+            emi_msg_send_highlevel_nonblock(addr,msgnum,datap,size, cmd);
         }
     }else{
         usage();

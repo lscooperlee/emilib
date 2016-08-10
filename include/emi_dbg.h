@@ -50,6 +50,7 @@ extern void debug_msg_table(struct msg_map **table);
 extern void debug_msg_full_table(struct msg_map **table);
 extern void debug_msg_chain(struct msg_map **table,struct msg_map *map);
 extern void debug_config(struct emi_config *config);
+extern void debug_msg_body(struct emi_msg *msg);
 
 #else
 
@@ -64,6 +65,7 @@ extern void debug_config(struct emi_config *config);
 #define debug_msg_full_table(table)
 #define emiprt(a)
 #define debug_config(config)
+#define debug_msg_body(msg);
 
 #endif
 
