@@ -22,13 +22,44 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <emiif.h>
 #include <emi_dbg.h>
 
+char retdata[1024] = {0};
+unsigned int retsize = 0;
 
-int func(struct emi_msg *tmp){
+unsigned int sentsize=0;
+char sentdata[1024]={0};
+
+void print_msg(struct emi_msg *msg){
+    printf("msg = %X, ",msg->msg);
+    printf("cmd = %X, ",msg->cmd);
+    printf("flag = %X, ",msg->flag);
+    printf("msg.size = %d",msg->size);
+    if(msg->size > 0){
+        printf(", msg.data = %s\n", msg->data);
+    }else{
+        printf("\n");
+    }
+
+}
+
+void print_retdata(unsigned int size, const char *data){
+    if(size > 0)
+        printf("retdata = %s\n", data);
+}
+
+int func_noblock(struct emi_msg *msg){
+    print_msg(msg);
     return 0;
 }
 
+int func_block(struct emi_msg *msg){
+    print_msg(msg);
+    print_retdata(retsize, retdata);
+    return emi_msg_prepare_return_data(msg, retdata, retsize); 
+}
+
 void usage(void){
-    printf("usage:sar [-b] -r registermsg \n usage: sar [-b] -s addr -m msg [ -c cmd ] [-d data]\n");
+    printf("usage: sar [-b] -r msg [-R retdata]\n");
+    printf("usage: sar [-b] -s addr -m msg [ -c cmd ] [-d sentdata] [-D retdatasize]\n");
 }
 
 #define BLOCK_MODE     0x20
@@ -37,14 +68,12 @@ void usage(void){
 #define MSG_NUM 0x10
 #define MSG_CMD 0x8
 #define MSG_DATA 0x4
+#define MSG_RETDATA 0x40
 
 int main(int argc,char **argv){
 
     char opt;
-    int option=0;
-    int size=0;
-    char datap[1024]={0};
-    char retdatap[1024]={0};
+    int option=0, retdatasize=0;
 
     unsigned long cmd=0,msgr=-1,msgnum=-1;
     char addr[32]={0};
@@ -73,8 +102,17 @@ int main(int argc,char **argv){
                         break;
                     case 'd':
                         option|=MSG_DATA;     //for send data
-                        size=strlen(*(argv+1));
-                        strcpy(datap,*(argv+1));
+                        sentsize=strlen(*(argv+1));
+                        strcpy(sentdata,*(argv+1));
+                        break;
+                    case 'D':
+                        option|=MSG_RETDATA;     //ret data of the receiver
+                        retdatasize=atol(*(argv+1));
+                        break;
+                    case 'R':
+                        option|=MSG_DATA;     //ret data of the sender
+                        retsize=strlen(*(argv+1));
+                        strcpy(retdata,*(argv+1));
                         break;
                     case 'c':             //for send cmd
                         option|=MSG_CMD;
@@ -98,17 +136,63 @@ int main(int argc,char **argv){
     if(option&REGISTER_MSG){
         if(emi_init()){
             printf("emi_init error\n");
+            return -1;
         }
-        emi_msg_register(msgr,func);
+        
+        if(option&BLOCK_MODE){
+            /*In block mode, the callback function could choose to return some data to the sender*/
+
+            if(emi_msg_register(msgr,func_block)){
+                printf("emi_msg_register error\n");
+                return -1;
+            }
+        }else{
+            if(emi_msg_register(msgr,func_noblock)){
+                printf("emi_msg_register error\n");
+                return -1;
+            }
+        }
         emi_loop();
 
     }else if(option&(SEND_MSG|MSG_NUM)){
-        if(option&BLOCK_MODE){
-            emi_msg_send_highlevel_block(addr,msgnum,datap,size, retdatap, 1024, cmd);
-            printf("%s\n",retdatap);
-        }else{
-            emi_msg_send_highlevel_nonblock(addr,msgnum,datap,size, cmd);
+
+        /* 
+         * The msg->data should still be allocated if expecting returning data, 
+         * though no data to be sent.
+         */
+        sentsize = sentsize > retdatasize ? sentsize : retdatasize;
+
+        struct emi_msg *msg = emi_msg_alloc(sentsize);
+        if (msg == NULL) {
+            return -1;
         }
+
+        emi_fill_msg(msg, addr, sentdata, cmd, msgnum, 0);
+
+        if(option&BLOCK_MODE){
+            msg->flag |= EMI_MSG_MODE_BLOCK;
+
+            print_msg(msg);            
+
+            if (emi_msg_send(msg)) {
+                emi_msg_free(msg);
+                return -1;
+            }
+            
+            print_retdata(msg->size, msg->data);
+
+        }else{
+
+            print_msg(msg);            
+
+            if (emi_msg_send(msg)) {
+                emi_msg_free(msg);
+                return -1;
+            }
+
+        }
+
+        emi_msg_free(msg);
     }else{
         usage();
     }

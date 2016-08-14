@@ -4,10 +4,14 @@ CC=$(CROSS)gcc
 
 ifeq ($(strip $(STATIC)),y)
 STATIC = -static
+else
+STATIC = 
 endif
 
 ifeq ($(strip $(DEBUG)),y)
 DEBUG = -g -DDEBUG
+else
+DEBUG =
 endif
 
 CFLAGS=-O2 -Wall $(DEBUG) -I../include/ 
@@ -23,7 +27,8 @@ all: $(EXES)
 
 $(BUILDPATH)%: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(STATIC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+	@echo CC	$<
+	@$(CC) $(STATIC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
 
 clean:

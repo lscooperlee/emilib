@@ -26,10 +26,14 @@ STATICLIB = libemi.a
 
 ifeq ($(strip $(STATIC)),y)
 STATIC = -static
+else
+STATIC =
 endif
 
 ifeq ($(strip $(DEBUG)),y)
 DEBUG = -g -DDEBUG
+else
+DEBUG = 
 endif
 
 CFLAGS = $(DEBUG) -O2 -Wall -I./include
@@ -92,4 +96,7 @@ TEST:
 
 clean:
 	$(RM) $(TMPDIR)
-	make -C $(TEST) clean
+	@make -C $(TEST) clean
+
+tests_run:
+	@python3 test/test.py

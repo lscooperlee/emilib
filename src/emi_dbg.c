@@ -45,9 +45,6 @@ struct msgandnum msgtonum[]={
     },
 };
 
-
-
-
 #define ARRAY_SIZE(array)    (sizeof(array)/sizeof(array[0]))
 
 void debug_flag(eu32 flag){

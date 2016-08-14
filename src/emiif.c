@@ -296,7 +296,6 @@ static inline int emi_msg_send_highlevel(char *ipaddr, int msgnum,void *send_dat
         return -1;
     }
 
-    msg->size = send_size;
     emi_fill_msg(msg, ipaddr, send_data, cmd, msgnum, flag);
     if (emi_msg_send(msg)) {
         dbg("emi_msg_send error\n");
@@ -359,10 +358,11 @@ int emi_msg_prepare_return_data(struct emi_msg *msg, void *data, eu32 size) {
         return -1;
     }
 
-    if (!(msg->flag & EMI_MSG_MODE_BLOCK))
+    if (!(msg->flag & EMI_MSG_MODE_BLOCK)) {
         dbg("an ~BLOCK msg is sent, receiver is not expecting receive data");
         msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
         return -1;
+    }
 
     msg->size = size;
     memcpy(msg->data, data, size);
