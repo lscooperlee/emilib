@@ -282,10 +282,11 @@ static int emi_recieve_operation(void *args){
         int nth;
         eu32 *pid_num;
 
-        if(msg_pos->flag&EMI_MSG_TYPE_DATA){
+        if(msg_pos->size > 0){
             coreprt("this is a send msg with data \n");
-            if(msg_pos->size<emi_config->emi_data_size_per_msg){
-                if((ret=emi_read(((struct clone_args *)args)->client_sd,msg_pos->data,msg_pos->size))<msg_pos->size){
+            if (msg_pos->size < emi_config->emi_data_size_per_msg) {
+                if ((ret = emi_read(((struct clone_args *) args)->client_sd,
+                        msg_pos->data, msg_pos->size)) < msg_pos->size) {
                     coreprt("emi_read from client error\n");
                     goto e0;
                 }
@@ -324,7 +325,8 @@ static int emi_recieve_operation(void *args){
             emi_unlock(&msg_map_lock);
 
 /*
- * *pid_num is used for passing the number which tells the recievers 
+ * pid_num is the index for emi_msg space in share memory
+ * It is used for passing the number which tells the recievers
  * where the transfered msg could be found,at the same time, 
  * as a flag judged by emi_core weather the reciever has finished operating it,
  * which means that it is safe for emi_core to unlock and to reuse it again.
@@ -349,12 +351,23 @@ static int emi_recieve_operation(void *args){
                 msg_pos->count++;
             }
 
+            /*
+             * if pid_num == nth, means the the SIGUSR2 is sent successfully.
+             * So here we are waiting for the signal handler (func_sterotype)
+             * to release the pid_num index.
+             */
             while(*pid_num){
                 sleep(0);
             };
 
             emi_unlock(&critical_shmem_lock);
 
+            /*
+             * if pid_ret < 0, means no process with pid_num.
+             * This is not an error, eg, the receiver process might just exit
+             * by some reason. It only means the emi_core kept an redundant map.
+             * So we should delete the redundance and continue
+             */
             if(pid_ret<0){
                 emi_lock(&msg_map_lock);
                 emi_hdelete(((struct clone_args *)args)->msg_table,m);
@@ -362,42 +375,51 @@ static int emi_recieve_operation(void *args){
             }
         }
 
-        //target process need to down this count once finishing the operation.
-        //remember to lock and unlock when down the count.
+        /*
+         * Waiting for receiver process to finish all job.
+         * Target process need to down this count once finishing the operation.
+         * remember to lock and unlock when down the count.
+         */
         while(msg_pos->count){
             sleep(0);
         }
 
-
+        /*
+         * After the receiver process finishes everything.
+         * We should check if that's an ~BLOCK msg or BLOCK msg.
+         * If it's an ~BLOCK msg, then simple return
+         * If it's and BLOCK msg, we should prepare the return data that
+         * the sender is expecting.
+         */
         if(msg_pos->flag&EMI_MSG_MODE_BLOCK){
             coreprt("this send msg is an block msg \n");
 /*
- * in BLOCK mode, if ,for any reasons, the result is ~SUCCEEDED (lack of memory, msg handler function failed etc.) , goto e0 and
- *      close(client_fd) immediately, though the sender is reading return info from emi_core, we send nothing. the sender will get
- *      an error code as the return value of read function, indicating some errors occured.
+ * In BLOCK mode, if the result is ~SUCCEEDED (lack of memory, msg handler function failed etc.),
+ *  goto e0 and close(client_fd) immediately, though the sender is expecting return info from emi_core, we send nothing.
+ *  just close the socket. The sender will get an error code as the return value of read function, indicating some errors occured.
  *
- *      if we are lucky enough that everything goes perfectly well, an SUCCEEDED flag will be set. at this condition,
- *      first we write msg_pos (an emi_msg struct) back to the sender, after that,
+ *  if we are lucky enough that everything goes perfectly well, an SUCCEEDED flag will be set.
+ *  In this condition, first we write msg_pos (an emi_msg struct) back to the sender, after that,
  *
- *      if msg_pos->flag&EMI_MSG_TYPE_DATA, we send extra data (msg_pos->data) back, Note that this EMI_MSG_TYPE_DATA will be set
- *      by the emi_msg_prepare_return or the like function, this means we should return extra data back. we don't check msg_pos->size
- *      for returning extra data any more for consistent issue. (with the send procedure)
- *
- *      keep in mind that this logic should be consistent with the emi_msg_send function.
+ *  if msg_pos->size > 0, we send extra data (msg_pos->data) back,
  */
-            if(msg_pos->flag&EMI_MSG_RET_SUCCEEDED){
-                if((ret=emi_write(((struct clone_args *)args)->client_sd,msg_pos,sizeof(struct emi_msg)))<sizeof(struct emi_msg)){
+            if (msg_pos->flag & EMI_MSG_RET_SUCCEEDED) {
+                if ((ret = emi_write(((struct clone_args *) args)->client_sd,
+                        msg_pos, sizeof(struct emi_msg)))
+                        < sizeof(struct emi_msg)) {
                     goto e0;
                 }
 
-                if(msg_pos->flag&EMI_MSG_TYPE_DATA){
+                if (msg_pos->size > 0) {
                     coreprt("this block msg need to return extra data \n");
-                    if((ret=emi_write(((struct clone_args *)args)->client_sd,msg_pos->data,msg_pos->size))<msg_pos->size){
+                    if ((ret = emi_write(
+                            ((struct clone_args *) args)->client_sd,
+                            msg_pos->data, msg_pos->size)) < msg_pos->size) {
                         goto e0;
                     }
                 }
 
-            }else{
+            } else {
                 coreprt("this send msg return a ~SUCCEEDED state\n");
                 goto e0;
             }

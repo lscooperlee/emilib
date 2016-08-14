@@ -214,10 +214,6 @@ int emi_msg_send(struct emi_msg *msg){
     struct sk_dpr *sd;
     int ret=-1;
 
-    if((msg->flag&EMI_MSG_TYPE_DATA)&&(msg->data==NULL)){
-        dbg("flag tells the msg includes data,but msg->data pointer is NULL\n");
-        return -1;
-    }
     if((sd=emi_open(AF_INET))==NULL){
         dbg("emi_open error\n");
         return -1;
@@ -232,7 +228,7 @@ int emi_msg_send(struct emi_msg *msg){
         goto out;
     }
 
-    if(msg->flag&EMI_MSG_TYPE_DATA){
+    if(msg->size > 0 && msg->data != NULL){
         if((emi_write(sd,msg->data,msg->size))<msg->size){
             dbg("nonblock mode:DATA:emi_write to remote prcess local data with error\n");
             goto out;
@@ -246,10 +242,6 @@ int emi_msg_send(struct emi_msg *msg){
  * keep consistent with the emi_core, try to read an emi_msg struct first, if the msg handler function returns an error, emi_core 
  *      will not send us the emi_msg struct, but we don't know that, so try to read it, if we read returns an error, that means
  *      emi_core has close the client_sd (accepted socket), some errors must be occured.
- *
- *         if we can read the emi_msg struct entirely, a SCCEEDED flag must be set, than we check if the
- *         returned msg->flag&EMI_MSG_TYPE_DATA, if true, emi_core must have been returned us extra data,
- *         we should receive it immediately.
  *
  *         there are two things that should be noticed.
  *
@@ -273,8 +265,8 @@ int emi_msg_send(struct emi_msg *msg){
             dbg("block mode:read msg emi_read from remote process error\n");
             goto out;
         }
-        if(msg->flag&EMI_MSG_TYPE_DATA){
-            if((emi_read(sd,msg->data,msg->size))<msg->size){
+        if(msg->size > 0){
+            if ((emi_read(sd, msg->data, msg->size)) < msg->size) {
                 dbg("block mode:read extra data emi_read from remote process error\n");
                 goto out;
             }
@@ -291,23 +283,29 @@ out:
 }
 
 static inline int emi_msg_send_highlevel(char *ipaddr, int msgnum,void *send_data,int send_size, void *ret_data,int ret_size, eu32 cmd,eu32 flag){
-    int size=send_size>ret_size?send_size:ret_size;
-    struct emi_msg *msg=emi_msg_alloc(size);
-    if(msg==NULL){
+
+    /* make sure the ret data size is no lager than send data size,
+     * currently, the ret data is using the memory of the send data to receive
+     * the ret data.
+     */
+    int size = send_size > ret_size ? send_size : ret_size;
+
+    struct emi_msg *msg = emi_msg_alloc(size);
+    if (msg == NULL) {
         dbg("emi_msg_alloc error\n");
         return -1;
     }
 
-    msg->size=send_size;
-    emi_fill_msg(msg,ipaddr,send_data,cmd,msgnum,flag);
-    if(emi_msg_send(msg)){
+    msg->size = send_size;
+    emi_fill_msg(msg, ipaddr, send_data, cmd, msgnum, flag);
+    if (emi_msg_send(msg)) {
         dbg("emi_msg_send error\n");
         emi_msg_free(msg);
         return -1;
     }
 
-    if(ret_data&&msg->size){
-        memcpy(ret_data,msg->data,msg->size);
+    if (ret_data != NULL && msg->size > 0) {
+        memcpy(ret_data, msg->data, msg->size);
     }
 
     emi_msg_free(msg);
@@ -327,16 +325,12 @@ static inline int emi_msg_send_highlevel(char *ipaddr, int msgnum,void *send_dat
  */
 int emi_msg_send_highlevel_block(char *ipaddr, int msgnum,void *send_data,int send_size,void *ret_data,  int ret_size,eu32 cmd){
     eu32 flag=EMI_MSG_MODE_BLOCK;
-    if(send_data)
-        flag|=EMI_MSG_TYPE_DATA;
 
     return emi_msg_send_highlevel(ipaddr,msgnum,send_data,send_size,ret_data,ret_size,cmd,flag);
 }
 
 int emi_msg_send_highlevel_nonblock(char *ipaddr, int msgnum,void *send_data, int send_size, eu32 cmd){
     eu32 flag=0;
-    if(send_data)
-        flag=EMI_MSG_TYPE_DATA;
 
     return emi_msg_send_highlevel(ipaddr,msgnum,send_data,send_size,NULL,0,cmd,flag);
 }
@@ -348,29 +342,31 @@ int emi_msg_send_highlevel_nonblock(char *ipaddr, int msgnum,void *send_data, in
  *      the receiver, thus the received data size should be zero, but need the receiver to write back an extra data, so the
  *      returned data size is larger than the received one.
  *
- *      step 2: change msg->flag to EMI_MSG_RET_SUCCEEDED|EMI_MSG_TYPE_DATA|EMI_MSG_MODE_BLOCK, see also func_sterotype
- *          SUCCEEDED tells the emi_core all is well, TYPE_DATA tells emi_core we have extra data to return,
- *          MODE_BLOCK tells emi_core that this is an block msg, this must be a block msg, or it won't return data back.
- *          normally msg->flag should already set that bit, here we just make it clear.
+ *      step 2: check if msg is ~BLOCK. Because the sender will not receive returned msg
+ *      if it sends an ~BLOCK msg.
  *
- *      when using this function in msg handler, we must check the return value of this function and must not return 0(success)
+ *      step 3: change msg->flag to EMI_MSG_RET_SUCCEEDED, see also func_sterotype
+ *
+ *      when using this function in msg handler,
+ *      we must check the return value of this function and must not return 0(success)
  *      in msg handler when emi_msg_prepare_return_data return -1(fail)
  */
-int emi_msg_prepare_return_data(struct emi_msg *msg,void *data,eu32 size){
+int emi_msg_prepare_return_data(struct emi_msg *msg, void *data, eu32 size) {
 
-    if(size>emi_config->emi_data_size_per_msg){
+    if (size > emi_config->emi_data_size_per_msg) {
         dbg("the size of returned extra data is too large\n");
-        msg->flag&=~EMI_MSG_RET_SUCCEEDED;
+        msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
         return -1;
     }
-    msg->size=size;
-    memcpy(msg->data,data,size);
-    /*here used to be a bug but now fixed, in nonblock mode, user may still misuse this function to return extra data to sender,
-     * which is impossible because sender has already close the socket. flag should not be assigned directly like
-     * msg->flag=EMI_MSG_RET_SUCCEEDED|EMI_MSG_TYPE_DATA|EMI_MSG_MODE_BLOCK,
-     * the emi_core with check this flag, and do the prepared block issue even though the sender don't want to receive them
-     */
-    msg->flag|=EMI_MSG_RET_SUCCEEDED|EMI_MSG_TYPE_DATA;
+
+    if (!(msg->flag & EMI_MSG_MODE_BLOCK))
+        dbg("an ~BLOCK msg is sent, receiver is not expecting receive data");
+        msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
+        return -1;
+
+    msg->size = size;
+    memcpy(msg->data, data, size);
+    msg->flag |= EMI_MSG_RET_SUCCEEDED;
     return 0;
 }
 

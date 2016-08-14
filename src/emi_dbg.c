@@ -31,66 +31,18 @@ struct msgandnum{
 };
 
 struct msgandnum msgtonum[]={
-    [0]={
-        .msg="EMI_MSG_TYPE_CMD",
-        .num=0x00000001,
-        },
-
-    [1]={
-        .msg="EMI_MSG_TYPE_DATA",
-        .num=0x00000002,
-        },
-    [2]={.msg="EMI_MSG_TYPE_BIN",
-        .num=0x00000004,
-        },
-    [3]={
-        .msg="EMI_MSG_FLAG_UNIDIRECTION",
-        .num=0x00000010,
-        },
-    [4]={
-        .msg="EMI_MSG_FLAG_BIDIRECTION",
-        .num=0x00000020,
-        },
-    [5]={
-        .msg="EMI_MSG_FLAG_LOCAL",
-        .num=0x00000040,
-        },
-    [6]={
-        .msg="EMI_MSG_FLAG_REMOTE",
-        .num=0x00000080,
-        },
-    [7]={
-        .msg="EMI_MSG_FLAG_BLOCK",
+    {
+        .msg="EMI_MSG_MODE_BLOCK",
         .num=0x00000100,
-        },
-    [8]={
-        .msg="EMI_MSG_FLAG_BLOCK_RETURN",
-        .num=0x00000200,
-        },
-    [9]={
-        .msg="EMI_MSG_FLAG_NONBLOCK",
-        .num=0x00000400,
-        },
-    [10]={
-        .msg="EMI_MSG_FLAG_CREATE",
-        .num=0x00002000,
-        },
-    [11]={
-        .msg="EMICORE_CMD_REGISTER",
+    },
+    {
+        .msg="EMI_MSG_CMD_REGISTER",
         .num=0x00004000,
-        },
-    [12]={
-        .msg="EMICORE_CMD_GET",
-        .num=0x00008000,
-        },
-    [13]={
-        .msg="EMI_MSG_CMD_SUCCEEDED",
+    },
+    {
+        .msg="EMI_MSG_RET_SUCCEEDED",
         .num=0x00010000,
-        },
-    [14]={
-        .msg="EMI_MSG_CMD_FAILED",
-        .num=0x00020000,
-        },
+    },
 };
 
 
@@ -124,8 +76,6 @@ void debug_addr(struct emi_addr *addr,char *p){
 void debug_msg_body(struct emi_msg *msg){
     printf("msg->size is %d\n",msg->size);
     if(msg->size){
-        if(!(msg->flag&EMI_MSG_TYPE_DATA))
-            printf("warning:!!!!!!!!!!!msg flag unmatched\n");
         printf(" date size is %d,content is %s:\n",msg->size,msg->data);
         int i;
 

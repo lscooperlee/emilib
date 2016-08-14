@@ -18,6 +18,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 
 #ifndef __EMI_H__
 #define __EMI_H__
+
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/unistd.h>
@@ -28,10 +29,6 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/l2cap.h>
 #endif
-
-
-//#define MAX_FUNC_NUM    1024;
-
 
 
 struct emi_addr{
@@ -84,29 +81,12 @@ struct emi_msg{
 
 
 /*
- * the default FLAG means there is no data to be transmitted.
- */
-#define EMI_MSG_TYPE_DATA            0x00000002
-
-
-/*we decide to add a RETDATA flag, but NOTE that this EMI_MSG_TYPE_RETDATA can be only valid when EMI_MSG_FLAG_BLOCK was set.
- *
- *I NEED TO think about at carefully, just leave it untouched.
- *
-#define EMI_MSG_TYPE_RETDATA        0x00000004
-*/
-/*
  * the default msg is  ~BLOCK, unless this FLAG was set.
  */
 #define EMI_MSG_MODE_BLOCK            0x00000100
 
 #define EMI_MSG_CMD_REGISTER        0x00004000
 #define EMI_MSG_RET_SUCCEEDED        0x00010000
-
-#define EMI_MSG_FLAG_AES            0x00040000
-
-#ifdef SUPPORT_P2P
-#endif
 
     eu32 count;                //the member is used for count the processes when several processes share one massage.it is internally,do not use it. useful in ~BLOCK msg.
     eu32 size;
