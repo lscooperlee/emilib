@@ -10,7 +10,7 @@ ifeq ($(strip $(DEBUG)),y)
 DEBUG = -g -DDEBUG
 endif
 
-CFLAGS=-Wall $(DEBUG) -I../include/ 
+CFLAGS=-O2 -Wall $(DEBUG) -I../include/ 
 
 LDFLAGS=-L../.out/lib/ -lemi -pthread
 

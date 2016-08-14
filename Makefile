@@ -18,6 +18,7 @@ BINDIR = $(TMPDIR)/bin
 TEST = test
 
 CORE = emi_core
+SAR = emi_sar
 DYNAMICLIB = libemi.so
 STATICLIB = libemi.a
 
@@ -31,10 +32,10 @@ ifeq ($(strip $(DEBUG)),y)
 DEBUG = -g -DDEBUG
 endif
 
-CORECFLAGS = $(DEBUG) -O2 -Wall -I./include
-LIBCFLAGS = $(CORECFLAGS) -fpic
+CFLAGS = $(DEBUG) -O2 -Wall -I./include
+LIBCFLAGS = $(CFLAGS) -fpic
 
-CORELDFLAGS = -L$(LIBDIR) -lemi -lpthread
+LDFLAGS = -L$(LIBDIR) -lemi -lpthread
 LIBLDFLAGS = -shared
 
 
@@ -44,9 +45,12 @@ LIBOBJS=$(patsubst %,$(TMPDIR)/%,$(LIBSRCS:.c=.o))
 CORESRCS=src/main.c
 COREOBJS=$(patsubst %,$(TMPDIR)/%,$(CORESRCS:.c=.o))
 
+SARSRCS=src/emi_sar.c
+SAROBJS=$(patsubst %,$(TMPDIR)/%,$(SARSRCS:.c=.o))
+
 .PHONY:all clean
 
-all:$(DYNAMICLIB) $(STATICLIB) $(CORE) TEST
+all:$(DYNAMICLIB) $(STATICLIB) $(CORE) $(SAR) TEST
 
 $(DYNAMICLIB):$(LIBOBJS)
 	@echo LD		$(DYNAMICLIB)
@@ -61,12 +65,22 @@ $(STATICLIB):$(LIBOBJS)
 $(CORE):$(COREOBJS)
 	@echo LD		$(CORE)
 	@$(MKDIR) $(BINDIR)
-	@$(CC) $(STATIC) -o $(BINDIR)/$@ $? $(CORELDFLAGS)
+	@$(CC) $(STATIC) -o $(BINDIR)/$@ $? $(LDFLAGS)
+
+$(SAR):$(SAROBJS)
+	@echo LD		$(SAR)
+	@$(MKDIR) $(BINDIR)
+	@$(CC) $(STATIC) -o $(BINDIR)/$@ $? $(LDFLAGS)
 
 $(COREOBJS):$(TMPDIR)/%.o:%.c
 	@echo CC		$^
 	@$(MKDIR) `$(DIRNAME) $@`
-	@$(CC) $(CORECFLAGS) -c -o $@ $<
+	@$(CC) $(CFLAGS) -c -o $@ $<
+
+$(SAROBJS):$(TMPDIR)/%.o:%.c
+	@echo CC		$^
+	@$(MKDIR) `$(DIRNAME) $@`
+	@$(CC) $(CFLAGS) -c -o $@ $<
 
 $(LIBOBJS):$(TMPDIR)/%.o:%.c
 	@echo CC		$^

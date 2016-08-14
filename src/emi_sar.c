@@ -68,7 +68,7 @@ int main(int argc,char **argv){
                         break;
                     case 's':
                         strcpy(addr,*(argv+1));
-                        if (*(int *)addr != 0)
+                        if (*(char *)addr != 0)
                             option|=SEND_MSG;      //for send msg
                         break;
                     case 'd':
