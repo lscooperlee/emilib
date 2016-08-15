@@ -38,7 +38,6 @@ void print_msg(struct emi_msg *msg){
     }else{
         printf("\n");
     }
-
 }
 
 void print_retdata(unsigned int size, const char *data){
@@ -132,6 +131,7 @@ int main(int argc,char **argv){
 
     }
 
+    setbuf(stdout, NULL);
 
     if(option&REGISTER_MSG){
         if(emi_init()){

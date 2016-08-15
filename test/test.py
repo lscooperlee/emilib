@@ -4,6 +4,7 @@ import os
 from itertools import product
 import subprocess
 import time
+import io
 
 Rules = [
     {"description" : "unblock sender, single receiver, without sent data",
@@ -50,21 +51,28 @@ class EmiTestor:
                 receiverWithArgs = "{0[0][cmd]} {0[1][receiver]}".format(_cmd)
 
                 print(description)
-                time.sleep(1)      
                 receiver = self.runCMD(receiverWithArgs)
-                time.sleep(1)      
-                sender = self.runCMD(senderWithArgs)
-                time.sleep(1)      
 
-                receiver.terminate()
+                sender = self.runCMD(senderWithArgs)
+                sender.wait()
+                s = sender.communicate() 
                 sender.terminate()
+
+                r = None
+                try:
+                    receiver.communicate(timeout = 0.1)
+                except subprocess.TimeoutExpired:
+                    receiver.terminate()
+                    r = receiver.communicate()
+                
+                assert s == r
 
         finally:
             emiCore.terminate()
         
     def runCMD(self, cmd):
         fullPathCmd = "{0}/{1}".format(self.BINDIR, cmd)
-        return subprocess.Popen(fullPathCmd.split(), env={"LD_LIBRARY_PATH" : self.LIBDIR})
+        return subprocess.Popen(fullPathCmd.split(), env={"LD_LIBRARY_PATH" : self.LIBDIR}, stdout = subprocess.PIPE, bufsize = 0)
 
 
 if __name__ == "__main__":
