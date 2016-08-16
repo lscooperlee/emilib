@@ -60,7 +60,7 @@ class EmiTestor:
 
                 r = None
                 try:
-                    receiver.communicate(timeout = 0.1)
+                    receiver.communicate(timeout = 1)
                 except subprocess.TimeoutExpired:
                     receiver.terminate()
                     r = receiver.communicate()

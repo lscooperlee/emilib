@@ -16,7 +16,7 @@ endif
 
 CFLAGS=-O2 -Wall $(DEBUG) -I../include/ 
 
-LDFLAGS=-L../.out/lib/ -lemi -pthread
+LDFLAGS=-L../.out/lib/ -lemir -lemis -pthread
 
 
 SRCS=$(shell find . -name "*.c")

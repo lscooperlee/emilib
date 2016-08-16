@@ -19,8 +19,8 @@ TEST = test
 
 CORE = emi_core
 SAR = emi_sar
-DYNAMICLIB = libemi.so
-STATICLIB = libemi.a
+LIBSENDER = libemis.so
+LIBRECEIVER = libemir.so
 
 #########################
 
@@ -39,12 +39,15 @@ endif
 CFLAGS = $(DEBUG) -O2 -Wall -I./include
 LIBCFLAGS = $(CFLAGS) -fpic
 
-LDFLAGS = -L$(LIBDIR) -lemi -lpthread
+LDFLAGS = -L$(LIBDIR) -lemir -lemis -lpthread
 LIBLDFLAGS = -shared
 
 
-LIBSRCS=src/emiif.c src/emi_sock.c src/emi_config.c src/emi_dbg.c src/emi_shmem.c src/emi_core.c
-LIBOBJS=$(patsubst %,$(TMPDIR)/%,$(LIBSRCS:.c=.o))
+LIBSENDERSRCS=src/emiif.c src/emi_sock.c
+LIBSENDEROBJS=$(patsubst %,$(TMPDIR)/%,$(LIBSENDERSRCS:.c=.o))
+
+LIBRECEIVERSRCS=src/emi_config.c src/emi_dbg.c src/emi_shmem.c src/emi_core.c
+LIBRECEIVEROBJS=$(patsubst %,$(TMPDIR)/%,$(LIBRECEIVERSRCS:.c=.o))
 
 CORESRCS=src/main.c
 COREOBJS=$(patsubst %,$(TMPDIR)/%,$(CORESRCS:.c=.o))
@@ -54,17 +57,17 @@ SAROBJS=$(patsubst %,$(TMPDIR)/%,$(SARSRCS:.c=.o))
 
 .PHONY:all clean
 
-all:$(DYNAMICLIB) $(STATICLIB) $(CORE) $(SAR) TEST
+all:$(LIBSENDER) $(LIBRECEIVER) $(CORE) $(SAR) TEST
 
-$(DYNAMICLIB):$(LIBOBJS)
-	@echo LD		$(DYNAMICLIB)
+$(LIBSENDER):$(LIBSENDEROBJS)
+	@echo LD		$(LIBSENDER)
 	@$(MKDIR) $(LIBDIR)
 	@$(CC) $(LIBLDFLAGS) -o $(LIBDIR)/$@ $?
 
-$(STATICLIB):$(LIBOBJS)
-	@echo AR		$(STATICLIB)
+$(LIBRECEIVER):$(LIBRECEIVEROBJS)
+	@echo AR		$(LIBRECEIVER)
 	@$(MKDIR) $(LIBDIR)
-	@$(AR) $(LIBDIR)/$@	$?
+	@$(CC) $(LIBLDFLAGS) -o $(LIBDIR)/$@ $?
 
 $(CORE):$(COREOBJS)
 	@echo LD		$(CORE)
@@ -86,7 +89,12 @@ $(SAROBJS):$(TMPDIR)/%.o:%.c
 	@$(MKDIR) `$(DIRNAME) $@`
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
-$(LIBOBJS):$(TMPDIR)/%.o:%.c
+$(LIBSENDEROBJS):$(TMPDIR)/%.o:%.c
+	@echo CC		$^
+	@$(MKDIR) `$(DIRNAME) $@`
+	@$(CC) $(LIBCFLAGS) -c -o $@ $<
+
+$(LIBRECEIVEROBJS):$(TMPDIR)/%.o:%.c
 	@echo CC		$^
 	@$(MKDIR) `$(DIRNAME) $@`
 	@$(CC) $(LIBCFLAGS) -c -o $@ $<
