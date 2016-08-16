@@ -65,19 +65,6 @@ int emi_listen(struct sk_dpr *sd){
     }
     return 0;
 }
-/*
-int __emi_connect(int sd,struct emi_addr *dest_addr,eu32 retry){
-    int ret;
-    int i;
-    for(i=1;i<=(2^retry);i<<=1){
-        if((ret=connect(sd,(const struct sockaddr *)&(dest_addr->ipv4),sizeof(struct sockaddr_in)))==0)
-            return 0;
-        if(i<(2^retry))
-            usleep(1000*(i<<3));
-    }
-    return -1;
-}
-*/
 
 int emi_connect(struct sk_dpr *sd,struct emi_addr *dest_addr,eu32 retry){
     int i,ret;
