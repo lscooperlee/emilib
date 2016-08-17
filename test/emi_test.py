@@ -1,4 +1,4 @@
-#!/usr/env/python
+#!/usr/bin/env python
 
 import os
 from itertools import product
@@ -36,6 +36,10 @@ class EmiTestor:
         os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.pardir))
     BINDIR = os.path.join(BASEDIR, ".out/bin")
     LIBDIR = os.path.join(BASEDIR, ".out/lib")
+    
+    @classmethod
+    def getBaseDir(self):
+        return self.BASEDIR;
     
     def runEmiCore(self):
         return self.runCMD("emi_core")
