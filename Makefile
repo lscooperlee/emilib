@@ -104,4 +104,4 @@ clean:
 	@make -C $(TEST) clean
 
 tests_run:
-	@python3 test/test.py
+	@python3 test/emi_test.py

@@ -42,7 +42,10 @@ class EmiTestor:
         return self.BASEDIR;
     
     def runEmiCore(self):
-        return self.runCMD("emi_core")
+        self.emiCore = self.runCMD("emi_core")
+
+    def stopEmiCore(self):
+        self.emiCore.terminate()
 
     def run(self):
         emiCore = self.runEmiCore()
@@ -72,12 +75,11 @@ class EmiTestor:
                 assert s == r
 
         finally:
-            emiCore.terminate()
+            self.stopEmiCore()
         
     def runCMD(self, cmd):
         fullPathCmd = "{0}/{1}".format(self.BINDIR, cmd)
         return subprocess.Popen(fullPathCmd.split(), env={"LD_LIBRARY_PATH" : self.LIBDIR}, stdout = subprocess.PIPE, bufsize = 0)
-
 
 if __name__ == "__main__":
     testor = EmiTestor()

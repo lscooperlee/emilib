@@ -37,7 +37,7 @@ class emilib:
     def emi_msg_register(self, msg_num, func):
         ret = ctypes.c_int(0)
         num = ctypes.c_int(msg_num)
-        CMPFUNC = ctypes.CFUNCTYPE(c_int, POINTER(emi))
+        CMPFUNC = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.POINTER(emi))
         callback = CMPFUNC(func)
         ret = self.__emilib.emi_msg_register(num, callback)
         return ret
