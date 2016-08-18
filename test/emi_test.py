@@ -31,15 +31,6 @@ Cmds = [
 ]
 
 class EmiTestor:
-
-    BASEDIR = os.path.abspath(
-        os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.pardir))
-    BINDIR = os.path.join(BASEDIR, ".out/bin")
-    LIBDIR = os.path.join(BASEDIR, ".out/lib")
-    
-    @classmethod
-    def getBaseDir(self):
-        return self.BASEDIR;
     
     def runEmiCore(self):
         self.emiCore = self.runCMD("emi_core")
@@ -78,8 +69,7 @@ class EmiTestor:
             self.stopEmiCore()
         
     def runCMD(self, cmd):
-        fullPathCmd = "{0}/{1}".format(self.BINDIR, cmd)
-        return subprocess.Popen(fullPathCmd.split(), env={"LD_LIBRARY_PATH" : self.LIBDIR}, stdout = subprocess.PIPE, bufsize = 0)
+        return subprocess.Popen(cmd.split(), stdout = subprocess.PIPE, bufsize = 0)
 
 if __name__ == "__main__":
     testor = EmiTestor()

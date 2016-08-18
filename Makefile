@@ -56,6 +56,10 @@ COREOBJS=$(patsubst %,$(TMPDIR)/%,$(CORESRCS:.c=.o))
 SARSRCS=src/emi_sar.c
 SAROBJS=$(patsubst %,$(TMPDIR)/%,$(SARSRCS:.c=.o))
 
+export LD_LIBRARY_PATH := ${PWD}/$(LIBDIR)
+export PATH := ${PWD}/$(BINDIR):${PATH}
+export PYTHONPATH := ${PWD}/python/emilib
+
 .PHONY:all clean
 
 all:$(LIBSENDER) $(LIBEMI) $(CORE) $(SAR) TEST
@@ -103,5 +107,8 @@ clean:
 	$(RM) $(TMPDIR)
 	@make -C $(TEST) clean
 
-tests_run:
+emi_test: 
 	@python3 test/emi_test.py
+
+unit_test: 
+	@python3 test/unit_test.py
