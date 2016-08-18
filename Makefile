@@ -111,4 +111,4 @@ emi_test:
 	@python3 test/emi_test.py
 
 unit_test: 
-	@python3 test/unit_test.py
+	@python3 -W ignore test/unit_test.py
