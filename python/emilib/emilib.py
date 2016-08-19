@@ -1,56 +1,90 @@
 #!/usr/bin/env python
 
 import ctypes
-import signal
 
 
 class EMIError(Exception):
 
-    def __init__(self, name):
-        self.__name = name
+    def __init__(cls, name):
+        cls.__name = name
 
-    def __str__(self):
-        return self.__name
+    def __str__(cls):
+        return cls.__name
 
+class sockaddr_in(ctypes.Structure):
+    _fields_ = [
+                ("sa_family", ctypes.c_ushort, 16),  # sin_family
+                ("sin_port", ctypes.c_ushort, 16),
+                ("sin_addr", ctypes.c_char * 4),
+                ("__pad", ctypes.c_char * 8)
+            ] 
 
-class emi(ctypes.Structure):
-    _fields_ = []
-#    _fields_=[("msg",c_int),("cmd",c_int)]
+class emi_addr(ctypes.Structure):
+    _fields_ = [
+                ("ipv4", sockaddr_in),
+                ("pid_t", ctypes.c_int),
+                ("id", ctypes.c_uint),
+            ]
+
+class emi_msg(ctypes.Structure):
+    _fields_=[
+                ("dest_addr", emi_addr),
+                ("src_addr", emi_addr),
+                ("flag", ctypes.c_uint, 32),
+                ("count", ctypes.c_uint, 32),
+                ("size", ctypes.c_uint, 32),
+                ("cmd", ctypes.c_uint, 32),
+                ("msg", ctypes.c_uint, 32),
+                ("data", ctypes.c_void_p),
+            ]
 
 
 class emilib:
 
     __emilib = ctypes.cdll.LoadLibrary("libemi.so")
+    __emilib.emi_init.argtypes = (None)
+    __emilib.emi_init.restype = ctypes.c_int
 
-    def __init__(self):
-        pass
+    __emilib.emi_msg_register.argtypes = (ctypes.c_uint, 
+            ctypes.CFUNCTYPE(ctypes.c_uint, ctypes.POINTER(emi_msg)))
+    __emilib.emi_msg_register.restype = ctypes.c_int
+
+    __emilib.emi_msg_send.argtypes = (ctypes.POINTER(emi_msg),)
+    __emilib.emi_msg_send.restype = ctypes.c_int
+
 
     @classmethod
-    def emi_init(self):
+    def emi_init(cls):
         ret = ctypes.c_int(0)
-        ret = self.__emilib.emi_init()
+        ret = cls.__emilib.emi_init()
         if ret < 0:
             raise EMIError("emi_core did not run")
         return ret
 
     @classmethod
-    def emi_msg_register(self, msg_num, func):
+    def emi_msg_register(cls, msg_num, func):
         ret = ctypes.c_int(0)
-        num = ctypes.c_int(msg_num)
-        CMPFUNC = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.POINTER(emi))
+        num = ctypes.c_uint(msg_num)
+        CMPFUNC = ctypes.CFUNCTYPE(ctypes.c_uint, ctypes.POINTER(emi_msg))
         callback = CMPFUNC(func)
-        ret = self.__emilib.emi_msg_register(num, callback)
+        ret = cls.__emilib.emi_msg_register(num, callback)
         return ret
 
+    @classmethod
+    def emi_msg_send(cls, emi_msg):
+        ret = ctypes.c_int(0)
+        ret = cls.__emilib.emi_msg_send(emi_msg)
+
+
 #     @classmethod
-#     def emi_msg_send_highlevel_block(self, ipaddr, msgnum, sbytes, cmd):
+#     def emi_msg_send_highlevel_block(cls, ipaddr, msgnum, sbytes, cmd):
 #         cip = c_char_p(ipaddr)
 #         print(cip)
 # # def emi_msg_send_highlevel_block(char *ipaddr, int msgnum,void
 # # *send_data,int send_size,void *ret_data,  int ret_size,eu32 cmd);
 
     @classmethod
-    def emi_msg_send_highlevel_nonblock(self, ipaddr, msgnum, sbytes, cmd):
+    def emi_msg_send_highlevel_nonblock(cls, ipaddr, msgnum, sbytes, cmd):
         cip = ctyps.c_char_p(ipaddr.encode())
         cnum = ctypes.c_int(msgnum)
         ccmd = ctypes.c_int(cmd)
@@ -59,38 +93,38 @@ class emilib:
         csize = ctypes.c_int(size)
         cdata = (ctypes.c_ubyte * size).from_buffer(sbytes)
 
-        return self.__emilib.emi_msg_send_highlevel_nonblock(
+        return cls.__emilib.emi_msg_send_highlevel_nonblock(
             cip, cnum, pointer(cdata), csize, ccmd)
 
-#     @classmethod
-#     def emi_convert_msg(self, msg):
-#         ret = {}
-#         msgnum = c_int(-1)
-#         cmd = c_int(-1)
-#         size = c_int(-1)
-# 
-#         msgnum = self.__emilib.get_msgnum_from_msg(msg)
-#         cmd = self.__emilib.get_cmd_from_msg(msg)
-#         size = self.__emilib.get_datasize_from_msg(msg)
-# 
-#         cdata = (c_ubyte * size)()
-#         self.__emilib.copy_data_from_msg(msg, cdata)
-# 
-#         ret["msg"] = msgnum
-#         ret["cmd"] = cmd
-#         ret["size"] = size
-#         ret["data"] = bytes(cdata)
-# 
-#         return ret
 # 
 #     @classmethod
-#     def emi_msg_prepare_return_data(self, msg, retbytes):
+#     def emi_msg_prepare_return_data(cls, msg, retbytes):
 #         size = len(retbytes)
 #         rdata = (c_ubyte * size).from_buffer(retbytes)
 #         rsize = c_int(size)
-#         return self.__emilib.emi_msg_prepare_return_data(msg, byref(rdata),
+#         return cls.__emilib.emi_msg_prepare_return_data(msg, byref(rdata),
 #                                                          rsize)
     @classmethod
-    def emi_loop(self):
-        while True:
-            signal.pause()
+    def emi_loop(cls):
+        cls.__emilib.emi_loop()
+
+    @classmethod
+    def emi_convert_msg(cls, emi_msg):
+        ret = {}
+        msgnum = ctypes.c_int(-1)
+        cmd = ctypes.c_int(-1)
+        size = ctypes.c_int(-1)
+ 
+        msgnum = cls.__emilib.get_msgnum_from_msg(emi_msg)
+        cmd = cls.__emilib.get_cmd_from_msg(emi_msg)
+        size = cls.__emilib.get_datasize_from_msg(emi_msg)
+ 
+        cdata = (ctypes.c_ubyte * size)()
+        cls.__emilib.copy_data_from_msg(msg, cdata)
+ 
+        ret["msg"] = msgnum
+        ret["cmd"] = cmd
+        ret["size"] = size
+        ret["data"] = bytes(cdata)
+ 
+        return ret

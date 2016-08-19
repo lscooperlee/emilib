@@ -5,7 +5,7 @@ import sys
 
 import unittest
 from emi_test import EmiTestor
-from emilib import emilib
+from emilib import emilib, emi_msg
 
 class TestEmiLib(unittest.TestCase):
 
@@ -27,6 +27,17 @@ class TestEmiLib(unittest.TestCase):
             print("emi registered")
         ret = emilib.emi_msg_register(1, func)
         self.assertEqual(ret, 0)
+
+    def test_emi_msg_send(self):
+        def func():
+            print("emi registered")
+        ret = emilib.emi_msg_register(2, func)
+        self.assertEqual(ret, 0)
+        
+        msg = emi_msg()
+        ret = emilib.emi_msg_send(msg)
+        print(msg)
+        print(ret)
 
 
 if __name__ == "__main__":
