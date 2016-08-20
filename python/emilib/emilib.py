@@ -39,10 +39,6 @@ class emi_msg(ctypes.Structure):
                 ("data", ctypes.c_void_p),
             ]
 
-
-    def __init__(self):
-        pass
-
 class emilib:
 
     __emilib = ctypes.cdll.LoadLibrary("libemi.so")
@@ -50,7 +46,7 @@ class emilib:
     __emilib.emi_init.restype = ctypes.c_int
 
     __emilib.emi_msg_register.argtypes = (ctypes.c_uint, 
-            ctypes.CFUNCTYPE(ctypes.c_uint, ctypes.POINTER(emi_msg)))
+            ctypes.CFUNCTYPE(ctypes.c_int, ctypes.POINTER(emi_msg)))
     __emilib.emi_msg_register.restype = ctypes.c_int
 
     __emilib.emi_msg_send.argtypes = (ctypes.POINTER(emi_msg),)
@@ -74,7 +70,7 @@ class emilib:
     def emi_msg_register(cls, msg_num, func):
         ret = ctypes.c_int(0)
         num = ctypes.c_uint(msg_num)
-        CMPFUNC = ctypes.CFUNCTYPE(ctypes.c_uint, ctypes.POINTER(emi_msg))
+        CMPFUNC = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.POINTER(emi_msg))
         callback = CMPFUNC(func)
         ret = cls.__emilib.emi_msg_register(num, callback)
         return ret

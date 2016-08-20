@@ -61,7 +61,7 @@ void func_sterotype(int no_use){
     id=emi_global.shm_id;
 
     if((baseshmsg=(struct emi_msg *)shmat(id,(const void *)0,0))==(void *)-1){
-        dbg("shmat error\n");
+        dbg("shmat error, did you run emi_init() ?! \n");
         exit(-1);        //error!!!!!!!!!!
     }
 

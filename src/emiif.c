@@ -288,29 +288,3 @@ int emi_msg_prepare_return_data(struct emi_msg *msg, void *data, eu32 size) {
     msg->flag |= EMI_MSG_RET_SUCCEEDED;
     return 0;
 }
-
-/**
- *Note: these functions are used for transporting emilib into other programming language like Python, it is more convienent to just 
-     use basic types when transporting (int, char and all kinds of pointers ) rather than structure. many transporting methods may
-    be hard to deal with complicated C types. these functions are much useful and can make things easer.
-
-    of course you can use them in C too.
- *
- */
-eu32 get_msgnum_from_msg(struct emi_msg *msg){
-    return msg->msg;
-}
-eu32 get_cmd_from_msg(struct emi_msg *msg){
-    return msg->cmd;
-}
-
-char *get_data_from_msg(struct emi_msg *msg){
-    return msg->data;
-}
-eu32 get_datasize_from_msg(struct emi_msg *msg){
-    return msg->size;
-}
-
-void copy_data_from_msg(struct emi_msg *msg,void *dest){
-    memcpy(dest,msg->data,msg->size);
-}
