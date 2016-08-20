@@ -35,10 +35,21 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(ret, 0)
         
         msg = emi_msg()
+        msg.msg = 2
         ret = emilib.emi_msg_send(msg)
         print(msg)
         print(ret)
 
+    def test_emi_msg_send_highlevel(self):
+        def func():
+            print("emi registered")
+        ret = emilib.emi_msg_register(2, func)
+        self.assertEqual(ret, 0)
+
+        ret = emilib.emi_msg_send_highlevel("127.0.0.1", 2, 1)
+        print(ret)
+        
+    
 
 if __name__ == "__main__":
     unittest.main()

@@ -19,6 +19,7 @@ class sockaddr_in(ctypes.Structure):
                 ("__pad", ctypes.c_char * 8)
             ] 
 
+
 class emi_addr(ctypes.Structure):
     _fields_ = [
                 ("ipv4", sockaddr_in),
@@ -39,6 +40,9 @@ class emi_msg(ctypes.Structure):
             ]
 
 
+    def __init__(self):
+        pass
+
 class emilib:
 
     __emilib = ctypes.cdll.LoadLibrary("libemi.so")
@@ -51,6 +55,11 @@ class emilib:
 
     __emilib.emi_msg_send.argtypes = (ctypes.POINTER(emi_msg),)
     __emilib.emi_msg_send.restype = ctypes.c_int
+
+    __emilib.emi_msg_send_highlevel.argtypes = (ctypes.c_char_p, ctypes.c_uint, 
+            ctypes.c_void_p, ctypes.c_size_t, ctypes.c_void_p, 
+            ctypes.c_size_t, ctypes.c_uint, ctypes.c_uint)
+    __emilib.emi_msg_send_highlevel.restype = ctypes.c_int
 
 
     @classmethod
@@ -74,27 +83,26 @@ class emilib:
     def emi_msg_send(cls, emi_msg):
         ret = ctypes.c_int(0)
         ret = cls.__emilib.emi_msg_send(emi_msg)
-
-
-#     @classmethod
-#     def emi_msg_send_highlevel_block(cls, ipaddr, msgnum, sbytes, cmd):
-#         cip = c_char_p(ipaddr)
-#         print(cip)
-# # def emi_msg_send_highlevel_block(char *ipaddr, int msgnum,void
-# # *send_data,int send_size,void *ret_data,  int ret_size,eu32 cmd);
+        return ret
 
     @classmethod
-    def emi_msg_send_highlevel_nonblock(cls, ipaddr, msgnum, sbytes, cmd):
-        cip = ctyps.c_char_p(ipaddr.encode())
-        cnum = ctypes.c_int(msgnum)
-        ccmd = ctypes.c_int(cmd)
+    def emi_msg_send_highlevel(cls, ipaddr, msgnum, cmd, sbytes=b'', block=False):
+        cipaddr = ctypes.c_char_p(ipaddr.encode())
+        cmsgnum = ctypes.c_uint(msgnum)
+        ccmd = ctypes.c_uint(cmd)
 
         size = len(sbytes)
-        csize = ctypes.c_int(size)
-        cdata = (ctypes.c_ubyte * size).from_buffer(sbytes)
+        cssize = ctypes.c_size_t(size)
+        csdata = (ctypes.c_ubyte * size).from_buffer(bytearray(sbytes))
 
-        return cls.__emilib.emi_msg_send_highlevel_nonblock(
-            cip, cnum, pointer(cdata), csize, ccmd)
+#        crsize = ctypes.c_int(size)
+#        crdata = (ctypes.c_ubyte * size).from_buffer(sbytes[:])
+        crsize = ctypes.c_size_t(size)
+        crdata = (ctypes.c_ubyte * size).from_buffer(bytearray(size))
+
+        return cls.__emilib.emi_msg_send_highlevel(cipaddr, cmsgnum, 
+                ctypes.pointer(csdata), cssize, ctypes.pointer(crdata), crsize,
+                ccmd, ctypes.c_uint(0))
 
 # 
 #     @classmethod
@@ -108,23 +116,3 @@ class emilib:
     def emi_loop(cls):
         cls.__emilib.emi_loop()
 
-    @classmethod
-    def emi_convert_msg(cls, emi_msg):
-        ret = {}
-        msgnum = ctypes.c_int(-1)
-        cmd = ctypes.c_int(-1)
-        size = ctypes.c_int(-1)
- 
-        msgnum = cls.__emilib.get_msgnum_from_msg(emi_msg)
-        cmd = cls.__emilib.get_cmd_from_msg(emi_msg)
-        size = cls.__emilib.get_datasize_from_msg(emi_msg)
- 
-        cdata = (ctypes.c_ubyte * size)()
-        cls.__emilib.copy_data_from_msg(msg, cdata)
- 
-        ret["msg"] = msgnum
-        ret["cmd"] = cmd
-        ret["size"] = size
-        ret["data"] = bytes(cdata)
- 
-        return ret

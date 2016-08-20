@@ -200,7 +200,7 @@ out:
     return ret;
 }
 
-static inline int emi_msg_send_highlevel(char *ipaddr, int msgnum,void *send_data,int send_size, void *ret_data,int ret_size, eu32 cmd,eu32 flag){
+int emi_msg_send_highlevel(char *ipaddr, int msgnum,void *send_data,int send_size, void *ret_data,int ret_size, eu32 cmd,eu32 flag){
 
     /* make sure the ret data size is no lager than send data size,
      * currently, the ret data is using the memory of the send data to receive
@@ -215,6 +215,7 @@ static inline int emi_msg_send_highlevel(char *ipaddr, int msgnum,void *send_dat
     }
 
     emi_fill_msg(msg, ipaddr, send_data, cmd, msgnum, flag);
+    
     if (emi_msg_send(msg)) {
         dbg("emi_msg_send error\n");
         emi_msg_free(msg);
