@@ -6,7 +6,7 @@ import time
 
 import unittest
 from emi_test import EmiTestor
-from emilib import emilib, emi_msg
+from emilib import emilib, emi_msg, emi_addr, sockaddr_in
 
 class TestEmiLib(unittest.TestCase):
 
@@ -19,6 +19,16 @@ class TestEmiLib(unittest.TestCase):
 
     def tearDown(self):
         self.emiTestor.stopEmiCore()
+
+    def test_emi_fill_addr(self):
+        addr = emi_addr()
+        print(addr)
+        emilib.emi_fill_addr(addr, "127.1.1.2", 256)
+        print(addr)
+
+    def test_emi_msg(self):
+        msg = emi_msg()
+        print(msg.data)
 
     def test_emi_init(self):
          self.assertEqual(emilib.emi_init(), 0)
@@ -42,16 +52,32 @@ class TestEmiLib(unittest.TestCase):
 #          print(msg)
 #          print(ret)
 
-    def test_emi_msg_send_highlevel(self):
+    def test_emi_msg_send_highlevel_unblock_nosenddata(self):
+        emilib.emi_init()
+
+        def func(emi_msg):
+            print("python: emi unblock nosenddata")
+            print(emi_msg)
+            return 0
+
+        ret = emilib.emi_msg_register(2, func)
+        self.assertEqual(ret, 0)
+ 
+        ret = emilib.emi_msg_send_highlevel("127.0.0.1", 2, 1)
+         
+        time.sleep(1)
+
+    def test_emi_msg_send_highlevel_unblock_senddata(self):
         emilib.emi_init()
         def func(emi_msg):
             print("python: emi registered")
-            print(emi_msg)
+            print(type(emi_msg.contents.msg))
+#            print(emi_msg.contents.data)
             return 0
-        ret = emilib.emi_msg_register(2, func)
+        ret = emilib.emi_msg_register(3, func)
         self.assertEqual(ret, 0)
 
-        ret = emilib.emi_msg_send_highlevel("127.0.0.1", 2, 1)
+        ret = emilib.emi_msg_send_highlevel("127.0.0.1", 3, 1, b"hello world")
         
         time.sleep(1)
     
