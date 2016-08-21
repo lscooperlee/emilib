@@ -72,6 +72,7 @@ void debug_addr(struct emi_addr *addr,char *p){
 
 void debug_msg_body(struct emi_msg *msg){
     printf("msg->size is %d\n",msg->size);
+    printf("msg->data address is %lX\n", (long)(msg->data));
     if(msg->size){
         printf(" date size is %d,content is %s:\n",msg->size,msg->data);
         int i;

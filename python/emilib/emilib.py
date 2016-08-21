@@ -46,7 +46,7 @@ class emi_addr(ctypes.Structure):
         _emilib.emi_fill_addr(ctypes.pointer(self), cipaddr, cport)
 
     def __str__(self):
-        return "emi_addr:{{ addr: {0}, pid: {1} }}".format(str(self.ipv4), str(self.pid_t))
+        return "emi_addr:{{ addr: {0}, pid: {1}, id: {2} }}".format(str(self.ipv4), str(self.pid_t), str(self.id))
 
 class emi_msg(ctypes.Structure):
 
@@ -60,12 +60,23 @@ class emi_msg(ctypes.Structure):
                 ("msg", ctypes.c_uint, 32),
             ]
 
+    def __new__(cls, *args, **kwargs):
+        _emilib.emi_msg_alloc.restype = emi_msg
+        msg = _emilib.emi_msg_alloc(8)
+        return msg
+#        return super().__new__(cls, *args, **kwargs)
+
     def __str__(self):
         return "emi_addr:{{ msg: {0}, cmd: {1} }}".format(str(self.msg), str(self.cmd))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.data = ctypes.c_char_p(ctypes.addressof(self)+ctypes.sizeof(self))
+
+    @property
+    def data(self):
+        PTYPE = ctypes.POINTER(ctypes.c_char * self.size)
+        ccharp = ctypes.c_char_p(ctypes.addressof(self)+ctypes.sizeof(self))
+        return ccharp.value
 
 
 class emilib:
@@ -113,6 +124,20 @@ class emilib:
         cipaddr = ctypes.c_char_p(ipaddr.encode())
         cport = ctypes.c_uint(port)
         return cls.__emilib.emi_fill_addr(ctypes.pointer(emiaddr), cipaddr, cport)
+
+    @classmethod
+    def emi_fill_msg(cls, emimsg, ipaddr, data, cmd, msgnum, flag):
+
+        cipaddr = ctypes.c_char_p(ipaddr.encode())
+        cport = ctypes.c_uint(port)
+
+        cdata = (ctypes.c_ubyte * size).from_buffer(bytearray(data))
+
+        ccmd = ctypes.c_uint(cmd)
+        cmsgnum = ctypes.c_uint(msgnum)
+        cflg = ctypes.c_uint(flag)
+
+        cls.__emilib.emi_fill_msg(ctypes.pointer(emimsg), cipaddr, ctypes.pointer(cdata), ccmd, cmsgnum, cflag)
 
     @classmethod
     def emi_msg_send(cls, emi_msg):

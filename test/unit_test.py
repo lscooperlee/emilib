@@ -28,12 +28,14 @@ class TestEmiLib(unittest.TestCase):
 
     def test_emi_msg(self):
         msg = emi_msg()
+        print(dir(msg))
         print(msg.data)
 
     def test_emi_init(self):
          self.assertEqual(emilib.emi_init(), 0)
 
     def test_emi_msg_register(self):
+        emilib.emi_init()
         def func():
             print("emi registered")
             return 0
@@ -71,13 +73,12 @@ class TestEmiLib(unittest.TestCase):
         emilib.emi_init()
         def func(emi_msg):
             print("python: emi registered")
-            print(type(emi_msg.contents.msg))
-#            print(emi_msg.contents.data)
+            print(emi_msg.contents.data)
             return 0
         ret = emilib.emi_msg_register(3, func)
         self.assertEqual(ret, 0)
 
-        ret = emilib.emi_msg_send_highlevel("127.0.0.1", 3, 1, b"hello world")
+        ret = emilib.emi_msg_send_highlevel("127.0.0.1", 3, 1, b"11112222")
         
         time.sleep(1)
     

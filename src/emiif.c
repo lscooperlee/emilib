@@ -102,7 +102,6 @@ int emi_fill_addr(struct emi_addr *addr,char *ip,int port){
     (addr)->ipv4.sin_port=htons(port);
     (addr)->ipv4.sin_family=AF_INET;
     (addr)->pid=getpid();
-    debug_addr(addr, "python");
     return 0;
 }
 
