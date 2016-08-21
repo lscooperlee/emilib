@@ -16,20 +16,24 @@ class TestEmiLib(unittest.TestCase):
 
     def setUp(self):
         self.emiTestor.runEmiCore()
+        time.sleep(0.2)
 
     def tearDown(self):
         self.emiTestor.stopEmiCore()
 
-    def test_emi_fill_addr(self):
+    def test_emi_addr(self):
         addr = emi_addr()
-        print(addr)
         emilib.emi_fill_addr(addr, "127.1.1.2", 256)
         print(addr)
 
     def test_emi_msg(self):
         msg = emi_msg()
-        print(dir(msg))
-        print(msg.data)
+        msg_data = emi_msg(data=b'1234', cmd=1, msgnum=2)
+        print(msg_data.data)
+        print(msg_data.msg)
+        print(msg_data.cmd)
+        print(msg_data.size)
+        print(msg_data.src_addr)
 
     def test_emi_init(self):
          self.assertEqual(emilib.emi_init(), 0)
