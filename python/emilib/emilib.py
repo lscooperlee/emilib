@@ -28,9 +28,10 @@ class sockaddr_in(ctypes.Structure):
 #        super(sockaddr_in, self).__init__(0, cport, cipaddr, 0)
 
     def __str__(self):
-        addr = ",".join([ str(x) for x in struct.unpack(">bbbb", self.sin_addr)])
+        addr = ".".join([ str(x) for x in struct.unpack(">bbbb", self.sin_addr)])
         port = struct.unpack("H", (struct.pack(">H", self.sin_port)))[0]
         return "{0}:{1}".format(addr, port)
+
 
 class emi_addr(ctypes.Structure):
 
@@ -72,8 +73,6 @@ class emi_msg(ctypes.Structure):
         return "emi_addr:{{ msg: {0}, cmd: {1} }}".format(str(self.msg), str(self.cmd))
 
     def __init__(self, msgnum = 0, cmd = 0, data = b'', ipaddr="127.0.0.1", port = 1361, flag = 0):
-        print("init")
-        print(ctypes.pointer(self))
         cipaddr = ctypes.c_char_p(ipaddr.encode())
 
         size = len(data)
@@ -90,9 +89,8 @@ class emi_msg(ctypes.Structure):
 
     @property
     def data(self):
-        PTYPE = ctypes.POINTER(ctypes.c_char * self.size)
         ccharp = ctypes.c_char_p(ctypes.addressof(self)+ctypes.sizeof(self))
-        return ccharp.value
+        return ccharp.value[:self.size]
 
 
 class emilib:
@@ -134,28 +132,6 @@ class emilib:
         callback = CMPFUNC(func)
         ret = cls.__emilib.emi_msg_register(num, callback)
         return ret
-
-    @classmethod
-    def emi_fill_addr(cls, emiaddr, ipaddr, port):
-        cipaddr = ctypes.c_char_p(ipaddr.encode())
-        cport = ctypes.c_uint(port)
-        return cls.__emilib.emi_fill_addr(ctypes.pointer(emiaddr), cipaddr, cport)
-
-    @classmethod
-    def emi_fill_msg(cls, emimsg, ipaddr, data, cmd, msgnum, flag):
-
-        cipaddr = ctypes.c_char_p(ipaddr.encode())
-        cport = ctypes.c_uint(port)
-
-        size = len(data)
-        cdata = (ctypes.c_ubyte * size).from_buffer(bytearray(data))
-
-        ccmd = ctypes.c_uint(cmd)
-        cmsgnum = ctypes.c_uint(msgnum)
-        cflg = ctypes.c_uint(flag)
-
-        cls.__emilib.emi_fill_msg(ctypes.pointer(emimsg), cipaddr, ctypes.pointer(cdata), ccmd, cmsgnum, cflag)
-#int emi_fill_msg(struct emi_msg *msg,char *dest_ip,void *data,eu32 cmd,eu32 defined_msg,eu32 flag){
 
     @classmethod
     def emi_msg_send(cls, emi_msg):

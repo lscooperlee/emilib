@@ -22,26 +22,24 @@ class TestEmiLib(unittest.TestCase):
         self.emiTestor.stopEmiCore()
 
     def test_emi_addr(self):
-        addr = emi_addr()
-        emilib.emi_fill_addr(addr, "127.1.1.2", 256)
-        print(addr)
+        addr = emi_addr("127.1.1.2", 256)
+        self.assertEqual(str(addr.ipv4), "127.1.1.2:256")
 
     def test_emi_msg(self):
         msg = emi_msg()
-        msg_data = emi_msg(data=b'1234', cmd=1, msgnum=2)
-        print(msg_data.data)
-        print(msg_data.msg)
-        print(msg_data.cmd)
-        print(msg_data.size)
-        print(msg_data.src_addr)
+        msg_data = emi_msg(data=b'1234', cmd=1, msgnum=2, flag=3, ipaddr="10.0.0.3")
+        self.assertEqual(msg_data.data, b'1234')
+        self.assertEqual(msg_data.msg, 2)
+        self.assertEqual(msg_data.cmd, 1)
+        self.assertEqual(msg_data.size, len(b'1234'))
+        self.assertEqual(str(msg_data.dest_addr.ipv4), "10.0.0.3:1361")
 
     def test_emi_init(self):
          self.assertEqual(emilib.emi_init(), 0)
 
     def test_emi_msg_register(self):
         emilib.emi_init()
-        def func():
-            print("emi registered")
+        def func(msg):
             return 0
         ret = emilib.emi_msg_register(1, func)
         self.assertEqual(ret, 0)
@@ -60,10 +58,14 @@ class TestEmiLib(unittest.TestCase):
 
     def test_emi_msg_send_highlevel_unblock_nosenddata(self):
         emilib.emi_init()
-
-        def func(emi_msg):
-            print("python: emi unblock nosenddata")
-            print(emi_msg)
+        
+        received = True
+        def func(msg):
+            nonlocal received
+            self.assertEqual(received, True)
+            self.assertEqual(msg.contents.msg, 2)
+            self.assertEqual(msg.contents.cmd, 1)
+            received = False
             return 0
 
         ret = emilib.emi_msg_register(2, func)
@@ -73,18 +75,29 @@ class TestEmiLib(unittest.TestCase):
          
         time.sleep(1)
 
+        self.assertEqual(received, False)
+
     def test_emi_msg_send_highlevel_unblock_senddata(self):
         emilib.emi_init()
-        def func(emi_msg):
-            print("python: emi registered")
-            print(emi_msg.contents.data)
+
+        received = True
+        def func(msg):
+            nonlocal received
+            self.assertEqual(received, True)
+            self.assertEqual(msg.contents.msg, 3)
+            self.assertEqual(msg.contents.cmd, 1)
+            self.assertEqual(msg.contents.data, b"11112222")
+            received = False
             return 0
+
         ret = emilib.emi_msg_register(3, func)
         self.assertEqual(ret, 0)
 
         ret = emilib.emi_msg_send_highlevel("127.0.0.1", 3, 1, b"11112222")
         
         time.sleep(1)
+
+        self.assertEqual(received, False)
     
 
 if __name__ == "__main__":
