@@ -61,20 +61,12 @@ class emi_msg(ctypes.Structure):
             ]
 
     def __new__(cls, *args, **kwargs):
-        _emilib.emi_msg_alloc.argtypes = (ctypes.c_uint,)
-        _emilib.emi_msg_alloc.restype = emi_msg
         size = len(kwargs.get("data", b''))
-#        print(kwargs.get('data', b""))
-#        print(size)
-#        print(ctypes.c_uint(size))
-        msg = _emilib.emi_msg_alloc(ctypes.c_uint(size))
-        return msg
-
-#        msg_void = ctypes.create_string_buffer(size+ctypes.sizeof(cls))
-#        EMITYPE = ctypes.POINTER(emi_msg)
-#        msg = EMITYPE(msg_void)
-#        msg.size = size
-#        return msg.contents
+        msg_void = ctypes.create_string_buffer(size+ctypes.sizeof(cls))
+        EMITYPE = ctypes.POINTER(emi_msg)
+        msg = EMITYPE(msg_void)
+        msg.contents.size = size
+        return msg.contents
 
     def __str__(self):
         return "emi_addr:{{ msg: {0}, cmd: {1} }}".format(str(self.msg), str(self.cmd))
@@ -87,10 +79,6 @@ class emi_msg(ctypes.Structure):
         size = len(data)
         csize = ctypes.c_size_t(size)
         cdata = (ctypes.c_ubyte * size).from_buffer(bytearray(data))
-        print(data)
-        print(size)
-        print(cdata)
-        self.size = size
 
         ccmd = ctypes.c_uint(cmd)
         cflag = ctypes.c_uint(flag)
@@ -99,18 +87,6 @@ class emi_msg(ctypes.Structure):
 #        cport = ctypes.c_uint(port)
         _emilib.emi_fill_msg(ctypes.pointer(self), cipaddr, cdata, ccmd, cmsgnum, cflag)
 
-    def __del__(self):
-        try:
-#            if self.__alloc:
-#                print(cls)
-#                caddr = ctypes.pointer(cls)
-#                _emilib.emi_msg_free(caddr)
-            print("free")
-            print(ctypes.pointer(self))
-            print(self.__alloc)
-#            _emilib.emi_msg_free(self.__alloc)
-        except:
-            pass
 
     @property
     def data(self):
