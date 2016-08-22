@@ -119,15 +119,12 @@ class emilib:
     __emilib.emi_msg_prepare_return_data.argtypes = (
         ctypes.POINTER(emi_msg), ctypes.c_void_p, ctypes.c_uint)
     __emilib.emi_msg_prepare_return_data.restype = ctypes.c_int
-    
 
     EMI_MSG_MODE_BLOCK = 0x00000100
     EMI_MSG_RET_SUCCEEDED = 0x00010000
 
-
     @classmethod
     def emi_init(cls):
-        ret = ctypes.c_int(0)
         ret = cls.__emilib.emi_init()
         if ret < 0:
             raise EMIError("emi_core did not run")
@@ -135,7 +132,6 @@ class emilib:
 
     @classmethod
     def emi_msg_register(cls, msg_num, func):
-        ret = ctypes.c_int(0)
         num = ctypes.c_uint(msg_num)
         CMPFUNC = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.POINTER(emi_msg))
         callback = CMPFUNC(func)
@@ -144,36 +140,37 @@ class emilib:
 
     @classmethod
     def emi_msg_send(cls, emi_msg):
-        ret = ctypes.c_int(0)
-        ret = cls.__emilib.emi_msg_send(emi_msg)
-        return ret
+        ret = cls.__emilib.emi_msg_send(ctypes.pointer(emi_msg))
+        return ret, bytes(emi_msg.data)
 
     @classmethod
-    def emi_msg_send_highlevel(cls, ipaddr, msgnum, cmd, sbytes=b'', block=False):
+    def emi_msg_send_highlevel(cls, ipaddr, msgnum, cmd, data=b'', retsize=0, block=False):
         cipaddr = ctypes.c_char_p(ipaddr.encode())
         cmsgnum = ctypes.c_uint(msgnum)
         ccmd = ctypes.c_uint(cmd)
 
-        size = len(sbytes)
+        size = len(data)
         cssize = ctypes.c_size_t(size)
-        csdata = (ctypes.c_ubyte * size).from_buffer(bytearray(sbytes))
+        csdata = (ctypes.c_ubyte * size).from_buffer(bytearray(data))
 
-        crsize = ctypes.c_size_t(size)
-        crdata = (ctypes.c_ubyte * size).from_buffer(bytearray(size))
+        crsize = ctypes.c_size_t(retsize)
+        crdata = (ctypes.c_ubyte * retsize).from_buffer(bytearray(retsize))
+
+        cflag = cls.EMI_MSG_MODE_BLOCK if block else 0
 
         ret = cls.__emilib.emi_msg_send_highlevel(cipaddr, cmsgnum,
-                                                   ctypes.pointer(csdata), cssize, ctypes.pointer(
-                                                       crdata), crsize,
-                                                   ccmd, ctypes.c_uint(0))
-        return ret, crdata
+                                                  ctypes.pointer(csdata), cssize, ctypes.pointer(
+                                                      crdata), crsize,
+                                                  ccmd, ctypes.c_uint(cflag))
+        return ret, bytes(crdata)
 
     @classmethod
     def emi_msg_prepare_return_data(cls, msg, retbytes):
         size = len(retbytes)
         rdata = (ctypes.c_ubyte * size).from_buffer(bytearray(retbytes))
         rsize = ctypes.c_uint(size)
-        return cls.__emilib.emi_msg_prepare_return_data(ctypes.pointer(msg), ctypes.pointer(rdata),
-                                                    rsize)
+        return cls.__emilib.emi_msg_prepare_return_data(msg, ctypes.pointer(rdata),
+                                                        rsize)
 
     @classmethod
     def emi_loop(cls):
