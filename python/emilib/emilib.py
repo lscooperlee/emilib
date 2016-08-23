@@ -1,6 +1,7 @@
 
 import ctypes
 import struct
+import signal
 
 _emilib = ctypes.cdll.LoadLibrary("libemi.so")
 
@@ -46,7 +47,7 @@ class emi_addr(ctypes.Structure):
     def __init__(self, ipaddr="0.0.0.0", port=1361):
         cipaddr = ctypes.c_char_p(ipaddr.encode())
         cport = ctypes.c_uint(port)
-        _emilib.emi_fill_addr(ctypes.pointer(self), cipaddr, cport)
+        _emilib.emi_fill_addr(ctypes.byref(self), cipaddr, cport)
 
     def __str__(self):
         return "emi_addr:{{ addr: {0}, pid: {1} }}".format(str(self.ipv4), str(self.pid_t), str(self.id))
@@ -88,7 +89,7 @@ class emi_msg(ctypes.Structure):
 
 #        cport = ctypes.c_uint(port)
         _emilib.emi_fill_msg(
-            ctypes.pointer(self), cipaddr, cdata, ccmd, cmsgnum, cflag)
+            ctypes.byref(self), cipaddr, cdata, ccmd, cmsgnum, cflag)
 
     @property
     def data(self):
@@ -168,10 +169,11 @@ class emilib:
         size = len(retbytes)
         rdata = (ctypes.c_ubyte * size).from_buffer(bytearray(retbytes))
         rsize = ctypes.c_uint(size)
-        return cls.__emilib.emi_msg_prepare_return_data(msg, ctypes.pointer(rdata),
+        return cls.__emilib.emi_msg_prepare_return_data(msg, ctypes.byref(rdata),
                                                         rsize)
 
     @classmethod
     def emi_loop(cls):
-        cls.__emilib.emi_loop()
+        while True:
+            signal.pause()
 
