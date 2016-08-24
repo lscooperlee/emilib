@@ -25,22 +25,22 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #include <signal.h>
 #include <errno.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+
 #include "emi.h"
 #include "emisocket.h"
-#include "shmem.h"
+#include "emi_shbuf.h"
 #include "list.h"
 #include "emi_semaphore.h"
 #include "emi_config.h"
 #include "emi_dbg.h"
+#include "emi_shmem.h"
 
 struct emi_global{
     int shm_id;
-    int sem_id;
-    int urandom_fd;
 }emi_global;
 
 struct func_list{
@@ -60,9 +60,9 @@ void func_sterotype(int no_use){
 
     id=emi_global.shm_id;
 
-    if((baseshmsg=(struct emi_msg *)shmat(id,(const void *)0,0))==(void *)-1){
-        dbg("shmat error, did you run emi_init() ?! \n");
-        exit(-1);        //error!!!!!!!!!!
+    if((baseshmsg=(struct emi_msg *)emi_shm_alloc(id, EMI_SHM_READ|EMI_SHM_WRITE))==(void *)-1){
+        dbg("emi_shm_alloc error, did you run emi_init() ?! \n");
+        exit(-1);
     }
 
     pid=getpid();
@@ -104,8 +104,8 @@ void func_sterotype(int no_use){
     //FIXME:unlock
 
 
-    if(shmdt(baseshmsg)){
-        dbg("shmdt error\n");
+    if(emi_shm_free(baseshmsg)){
+        dbg("emi_shm_free error\n");
         return;
     }
 
@@ -215,12 +215,8 @@ int emi_init(){
         set_default_config(config);
     }
 
-    if((emi_global.shm_id=shmget(emi_config->emi_key,0,0))<0){
-        dbg("shmget error\n");
-        return -1;
-    }
-    if((emi_global.urandom_fd=open("/dev/urandom",O_RDONLY))<0){
-        dbg("urandom fd open error\n");
+    if((emi_global.shm_id=emi_shm_init("emilib", 0, 0))<0){
+        dbg("emi_shm_init error\n");
         return -1;
     }
 

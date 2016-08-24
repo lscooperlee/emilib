@@ -16,8 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see http://www.gnu.org/licenses/.
 */
 
-#ifndef __SHMEM_H__
-#define __SHMEM_H__
+#ifndef __SHBUF_H__
+#define __SHBUF_H__
 
 #include "list.h"
 #include "emi_semaphore.h"
@@ -25,9 +25,6 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 
 
 #define EMI_KEY                ((key_t)0x0FE02570)
-
-#define LOCK    "/var/run/emi_core.pid"
-#define LOCKBASENAME    "/tmp/emi_core."
 
 
 struct emi_transfer_buf{
@@ -45,8 +42,8 @@ enum{
 
 extern struct list_head __msg_list;
 extern eu32 __num_busy_msg;
-extern elock_t __emi_msg_space_lock;
 
+extern elock_t __emi_msg_space_lock;
 extern elock_t msg_map_lock;
 extern elock_t critical_shmem_lock;
 
@@ -136,10 +133,7 @@ static inline void *__emi_obtain_consecutive_space(void *base,int size,struct li
 
 
 
-extern int construct_local_lock_name(char name[]);
 extern int emi_init_space(struct list_head *head,eu32 num,es32 bias,eu32 size);
-extern void *emi_obtain_space(void *base,eu32 size,struct list_head *head);
-extern int emi_return_space(void *addr,struct list_head *head);
 extern void emi_init_locks(void);
 
 #endif

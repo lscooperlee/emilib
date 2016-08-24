@@ -46,7 +46,7 @@ LIBLDFLAGS = -shared
 LIBSENDERSRCS=src/emiif.c src/emi_sock.c src/emi_dbg.c src/emi_config.c
 LIBSENDEROBJS=$(patsubst %,$(TMPDIR)/%,$(LIBSENDERSRCS:.c=.o))
 
-LIBRECEIVERSRCS=src/emi_ifr.c src/emi_config.c src/emi_dbg.c src/emi_shmem.c src/emi_core.c
+LIBRECEIVERSRCS=src/emi_ifr.c src/emi_config.c src/emi_dbg.c src/emi_shbuf.c src/emi_shmem.c src/emi_core.c
 LIBEMISRCS=$(sort $(LIBSENDERSRCS) $(LIBRECEIVERSRCS))
 LIBEMIOBJS=$(patsubst %,$(TMPDIR)/%,$(LIBEMISRCS:.c=.o))
 

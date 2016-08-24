@@ -20,6 +20,9 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #define __MSG_TABLE_H__
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
+
+#include "emi_types.h"
 
 
 #define EMI_HASH_MASK    12

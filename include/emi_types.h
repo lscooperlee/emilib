@@ -1,6 +1,7 @@
 #ifndef __EMI_TYPES_H__
 #define __EMI_TYPES_H__
 #include <stdint.h>
+#include <pthread.h>
 
 /*
 #ifdef X86

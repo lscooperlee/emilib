@@ -1,7 +1,8 @@
 #ifndef __EMI_CONFIG_H__
 #define __EMI_CONFIG_H__
+
+#include "emi_types.h"
 #include "msg_table.h"
-#include "shmem.h"
 
 #define EMI_MAX_MSG    (1<<EMI_HASH_MASK)
 #define EMI_DATA_SIZE_PER_MSG    (1024)
@@ -21,4 +22,5 @@ extern void set_default_config(struct emi_config *config);
 extern struct emi_config *guess_config(void);
 extern struct emi_config *get_root_default_config(void);
 extern struct emi_config *get_usr_default_config(void);
+
 #endif

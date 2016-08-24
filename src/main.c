@@ -34,7 +34,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <pthread.h>
 #include "emi.h"
 #include "msg_table.h"
-#include "shmem.h"
+#include "emi_shbuf.h"
 #include "emisocket.h"
 #include "emi_semaphore.h"
 #include "emi_dbg.h"

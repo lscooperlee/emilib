@@ -34,12 +34,12 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <pthread.h>
 #include "emi.h"
 #include "msg_table.h"
-#include "shmem.h"
+#include "emi_shbuf.h"
 #include "emisocket.h"
 #include "emi_semaphore.h"
 #include "emi_dbg.h"
 #include "emi_config.h"
-
+#include "emi_shmem.h"
 
 #define coreprt(a) emiprt(a)
 
@@ -65,7 +65,7 @@ void emi_release(void){
     emi_close(sd);
     emi_close(client_sd);
     if(core_shmid>=0){
-        shmctl(core_shmid,IPC_RMID,NULL);
+        emi_shm_destroy(core_shmid);
     }
 }
 
@@ -80,13 +80,13 @@ static int init_msg_table(struct msg_map *table[]){
 
 
 static int int_global_shm_space(int pid_max){
-    if((core_shmid=shmget(emi_config->emi_key,pid_max*sizeof(int)+sizeof(struct emi_msg)*(EMI_MAX_MSG)+(emi_config->emi_data_size_per_msg)*(EMI_MAX_MSG),IPC_CREAT|IPC_EXCL|0666))<0){
-        coreprt("shmget error\n");
+    if((core_shmid=emi_shm_init("emilib", pid_max*sizeof(int)+sizeof(struct emi_msg)*(EMI_MAX_MSG)+(emi_config->emi_data_size_per_msg)*(EMI_MAX_MSG),EMI_SHM_CREATE))<0){
+        coreprt("emi_shm_init error\n");
         return -1;
     }
-    if((emi_base_addr=(void *)shmat(core_shmid,(const void *)0,0))==(void *)-1){
-        coreprt("shmat error\n");
-        shmctl(core_shmid,IPC_RMID,NULL);
+    if((emi_base_addr=(void *)emi_shm_alloc(core_shmid, EMI_SHM_READ|EMI_SHM_WRITE))==(void *)-1){
+        coreprt("emi_shm_alloc error\n");
+        emi_shm_destroy(core_shmid);
         return -1;
     }
     return 0;
@@ -153,7 +153,7 @@ static int __emi_core(void){
 
     if((sd=emi_open(AF_INET))==NULL){
         coreprt("emi_open error\n");
-        shmctl(core_shmid,IPC_RMID,NULL);
+        emi_shm_destroy(core_shmid);
         return -1;
     }
 
@@ -167,14 +167,14 @@ static int __emi_core(void){
     if(emi_bind(sd,emi_config->emi_port)<0){
         coreprt("bind error\n");
         emi_close(sd);
-        shmctl(core_shmid,IPC_RMID,NULL);
+        emi_shm_destroy(core_shmid);
         return -1;
     }
 
     if(emi_listen(sd)<0){
         coreprt("listen err\n");
         emi_close(sd);
-        shmctl(core_shmid,IPC_RMID,NULL);
+        emi_shm_destroy(core_shmid);
         return -1;
     }
 
