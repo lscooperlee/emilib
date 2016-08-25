@@ -38,6 +38,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi_config.h"
 #include "emi_dbg.h"
 #include "emi_shmem.h"
+#include "emi_core.h"
 
 struct emi_global{
     int shm_id;
@@ -215,7 +216,9 @@ int emi_init(){
         set_default_config(config);
     }
 
-    if((emi_global.shm_id=emi_shm_init("emilib", 0, 0))<0){
+    eu32 pid_max = get_pid_max();
+
+    if((emi_global.shm_id=emi_shm_init("emilib", pid_max*sizeof(int)+sizeof(struct emi_msg)*(EMI_MAX_MSG)+(emi_config->emi_data_size_per_msg)*(EMI_MAX_MSG), 0))<0){
         dbg("emi_shm_init error\n");
         return -1;
     }
@@ -228,3 +231,4 @@ void emi_loop(void){
         pause();
     }
 }
+

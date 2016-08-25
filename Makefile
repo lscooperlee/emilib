@@ -36,12 +36,15 @@ else
 DEBUG = 
 endif
 
-CFLAGS = $(DEBUG) -O2 -Wall -I./include
+CFLAGS = $(DEBUG) -O2 -Wall -I./include -D$(SHMEM)
 LIBCFLAGS = $(CFLAGS) -fpic
 
 LDFLAGS = -L$(LIBDIR) -lemi -lpthread
 LIBLDFLAGS = -shared
 
+ifeq ($(strip $(SHMEM)),POSIX_SHMEM)
+LIBLDFLAGS += -lrt
+endif
 
 LIBSENDERSRCS=src/emiif.c src/emi_sock.c src/emi_dbg.c src/emi_config.c
 LIBSENDEROBJS=$(patsubst %,$(TMPDIR)/%,$(LIBSENDERSRCS:.c=.o))

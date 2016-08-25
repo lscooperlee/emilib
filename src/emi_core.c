@@ -92,7 +92,7 @@ static int int_global_shm_space(int pid_max){
     return 0;
 }
 
-static eu32 get_pid_max(void){
+eu32 get_pid_max(void){
     int fd,i;
     char buf[8]={0};
     if((fd=open("/proc/sys/kernel/pid_max",O_RDONLY))<0){
@@ -110,7 +110,6 @@ error:
     perror("dangerous!it seems your system does not mount the proc filesystem yet,so can not get your pid_max number.emi_core would use default ,but this may be different with the value in your system,as a result,may cause incorrect transmission");
     return 32768;
 }
-
 
 static int __emi_core(void);
 
@@ -149,7 +148,6 @@ static int __emi_core(void){
         coreprt("init msg space error\n");
         return -1;
     }
-
 
     if((sd=emi_open(AF_INET))==NULL){
         coreprt("emi_open error\n");

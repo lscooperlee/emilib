@@ -63,7 +63,10 @@ class EmiTestor:
                     receiver.terminate()
                     r = receiver.communicate()
                 
-                assert s == r
+                if s != r:
+                    print("sender output: {}".format(s))
+                    print("receiver output: {}".format(r))
+                    os.exit(-1)                
 
         finally:
             self.stopEmiCore()
