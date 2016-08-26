@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os
+import os, sys
 from itertools import product
 import subprocess
 import time
@@ -66,7 +66,7 @@ class EmiTestor:
                 if s != r:
                     print("sender output: {}".format(s))
                     print("receiver output: {}".format(r))
-                    os.exit(-1)                
+                    sys.exit(-1)                
 
         finally:
             self.stopEmiCore()

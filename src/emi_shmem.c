@@ -84,7 +84,10 @@ int emi_shm_init(char *name, size_t size, int mode){
     shmem_size = size;
 
     if (mode == EMI_SHM_CREATE){
-        ftruncate(shm_id, shmem_size);
+        if(ftruncate(shm_id, shmem_size)){
+            shm_unlink(pathname);
+            return -1;
+        }
     }
 
     return shm_id;

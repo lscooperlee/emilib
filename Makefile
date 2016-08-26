@@ -39,8 +39,8 @@ endif
 CFLAGS = $(DEBUG) -O2 -Wall -I./include -D$(SHMEM)
 LIBCFLAGS = $(CFLAGS) -fpic
 
-LDFLAGS = -L$(LIBDIR) -lemi -lpthread
-LIBLDFLAGS = -shared
+LDFLAGS = -L$(LIBDIR) -lemi 
+LIBLDFLAGS = -lpthread
 
 ifeq ($(strip $(SHMEM)),POSIX_SHMEM)
 LIBLDFLAGS += -lrt
@@ -70,12 +70,12 @@ all:$(LIBSENDER) $(LIBEMI) $(CORE) $(SAR) TEST
 $(LIBSENDER):$(LIBSENDEROBJS)
 	@echo LD		$(LIBSENDER)
 	@$(MKDIR) $(LIBDIR)
-	@$(CC) $(LIBLDFLAGS) -o $(LIBDIR)/$@ $?
+	@$(CC) -shared -o $(LIBDIR)/$@ $? $(LIBLDFLAGS)
 
 $(LIBEMI):$(LIBEMIOBJS)
 	@echo AR		$(LIBEMI)
 	@$(MKDIR) $(LIBDIR)
-	@$(CC) $(LIBLDFLAGS) -o $(LIBDIR)/$@ $?
+	@$(CC) -shared -o $(LIBDIR)/$@ $? $(LIBLDFLAGS)
 
 $(CORE):$(COREOBJS)
 	@echo LD		$(CORE)
