@@ -65,7 +65,7 @@ void emi_release(void){
     emi_close(sd);
     emi_close(client_sd);
     if(core_shmid>=0){
-        emi_shm_destroy(core_shmid);
+        emi_shm_destroy("emilib", core_shmid);
     }
 }
 
@@ -86,7 +86,7 @@ static int int_global_shm_space(int pid_max){
     }
     if((emi_base_addr=(void *)emi_shm_alloc(core_shmid, EMI_SHM_READ|EMI_SHM_WRITE))==(void *)-1){
         coreprt("emi_shm_alloc error\n");
-        emi_shm_destroy(core_shmid);
+        emi_shm_destroy("emilib", core_shmid);
         return -1;
     }
     return 0;
@@ -151,7 +151,7 @@ static int __emi_core(void){
 
     if((sd=emi_open(AF_INET))==NULL){
         coreprt("emi_open error\n");
-        emi_shm_destroy(core_shmid);
+        emi_shm_destroy("emilib", core_shmid);
         return -1;
     }
 
@@ -165,14 +165,14 @@ static int __emi_core(void){
     if(emi_bind(sd,emi_config->emi_port)<0){
         coreprt("bind error\n");
         emi_close(sd);
-        emi_shm_destroy(core_shmid);
+        emi_shm_destroy("emilib", core_shmid);
         return -1;
     }
 
     if(emi_listen(sd)<0){
         coreprt("listen err\n");
         emi_close(sd);
-        emi_shm_destroy(core_shmid);
+        emi_shm_destroy("emilib", core_shmid);
         return -1;
     }
 

@@ -24,7 +24,7 @@ unsigned long hash(char *str) {
     return hash;
 }
 
-int emi_shm_init(char *name, size_t size, int mode){
+int emi_shm_init(const char *name, size_t size, int mode){
     int shm_id;
     key_t key = (key_t)hash(name);
 
@@ -49,7 +49,7 @@ int emi_shm_free(void *addr){
     return shmdt(addr);
 }
 
-int emi_shm_destroy(int id){
+int emi_shm_destroy(const char *name, int id){
     return shmctl(id,IPC_RMID,NULL);
 }
 
@@ -65,8 +65,7 @@ static size_t shmem_size = 0;
 #include <fcntl.h>
 #include <unistd.h>
 
-
-int emi_shm_init(char *name, size_t size, int mode){
+int emi_shm_init(const char *name, size_t size, int mode){
     int shm_id;
     int _mode;
     char pathname[PATH_MAX] = "/";
@@ -96,9 +95,11 @@ int emi_shm_init(char *name, size_t size, int mode){
     return shm_id;
 }
 
-int emi_shm_destroy(int id){
+int emi_shm_destroy(const char *name, int id){
     close(id);
-    shm_unlink("/emilib");
+    char pathname[PATH_MAX] = "/";
+    strcat(pathname, name);
+    shm_unlink(pathname);
     return 0;
 }
 
@@ -110,7 +111,7 @@ int emi_shm_destroy(int id){
 
 #define ASHMEM_DEVICE"/dev/ashmem"
 
-int emi_shm_init(char *name, size_t size, int mode){
+int emi_shm_init(const char *name, size_t size, int mode){
 	int fd, ret;
 
 	fd = open(ASHMEM_DEVICE, O_RDWR);
@@ -137,10 +138,9 @@ error:
 	return ret;
 }
 
-int emi_shm_destroy(int id){
+int emi_shm_destroy(const char *name, int id){
     return 0;
 }
-
 
 #endif //POSIX_SHMEM
 
