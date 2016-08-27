@@ -53,15 +53,18 @@ int emi_shm_destroy(int id){
     return shmctl(id,IPC_RMID,NULL);
 }
 
-
-#elif defined(POSIX_SHMEM)
+#else //!SYSV_SHMEM
 
 #include <sys/mman.h>
+
+static size_t shmem_size = 0;
+
+#if defined(POSIX_SHMEM)
+
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 
-static size_t shmem_size = 0;
 
 int emi_shm_init(char *name, size_t size, int mode){
     int shm_id;
@@ -93,6 +96,54 @@ int emi_shm_init(char *name, size_t size, int mode){
     return shm_id;
 }
 
+int emi_shm_destroy(int id){
+    close(id);
+    shm_unlink("/emilib");
+    return 0;
+}
+
+
+#elif defined(ANDROID_SHMEM)
+
+#include <linux/ashmem.h>
+#include <cutils/ashmem.h>
+
+#define ASHMEM_DEVICE"/dev/ashmem"
+
+int emi_shm_init(char *name, size_t size, int mode){
+	int fd, ret;
+
+	fd = open(ASHMEM_DEVICE, O_RDWR);
+	if (fd < 0)
+		return fd;
+
+	if (name) {
+		char buf[ASHMEM_NAME_LEN];
+
+		strlcpy(buf, name, sizeof(buf));
+		ret = ioctl(fd, ASHMEM_SET_NAME, buf);
+		if (ret < 0)
+			goto error;
+	}
+
+	ret = ioctl(fd, ASHMEM_SET_SIZE, size);
+	if (ret < 0)
+		goto error;
+
+	return fd;
+
+error:
+	close(fd);
+	return ret;
+}
+
+int emi_shm_destroy(int id){
+    return 0;
+}
+
+
+#endif //POSIX_SHMEM
+
 void *emi_shm_alloc(int id, int flag){
     void *p = NULL;
 
@@ -107,11 +158,5 @@ int emi_shm_free(void *addr){
     return munmap(addr, shmem_size);
 }
 
-int emi_shm_destroy(int id){
-    close(id);
-    shm_unlink("/emilib");
-    return 0;
-}
 
-#endif
-
+#endif //SYSV_SHMEM

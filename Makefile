@@ -70,7 +70,7 @@ all:$(LIBSENDER) $(LIBEMI) $(CORE) $(SAR) TEST
 $(LIBSENDER):$(LIBSENDEROBJS)
 	@echo LD		$(LIBSENDER)
 	@$(MKDIR) $(LIBDIR)
-	@$(CC) -shared -o $(LIBDIR)/$@ $? $(LIBLDFLAGS)
+	@$(CC) -shared -o $(LIBDIR)/$@ $?
 
 $(LIBEMI):$(LIBEMIOBJS)
 	@echo AR		$(LIBEMI)
