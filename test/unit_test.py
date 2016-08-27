@@ -195,10 +195,10 @@ class TestEmiLib(unittest.TestCase):
 
         received = 0
 
-        @emi_register(6)
+        @emi_register(7)
         def func(msg):
             nonlocal received
-            self.assertEqual(msg.contents.msg, 6)
+            self.assertEqual(msg.contents.msg, 7)
             self.assertEqual(msg.contents.cmd, 1)
             self.assertEqual(msg.contents.data, b"11112222")
             received = received + 1
@@ -206,13 +206,45 @@ class TestEmiLib(unittest.TestCase):
             return 0
 
         ret = emilib.emi_msg_send_highlevel(
-            msgnum=6, cmd=1, ipaddr="127.0.0.1", data=b'11112222', retsize=len(b'abcdefghijkmln'), block=True)
+            msgnum=7, cmd=1, ipaddr="127.0.0.1", data=b'11112222', retsize=len(b'abcdefghijkmln'), block=True)
         self.assertEqual(ret[0], 0)
         self.assertEqual(ret[1], b'abcdefghijkmln')
 
         time.sleep(1)
 
         self.assertEqual(received, 1)
+
+    def test_emi_msg_send_multiple_func(self):
+        emilib.emi_init()
+
+        def func1(msg):
+            self.assertEqual(func1.__name__, "func1")
+            self.assertEqual(msg.contents.msg, 8)
+            self.assertEqual(msg.contents.cmd, 1)
+            return 0
+
+        def func2(msg):
+            self.assertEqual(func2.__name__, "func2")
+            self.assertEqual(msg.contents.msg, 9)
+            self.assertEqual(msg.contents.cmd, 1)
+            return 0
+
+        ret = emilib.emi_msg_register(8, func1)
+        self.assertEqual(ret, 0)
+
+        ret = emilib.emi_msg_register(9, func2)
+        self.assertEqual(ret, 0)
+
+        msg = emi_msg(msgnum=8, cmd=1, ipaddr="127.0.0.1")
+        ret = emilib.emi_msg_send(msg)
+        self.assertEqual(ret[0], 0)
+
+        msg = emi_msg(msgnum=9, cmd=1, ipaddr="127.0.0.1")
+        ret = emilib.emi_msg_send(msg)
+        self.assertEqual(ret[0], 0)
+
+        time.sleep(1)
+
 
 if __name__ == "__main__":
     unittest.main()

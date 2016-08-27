@@ -96,6 +96,7 @@ class emi_msg(ctypes.Structure):
         ccharp = ctypes.c_char_p(ctypes.addressof(self) + ctypes.sizeof(self))
         return ccharp.value[:self.size]
 
+_registered_callback = []
 
 class emilib:
 
@@ -123,6 +124,7 @@ class emilib:
     EMI_MSG_MODE_BLOCK = 0x00000100
     EMI_MSG_RET_SUCCEEDED = 0x00010000
 
+
     @classmethod
     def emi_init(cls):
         ret = cls.__emilib.emi_init()
@@ -135,6 +137,7 @@ class emilib:
         num = ctypes.c_uint(msg_num)
         CMPFUNC = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.POINTER(emi_msg))
         callback = CMPFUNC(func)
+        _registered_callback.append(callback)
         ret = cls.__emilib.emi_msg_register(num, callback)
         return ret
 
@@ -176,8 +179,6 @@ class emilib:
     def emi_loop(cls):
         while True:
             signal.pause()
-
-
 
 def emi_register(msg_num):
     def emi_func_register(func):
