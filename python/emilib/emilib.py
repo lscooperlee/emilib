@@ -144,7 +144,7 @@ class emilib:
         return ret, bytes(emi_msg.data)
 
     @classmethod
-    def emi_msg_send_highlevel(cls, ipaddr, msgnum, cmd, data=b'', retsize=0, block=False):
+    def emi_msg_send_highlevel(cls, msgnum, ipaddr="127.0.0.1", cmd=0, data=b'', retsize=0, block=False):
         cipaddr = ctypes.c_char_p(ipaddr.encode())
         cmsgnum = ctypes.c_uint(msgnum)
         ccmd = ctypes.c_uint(cmd)
@@ -177,3 +177,12 @@ class emilib:
         while True:
             signal.pause()
 
+
+
+def emi_register(msg_num):
+    def emi_func_register(func):
+        ret = emilib.emi_msg_register(msg_num, func)
+        if ret < 0:
+            raise EMIError("emi_core did not run")
+        return func
+    return emi_func_register

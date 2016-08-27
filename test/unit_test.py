@@ -6,7 +6,7 @@ import time
 
 import unittest
 from emi_test import EmiTestor
-from emilib import emilib, emi_msg, emi_addr, sockaddr_in
+from emilib import emilib, emi_msg, emi_addr, sockaddr_in, emi_register
 
 
 class TestEmiLib(unittest.TestCase):
@@ -190,6 +190,29 @@ class TestEmiLib(unittest.TestCase):
 
         self.assertEqual(received, 1)
 
+    def test_register_decorator(self):
+        emilib.emi_init()
+
+        received = 0
+
+        @emi_register(6)
+        def func(msg):
+            nonlocal received
+            self.assertEqual(msg.contents.msg, 6)
+            self.assertEqual(msg.contents.cmd, 1)
+            self.assertEqual(msg.contents.data, b"11112222")
+            received = received + 1
+            emilib.emi_msg_prepare_return_data(msg, b'abcdefghijkmln')
+            return 0
+
+        ret = emilib.emi_msg_send_highlevel(
+            msgnum=6, cmd=1, ipaddr="127.0.0.1", data=b'11112222', retsize=len(b'abcdefghijkmln'), block=True)
+        self.assertEqual(ret[0], 0)
+        self.assertEqual(ret[1], b'abcdefghijkmln')
+
+        time.sleep(1)
+
+        self.assertEqual(received, 1)
 
 if __name__ == "__main__":
     unittest.main()
