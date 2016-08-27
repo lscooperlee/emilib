@@ -142,6 +142,46 @@ int emi_shm_destroy(const char *name, int id){
     return 0;
 }
 
+#elif defined(FILE_SHMEM)
+
+int emi_shm_init(const char *name, size_t size, int mode){
+    int fd;
+    int _mode;
+    char pathname[PATH_MAX] = "/tmp/";
+    strcat(pathname, name);
+
+    if (mode == EMI_SHM_CREATE){
+        _mode = O_RDWR|O_CREAT;
+    }else{
+        _mode = O_RDWR;
+    }
+
+    if((fd = open(pathname, _mode, 0666))<0){
+        return -1;
+    }
+
+    int PAGE_SIZE = getpagesize();
+    size = ( (size+PAGE_SIZE) / PAGE_SIZE ) * PAGE_SIZE;
+    shmem_size = size;
+
+    if (mode == EMI_SHM_CREATE){
+        if(ftruncate(fd, shmem_size)){
+            unlink(pathname);
+            return -1;
+        }
+    }
+
+    return fd;
+}
+
+int emi_shm_destroy(const char *name, int id){
+    close(id);
+    char pathname[PATH_MAX] = "/tmp";
+    strcat(pathname, name);
+    unlink(pathname);
+    return 0;
+}
+
 #endif //POSIX_SHMEM
 
 void *emi_shm_alloc(int id, int flag){
