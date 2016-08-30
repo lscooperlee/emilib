@@ -6,7 +6,7 @@ import time
 
 import unittest
 from emi_test import EmiTestor
-from emilib import emilib, emi_msg, emi_addr, sockaddr_in, emi_register
+from emilib import emilib, emi_msg, emi_addr, sockaddr_in, emi_register, emi_run
 
 
 class TestEmiLib(unittest.TestCase):
@@ -191,7 +191,6 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(received, 1)
 
     def test_register_decorator(self):
-        emilib.emi_init()
 
         received = 0
 
@@ -204,6 +203,8 @@ class TestEmiLib(unittest.TestCase):
             received = received + 1
             emilib.emi_msg_prepare_return_data(msg, b'abcdefghijkmln')
             return 0
+
+        emi_run(False)
 
         ret = emilib.emi_msg_send_highlevel(
             msgnum=7, cmd=1, ipaddr="127.0.0.1", data=b'11112222', retsize=len(b'abcdefghijkmln'), block=True)

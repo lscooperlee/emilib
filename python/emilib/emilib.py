@@ -96,8 +96,8 @@ class emi_msg(ctypes.Structure):
         ccharp = ctypes.c_char_p(ctypes.addressof(self) + ctypes.sizeof(self))
         return ccharp.value[:self.size]
 
-_registered_callback = []
 
+_registered_callback = []
 class emilib:
 
     __emilib = _emilib
@@ -180,10 +180,22 @@ class emilib:
         while True:
             signal.pause()
 
+
+recorded_func = {}
+
 def emi_register(msg_num):
     def emi_func_register(func):
-        ret = emilib.emi_msg_register(msg_num, func)
-        if ret < 0:
-            raise EMIError("emi_core did not run")
+        recorded_func[msg_num] = func
         return func
     return emi_func_register
+
+def emi_run(loop = True):
+    emilib.emi_init()
+
+    for num, func in recorded_func.items():
+        ret = emilib.emi_msg_register(num, func)
+        if ret < 0:
+            raise EMIError('emi msg register error')
+
+    if loop:
+        emilib.emi_loop()
