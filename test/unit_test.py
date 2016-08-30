@@ -6,7 +6,7 @@ import time
 
 import unittest
 from emi_test import EmiTestor
-from emilib import emilib, emi_msg, emi_addr, sockaddr_in, emi_register, emi_run
+from emilib import *
 
 
 class TestEmiLib(unittest.TestCase):
@@ -37,36 +37,36 @@ class TestEmiLib(unittest.TestCase):
 
     def test_emi_msg_prepare_return_data(self):
         msg_data = emi_msg(data=b'87654321', cmd=2, msgnum=1,
-                           flag=emilib.EMI_MSG_MODE_BLOCK, ipaddr="127.0.0.3")
+                           flag=EMI_MSG_MODE_BLOCK, ipaddr="127.0.0.3")
         self.assertEqual(msg_data.data, b'87654321')
-        self.assertEqual(msg_data.flag, emilib.EMI_MSG_MODE_BLOCK)
+        self.assertEqual(msg_data.flag, EMI_MSG_MODE_BLOCK)
         self.assertEqual(msg_data.size, len(b'87654321'))
         self.assertEqual(str(msg_data.dest_addr.ipv4), "127.0.0.3:1361")
 
-        ret = emilib.emi_msg_prepare_return_data(msg_data, b'abcdef')
+        ret = emi_msg_prepare_return_data(msg_data, b'abcdef')
 
         self.assertEqual(ret, 0)
         self.assertEqual(msg_data.data, b'abcdef')
         self.assertEqual(
-            msg_data.flag, emilib.EMI_MSG_MODE_BLOCK | emilib.EMI_MSG_RET_SUCCEEDED)
+            msg_data.flag, EMI_MSG_MODE_BLOCK | EMI_MSG_RET_SUCCEEDED)
         self.assertEqual(msg_data.size, len(b'abcdef'))
         self.assertEqual(str(msg_data.dest_addr.ipv4), "127.0.0.3:1361")
 
     def test_emi_init(self):
-        self.assertEqual(emilib.emi_init(), 0)
+        self.assertEqual(emi_init(), 0)
 
     def test_emi_msg_register(self):
-        ret = emilib.emi_init()
+        ret = emi_init()
         self.assertEqual(ret, 0)
 
         def func(msg):
             return 0
-        ret = emilib.emi_msg_register(1, func)
+        ret = emi_msg_register(1, func)
 
         self.assertEqual(ret, 0)
 
     def test_emi_msg_send_unblock_nosenddata(self):
-        emilib.emi_init()
+        emi_init()
 
         received = 0
 
@@ -77,11 +77,11 @@ class TestEmiLib(unittest.TestCase):
             received = received + 1
             return 0
 
-        ret = emilib.emi_msg_register(2, func)
+        ret = emi_msg_register(2, func)
         self.assertEqual(ret, 0)
 
         msg = emi_msg(msgnum=2, cmd=1, ipaddr="127.0.0.1")
-        ret = emilib.emi_msg_send(msg)
+        ret = emi_msg_send(msg)
         self.assertEqual(ret[0], 0)
 
         time.sleep(1)
@@ -89,7 +89,7 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(received, 1)
 
     def test_emi_msg_send_unblock_senddata(self):
-        emilib.emi_init()
+        emi_init()
 
         received = 0
 
@@ -101,11 +101,11 @@ class TestEmiLib(unittest.TestCase):
             received = received + 1
             return 0
 
-        ret = emilib.emi_msg_register(3, func)
+        ret = emi_msg_register(3, func)
         self.assertEqual(ret, 0)
 
         msg = emi_msg(msgnum=3, cmd=1, ipaddr="127.0.0.1", data=b'11112222')
-        ret = emilib.emi_msg_send(msg)
+        ret = emi_msg_send(msg)
         self.assertEqual(ret[0], 0)
 
         time.sleep(1)
@@ -113,7 +113,7 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(received, 1)
 
     def test_emi_msg_send_block_noretdata(self):
-        emilib.emi_init()
+        emi_init()
 
         received = 0
 
@@ -125,12 +125,12 @@ class TestEmiLib(unittest.TestCase):
             received = received + 1
             return 0
 
-        ret = emilib.emi_msg_register(4, func)
+        ret = emi_msg_register(4, func)
         self.assertEqual(ret, 0)
 
         msg = emi_msg(msgnum=4, cmd=1, ipaddr="127.0.0.1",
-                      data=b'11112222', flag=emilib.EMI_MSG_MODE_BLOCK)
-        ret = emilib.emi_msg_send(msg)
+                      data=b'11112222', flag=EMI_MSG_MODE_BLOCK)
+        ret = emi_msg_send(msg)
         self.assertEqual(ret[0], 0)
 
         time.sleep(1)
@@ -138,7 +138,7 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(received, 1)
 
     def test_emi_msg_send_block_retdata(self):
-        emilib.emi_init()
+        emi_init()
 
         received = 0
 
@@ -148,15 +148,15 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(msg.contents.cmd, 1)
             self.assertEqual(msg.contents.data, b"11112222")
             received = received + 1
-            emilib.emi_msg_prepare_return_data(msg, b'abcdefghijkmln')
+            emi_msg_prepare_return_data(msg, b'abcdefghijkmln')
             return 0
 
-        ret = emilib.emi_msg_register(5, func)
+        ret = emi_msg_register(5, func)
         self.assertEqual(ret, 0)
 
         msg = emi_msg(msgnum=5, cmd=1, ipaddr="127.0.0.1",
-                      data=b'11112222', flag=emilib.EMI_MSG_MODE_BLOCK)
-        ret = emilib.emi_msg_send(msg)
+                      data=b'11112222', flag=EMI_MSG_MODE_BLOCK)
+        ret = emi_msg_send(msg)
         self.assertEqual(ret[0], 0)
         self.assertEqual(ret[1], b'abcdefghijkmln')
 
@@ -165,7 +165,7 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(received, 1)
 
     def test_emi_msg_send_highlevel(self):
-        emilib.emi_init()
+        emi_init()
 
         received = 0
 
@@ -175,13 +175,13 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(msg.contents.cmd, 1)
             self.assertEqual(msg.contents.data, b"11112222")
             received = received + 1
-            emilib.emi_msg_prepare_return_data(msg, b'abcdefghijkmln')
+            emi_msg_prepare_return_data(msg, b'abcdefghijkmln')
             return 0
 
-        ret = emilib.emi_msg_register(6, func)
+        ret = emi_msg_register(6, func)
         self.assertEqual(ret, 0)
 
-        ret = emilib.emi_msg_send_highlevel(
+        ret = emi_msg_send_highlevel(
             msgnum=6, cmd=1, ipaddr="127.0.0.1", data=b'11112222', retsize=len(b'abcdefghijkmln'), block=True)
         self.assertEqual(ret[0], 0)
         self.assertEqual(ret[1], b'abcdefghijkmln')
@@ -201,12 +201,12 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(msg.contents.cmd, 1)
             self.assertEqual(msg.contents.data, b"11112222")
             received = received + 1
-            emilib.emi_msg_prepare_return_data(msg, b'abcdefghijkmln')
+            emi_msg_prepare_return_data(msg, b'abcdefghijkmln')
             return 0
 
         emi_run(False)
 
-        ret = emilib.emi_msg_send_highlevel(
+        ret = emi_msg_send_highlevel(
             msgnum=7, cmd=1, ipaddr="127.0.0.1", data=b'11112222', retsize=len(b'abcdefghijkmln'), block=True)
         self.assertEqual(ret[0], 0)
         self.assertEqual(ret[1], b'abcdefghijkmln')
@@ -216,7 +216,7 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(received, 1)
 
     def test_emi_msg_send_multiple_func(self):
-        emilib.emi_init()
+        emi_init()
 
         def func1(msg):
             self.assertEqual(func1.__name__, "func1")
@@ -230,18 +230,18 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(msg.contents.cmd, 1)
             return 0
 
-        ret = emilib.emi_msg_register(8, func1)
+        ret = emi_msg_register(8, func1)
         self.assertEqual(ret, 0)
 
-        ret = emilib.emi_msg_register(9, func2)
+        ret = emi_msg_register(9, func2)
         self.assertEqual(ret, 0)
 
         msg = emi_msg(msgnum=8, cmd=1, ipaddr="127.0.0.1")
-        ret = emilib.emi_msg_send(msg)
+        ret = emi_msg_send(msg)
         self.assertEqual(ret[0], 0)
 
         msg = emi_msg(msgnum=9, cmd=1, ipaddr="127.0.0.1")
-        ret = emilib.emi_msg_send(msg)
+        ret = emi_msg_send(msg)
         self.assertEqual(ret[0], 0)
 
         time.sleep(1)
