@@ -390,16 +390,18 @@ static int emi_recieve_operation(void *args){
          * the sender is expecting.
          */
         if(msg_pos->flag&EMI_MSG_MODE_BLOCK){
-            coreprt("this send msg is an block msg \n");
+            coreprt("A block message, return states to the sender \n");
 /*
  * In BLOCK mode, if the result is ~SUCCEEDED (lack of memory, msg handler function failed etc.),
  *  goto e0 and close(client_fd) immediately, though the sender is expecting return info from emi_core, we send nothing.
  *  just close the socket. The sender will get an error code as the return value of read function, indicating some errors occured.
  *
  *  if we are lucky enough that everything goes perfectly well, an SUCCEEDED flag will be set.
- *  In this condition, first we write msg_pos (an emi_msg struct) back to the sender, after that,
+ *  In this condition, first we write msg_pos (an emi_msg struct) back to the sender. That means
+ *  the receiver could make use of this feature to return data to the sender by putting it to
+ *  emi_msg strcture body.
  *
- *  if msg_pos->size > 0, we send extra data (msg_pos->data) back,
+ *  if EMI_MSG_RET_WITHDATA is set and msg_pos->size > 0, we send extra data (msg_pos->data) back,
  */
             if (msg_pos->flag & EMI_MSG_RET_SUCCEEDED) {
                 if ((ret = emi_write(((struct clone_args *) args)->client_sd,
@@ -408,8 +410,8 @@ static int emi_recieve_operation(void *args){
                     goto e0;
                 }
 
-                if (msg_pos->size > 0) {
-                    coreprt("this block msg need to return extra data \n");
+                if ((msg_pos->flag & EMI_MSG_RET_WITHDATA) && (msg_pos->size > 0)) {
+                    coreprt("Emi message handler returns extra data \n");
                     if ((ret = emi_write(
                             ((struct clone_args *) args)->client_sd,
                             msg_pos->data, msg_pos->size)) < msg_pos->size) {
@@ -418,7 +420,7 @@ static int emi_recieve_operation(void *args){
                 }
 
             } else {
-                coreprt("this send msg return a ~SUCCEEDED state\n");
+                coreprt("Emi message handler returns a ~SUCCEEDED state\n");
                 goto e0;
             }
 

@@ -183,7 +183,7 @@ int emi_msg_send(struct emi_msg *msg){
             dbg("block mode:read msg emi_read from remote process error\n");
             goto out;
         }
-        if(msg->size > 0){
+        if((msg->flag & EMI_MSG_RET_WITHDATA) && (msg->size > 0)){
             if ((emi_read(sd, msg->data, msg->size)) < msg->size) {
                 dbg("block mode:read extra data emi_read from remote process error\n");
                 goto out;
@@ -259,7 +259,7 @@ int emi_msg_send_highlevel_nonblock(char *ipaddr, int msgnum,void *send_data, in
  *      step 2: check if msg is ~BLOCK. Because the sender will not receive returned msg
  *      if it sends an ~BLOCK msg.
  *
- *      step 3: change msg->flag to EMI_MSG_RET_SUCCEEDED, see also func_sterotype
+ *      step 3: change msg->flag to EMI_MSG_RET_WITHDATA
  *
  *      when using this function in msg handler,
  *      we must check the return value of this function and must not return 0(success)
@@ -281,6 +281,6 @@ int emi_msg_prepare_return_data(struct emi_msg *msg, void *data, eu32 size) {
 
     msg->size = size;
     memcpy(msg->data, data, size);
-    msg->flag |= EMI_MSG_RET_SUCCEEDED;
+    msg->flag |= EMI_MSG_RET_WITHDATA;
     return 0;
 }

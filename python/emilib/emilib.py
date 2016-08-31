@@ -7,6 +7,7 @@ _emilib = ctypes.cdll.LoadLibrary("libemi.so")
 class emi_flag:
     EMI_MSG_MODE_BLOCK = 0x00000100
     EMI_MSG_RET_SUCCEEDED = 0x00010000
+    EMI_MSG_RET_WITHDATA = 0x00020000
 
 
 class EMIError(Exception):
@@ -148,7 +149,7 @@ def emi_msg_register(msg_num, func):
 
 def emi_msg_send(emi_msg):
     ret = _emilib.emi_msg_send(ctypes.pointer(emi_msg))
-    return ret, bytes(emi_msg.data)
+    return ret, bytes(emi_msg.data) if emi_msg.flag & emi_flag.EMI_MSG_RET_WITHDATA else b''
 
 
 def emi_msg_send_highlevel(msgnum,
