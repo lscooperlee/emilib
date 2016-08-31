@@ -4,8 +4,9 @@ import signal
 
 _emilib = ctypes.cdll.LoadLibrary("libemi.so")
 
-EMI_MSG_MODE_BLOCK = 0x00000100
-EMI_MSG_RET_SUCCEEDED = 0x00010000
+class emi_flag:
+    EMI_MSG_MODE_BLOCK = 0x00000100
+    EMI_MSG_RET_SUCCEEDED = 0x00010000
 
 
 class EMIError(Exception):
@@ -167,7 +168,7 @@ def emi_msg_send_highlevel(msgnum,
     crsize = ctypes.c_size_t(retsize)
     crdata = (ctypes.c_ubyte * retsize).from_buffer(bytearray(retsize))
 
-    cflag = EMI_MSG_MODE_BLOCK if block else 0
+    cflag = emi_flag.EMI_MSG_MODE_BLOCK if block else 0
 
     ret = _emilib.emi_msg_send_highlevel(
         cipaddr, cmsgnum, ctypes.pointer(csdata), cssize,

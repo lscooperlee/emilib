@@ -37,9 +37,9 @@ class TestEmiLib(unittest.TestCase):
 
     def test_emi_msg_prepare_return_data(self):
         msg_data = emi_msg(data=b'87654321', cmd=2, msgnum=1,
-                           flag=EMI_MSG_MODE_BLOCK, ipaddr="127.0.0.3")
+                           flag=emi_flag.EMI_MSG_MODE_BLOCK, ipaddr="127.0.0.3")
         self.assertEqual(msg_data.data, b'87654321')
-        self.assertEqual(msg_data.flag, EMI_MSG_MODE_BLOCK)
+        self.assertEqual(msg_data.flag, emi_flag.EMI_MSG_MODE_BLOCK)
         self.assertEqual(msg_data.size, len(b'87654321'))
         self.assertEqual(str(msg_data.dest_addr.ipv4), "127.0.0.3:1361")
 
@@ -48,7 +48,7 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(ret, 0)
         self.assertEqual(msg_data.data, b'abcdef')
         self.assertEqual(
-            msg_data.flag, EMI_MSG_MODE_BLOCK | EMI_MSG_RET_SUCCEEDED)
+            msg_data.flag, emi_flag.EMI_MSG_MODE_BLOCK | emi_flag.EMI_MSG_RET_SUCCEEDED)
         self.assertEqual(msg_data.size, len(b'abcdef'))
         self.assertEqual(str(msg_data.dest_addr.ipv4), "127.0.0.3:1361")
 
@@ -129,7 +129,7 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(ret, 0)
 
         msg = emi_msg(msgnum=4, cmd=1, ipaddr="127.0.0.1",
-                      data=b'11112222', flag=EMI_MSG_MODE_BLOCK)
+                      data=b'11112222', flag=emi_flag.EMI_MSG_MODE_BLOCK)
         ret = emi_msg_send(msg)
         self.assertEqual(ret[0], 0)
 
@@ -155,7 +155,7 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(ret, 0)
 
         msg = emi_msg(msgnum=5, cmd=1, ipaddr="127.0.0.1",
-                      data=b'11112222', flag=EMI_MSG_MODE_BLOCK)
+                      data=b'11112222', flag=emi_flag.EMI_MSG_MODE_BLOCK)
         ret = emi_msg_send(msg)
         self.assertEqual(ret[0], 0)
         self.assertEqual(ret[1], b'abcdefghijkmln')
