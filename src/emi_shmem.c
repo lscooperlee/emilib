@@ -13,7 +13,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
-unsigned long hash(char *str) {
+unsigned long hash(const char *str) {
     unsigned long hash = 5381;
     int c;
 

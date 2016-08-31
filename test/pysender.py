@@ -1,13 +1,19 @@
 #!/usr/bin/env python
 
+import emilib
 
-import signal
-import sys
-sys.path.append("../python")
+m = emilib.emi_msg(msgnum = 1)
+ret = emilib.emi_msg_send(m)
+print(ret)
 
-from emilib import *
+m = emilib.emi_msg(msgnum = 1, data = b'1234')
+ret = emilib.emi_msg_send(m)
+print(ret)
 
-if len(sys.argv) == 1:
-    emilib.emi_msg_send_highlevel_nonblock("127.0.0.1",1,bytearray(b'hell'),2)
-else:
-    emilib.emi_msg_send_highlevel_nonblock(sys.argv[1],1,bytearray(b'hell'),2)
+m = emilib.emi_msg(msgnum = 1, flag = emilib.emi_flag.EMI_MSG_MODE_BLOCK)
+ret = emilib.emi_msg_send(m)
+print(ret)
+
+m = emilib.emi_msg(msgnum = 1, flag = emilib.emi_flag.EMI_MSG_MODE_BLOCK, data = b'4321')
+ret = emilib.emi_msg_send(m)
+print(ret)
