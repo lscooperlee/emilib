@@ -21,7 +21,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <sys/unistd.h>
+#include <unistd.h>
 #include <netinet/in.h>
 #include "emi_types.h"
 

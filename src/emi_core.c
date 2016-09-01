@@ -30,7 +30,6 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
-#include <sys/shm.h>
 #include <pthread.h>
 #include "emi.h"
 #include "msg_table.h"

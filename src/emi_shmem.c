@@ -81,8 +81,8 @@ int emi_shm_init(const char *name, size_t size, int mode){
         return -1;
     }
 
-    int PAGE_SIZE = getpagesize();
-    size = ( (size+PAGE_SIZE) / PAGE_SIZE ) * PAGE_SIZE;
+    int page_size = getpagesize();
+    size = ( (size+page_size) / page_size ) * page_size;
     shmem_size = size;
 
     if (mode == EMI_SHM_CREATE){
@@ -107,9 +107,8 @@ int emi_shm_destroy(const char *name, int id){
 #elif defined(ANDROID_SHMEM)
 
 #include <linux/ashmem.h>
-#include <cutils/ashmem.h>
 
-#define ASHMEM_DEVICE"/dev/ashmem"
+#define ASHMEM_DEVICE "/dev/ashmem"
 
 int emi_shm_init(const char *name, size_t size, int mode){
 	int fd, ret;
@@ -160,8 +159,8 @@ int emi_shm_init(const char *name, size_t size, int mode){
         return -1;
     }
 
-    int PAGE_SIZE = getpagesize();
-    size = ( (size+PAGE_SIZE) / PAGE_SIZE ) * PAGE_SIZE;
+    int page_size = getpagesize();
+    size = ( (size+page_size) / page_size ) * page_size;
     shmem_size = size;
 
     if (mode == EMI_SHM_CREATE){
