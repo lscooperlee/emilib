@@ -73,8 +73,8 @@ int main(int argc,char **argv){
 
     char opt;
     int option=0, retdatasize=0;
-
-    unsigned long cmd=0,msgr=-1,msgnum=-1;
+    long msgr=-1,msgnum=-1;
+    unsigned long cmd=0;
     char addr[32]={0};
 
     if(argc==1){

@@ -145,7 +145,7 @@ int emi_msg_send(struct emi_msg *msg){
         goto out;
     }
 
-    if(msg->size > 0 && msg->data != NULL){
+    if(msg->size > 0 && (void *)msg->data != NULL){
         if((emi_write(sd,msg->data,msg->size))<msg->size){
             dbg("nonblock mode:DATA:emi_write to remote prcess local data with error\n");
             goto out;
