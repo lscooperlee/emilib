@@ -45,6 +45,7 @@ static inline void __list_add(struct list_head *new_lst,
     new_lst->prev = prev;
     prev->next = new_lst;
 }
+
 static inline void list_add(struct list_head *new_lst, struct list_head *head)
 {
     __list_add(new_lst, head, head->next);
@@ -65,6 +66,12 @@ static inline void list_del(struct list_head * entry)
 {
     __list_del(entry->prev,entry->next);
 }
+
+static inline void list_del_first_entry(struct list_head * head)
+{
+    list_del(head->next);
+}
+
 static inline void list_replace(struct list_head *old,
                 struct list_head *new_lst)
 {
@@ -114,73 +121,25 @@ static inline int list_is_singular(const struct list_head *head)
     const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
         (type *)( (char *)__mptr - _offsetof(type,member) );})
 
+#define list_entry(ptr, type, member)    container_of(ptr, type, member)
 
-
-#define list_entry(ptr, type, member) ({                                             \
-    ( ((type *)0)->member ) *__mptr = (ptr);                                         \
-    (type *)( (char *)__mptr -    ((eu32) &((type *)0)->member) );            \
-})
-
-
-/**
- * list_first_entry - get the first element from a list
- * @ptr:    the list head to take the element from.
- * @type:    the type of the struct this is embedded in.
- * @member:    the name of the list_struct within the struct.
- *
- * Note, that list is expected to be not empty.
- */
 #define list_first_entry(ptr, type, member) \
     list_entry((ptr)->next, type, member)
 
-
-/**
- * list_for_each    -    iterate over a list
- * @pos:    the &struct list_head to use as a loop cursor.
- * @head:    the head for your list.
- *
- * This variant differs from list_for_each() in that it's the
- * simplest possible list iteration code, no prefetching is done.
- * Use this for code that knows the list to be very short (empty
- * or 1 entry) most of the time.
- */
 #define list_for_each(pos, head) \
     for (pos = (head)->next; pos != (head); pos = pos->next)
 
-/**
- * list_for_each_tail    -    iterate over a list
- * @pos:    the &struct list_head to use as a loop cursor.
- * @head:    the head for your list.
- *
- * This variant differs from list_for_each() in that it's the
- * simplest possible list iteration code, no prefetching is done.
- * Use this for code that knows the list to be very short (empty
- * or 1 entry) most of the time.
- */
 #define list_for_each_tail(pos, head) \
     for (pos = (head)->prev; pos != (head); pos = pos->prev)
 
-/**
- * list_for_each_entry    -    iterate over list of given type
- * @pos:    the type * to use as a loop cursor.
- * @head:    the head for your list.
- * @member:    the name of the list_struct within the struct.
- */
 #define list_for_each_entry(pos, head, member)                        \
     for (pos = list_entry((head)->next, typeof(*pos), member);        \
          &pos->member != (head);                                     \
          pos = list_entry(pos->member.next, typeof(*pos), member))
 
-/**
- * list_for_each_entry_tail    -    iterate over list of given type
- * @pos:    the type * to use as a loop cursor.
- * @head:    the head for your list.
- * @member:    the name of the list_struct within the struct.
- */
 #define list_for_each_entry_tail(pos, head, member)                        \
     for (pos = list_entry((head)->prev, typeof(*pos), member);        \
          &pos->member != (head);                                     \
          pos = list_entry(pos->member.prev, typeof(*pos), member))
-
 
 #endif
