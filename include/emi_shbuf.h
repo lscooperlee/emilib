@@ -22,6 +22,8 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "list.h"
 #include "emi_semaphore.h"
 #include "emi_types.h"
+#include "emi_config.h"
+#include "emi.h"
 
 
 #define EMI_KEY                ((key_t)0x0FE02570)
@@ -135,5 +137,16 @@ static inline void *__emi_obtain_consecutive_space(void *base,int size,struct li
 
 extern int emi_init_space(struct list_head *head,eu32 num,es32 bias,eu32 size);
 extern void emi_init_locks(void);
+
+#ifndef ORDER_NUM
+#define ORDER_NUM 10
+#endif
+
+#define BUDDY_SIZE  ((sizeof(struct emi_msg) + 0xFF) & ~0xFF)
+
+struct emi_buf{
+    void *addr;
+    int order;
+};
 
 #endif

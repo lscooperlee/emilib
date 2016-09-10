@@ -36,7 +36,7 @@ else
 DEBUG = 
 endif
 
-CFLAGS = $(DEBUG) -O2 -Wall -I./include -D$(SHMEM)
+CFLAGS = $(DEBUG) -O2 -Wall -I./include -D$(SHMEM) -DORDER_NUM=$(ORDER_NUM)
 LIBCFLAGS = $(CFLAGS) -fpic
 
 LDFLAGS = -L$(LIBDIR) -lemi 
@@ -114,5 +114,8 @@ clean:
 emi_test: 
 	@python3 test/emi_test.py
 
-unit_test: 
+python_test: 
 	@python3 -W ignore test/unit_test.py
+
+unit_test:
+	./test/lowleveltest/test_buddy_algorithm

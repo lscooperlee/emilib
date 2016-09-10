@@ -83,142 +83,96 @@ void emi_init_locks(void){
 };
 
 
-struct emi_buddy{
-    struct list_head list;
-    void *addr;
-};
+void *emi_membuf_base_addr = NULL;
+struct emi_buddy *emi_buddy_allocator = NULL;
 
-#ifndef MAX_ORDER_NUM
-#define MAX_ORDER_NUM 8
-#endif
+#define BUDDY_IDX(buf, top)   ((buf) - (top))
 
-#define BUDDY_SIZE  ((sizeof(struct emi_msg) + 0xFF) & ~0xFF)
+#define PARENT(buf, top)    (((BUDDY_IDX(buf, top) + 1) >> 1) + top - 1)
+#define SON(buf, top)    ((BUDDY_IDX(buf, top) << 1) + top + 1)
+#define DAUGHTER(buf, top)    ((BUDDY_IDX(buf, top) << 1) + top + 2)
+#define SIBLING(buf, top)   (PARENT(buf, top) == PARENT(buf + 1, top) ? buf + 1 : buf - 1)
+#define LEFT_MOST_OFFSPRING(level, top)    ((1<<level) + top - 1)
 
-static struct emi_buddy *emi_buddy_allocator = NULL;
-static struct list_head *free_memlist_vector = NULL;
-
-#define BUDDY_IDX(buddy_addr)   (buddy_addr - emi_buddy_allocator)
-
-#define PARENT(buddy_addr)    ((BUDDY_IDX(buddy_addr) >> 1) + emi_buddy_allocator)
-#define SON(buddy_addr)    ((BUDDY_IDX(buddy_addr) << 1) + emi_buddy_allocator + 1)
-#define DAUGHTER(buddy_addr)    ((BUDDY_IDX(buddy_addr) << 1) + emi_buddy_allocator + 2)
-
-static struct emi_buddy *inherit_from_parent(int myorder){
-    int parent_order = myorder + 1;
-
-    struct list_head *parent = &free_memlist_vector[parent_order];
-
-    if (parent == NULL)
+static inline struct emi_buf *get_emi_buf(struct emi_buf *top, int order, int order_num){
+    struct emi_buf *tmp = top;
+    if(tmp->order < order)
         return NULL;
 
-    struct emi_buddy *buddy = list_first_entry(parent, struct emi_buddy, list);
-    struct emi_buddy *daughter = DAUGHTER(buddy);
-    struct emi_buddy *son = SON(buddy);
+    int level = order_num;
+    while(--level > order){
+        struct emi_buf *son = SON(tmp, top);
+        struct emi_buf *daughter = DAUGHTER(tmp, top);
+        struct emi_buf *next;
 
-    buddy->addr = NULL;
-
-    list_add(&daughter->list, &free_memlist_vector[myorder]);
-
-    return son;
-}
-
-static struct emi_buddy *pass_to_child(struct emi_buddy *buddy, int myorder){
-    int child_order = myorder - 1;
-
-    struct emi_buddy *daughter = DAUGHTER(buddy);
-    struct emi_buddy *son = SON(buddy);
-
-    buddy->addr = NULL;
-
-    list_add(&daughter->list, &free_memlist_vector[child_order]);
-
-    return son;
-
-}
-
-static void *inherit_from_ancestor(int order){
-    int my_order = order;
-    struct emi_buddy *addr = NULL;
-
-    while(order < MAX_ORDER_NUM - 1){
-        addr = inherit_from_parent(order++);
-        if(addr != NULL){
-            break;
+        if(son->order < order){
+           next = daughter;
+        }else if(daughter->order < order){
+           next = son;
+        }else{
+            next = son->order <= daughter->order ? son : daughter;
         }
-    }
-    
-    if(addr == NULL)
-        return NULL;
 
-    while(order > my_order + 1){
-        pass_to_child(addr, --order);
+        tmp = next;
     }
 
-    return addr;
+    return tmp;
 }
 
-static void init_emi_buddy(struct emi_buddy *buddy, void *addr){
-    INIT_LIST_HEAD(&buddy->list);
-    buddy->addr = addr;
-    
-    int i, j;
-    for(i = 0; i < MAX_ORDER_NUM; i++){
-        int order = 1<<i;
-        
-        struct emi_buddy *tmp = buddy;
-        for(j = 0; j<order; j++){
-            tmp->addr = buddy->addr + j * (MAX_ORDER_NUM - i);    
+static void update_buf_order(struct emi_buf *buf, struct emi_buf *top, int order, int order_num){
+
+    while(order++ < order_num - 1){
+        struct emi_buf *sibling = SIBLING(buf, top);
+        struct emi_buf *parent = PARENT(buf, top);
+
+        if(sibling->order == -1 && buf->order == -1){
+            parent->order = -1;
+        }else if(sibling->order == buf->order){
+            parent->order++;
+        }else{
+            parent->order = sibling->order > buf->order ? sibling->order : buf->order;
         }
-        buddy = SON(buddy);
+        buf = parent;
     }
 }
 
-int emi_init_msgbuf_allocator(void *base_addr){
-    
-    unsigned int num_buddy = (1<<(MAX_ORDER_NUM+1)) - 1;
-
-    emi_buddy_allocator = (struct emi_buddy *)malloc(sizeof(struct emi_buddy) * num_buddy);
-    if(emi_buddy_allocator == NULL){
-        return -1;
-    }
-
-    init_emi_buddy(&emi_buddy_allocator[0], base_addr);
-
-    free_memlist_vector = (struct list_head*)malloc(sizeof(struct list_head) * MAX_ORDER_NUM);
-    if(free_memlist_vector == NULL){
-        free(emi_buddy_allocator);
-        return -1;
-    }
-    
+static int __init_emi_buf(struct emi_buf *top, void *addr, int order){
     int i;
-    for(i = 0; i < MAX_ORDER_NUM - 1; i++){
-        INIT_LIST_HEAD(&free_memlist_vector[i]);
+    for (i = 0; i < order; i++)
+    {
+        int j;
+        int current_order = 1<<i;
+        struct emi_buf *tmp = LEFT_MOST_OFFSPRING(i, top);
+        for (j = 0; j < current_order; j++, tmp++)
+        {
+            tmp->addr = addr + j * (order - i) * BUDDY_SIZE;
+            tmp->order = order - i - 1;
+        }
     }
-    list_add(&emi_buddy_allocator[0].list, &free_memlist_vector[MAX_ORDER_NUM - 1]); 
 
     return 0;
 }
 
-void *__emi_msgbuf_alloc(unsigned int order){
-    struct emi_buddy *buddy = NULL;
-    
-    if (!list_empty(&free_memlist_vector[order])){
-        buddy = list_first_entry(&free_memlist_vector[order], struct emi_buddy, list);
-        list_del_first_entry(&free_memlist_vector[order]);
-    }else{
-        buddy = inherit_from_ancestor(order);
-    }
-    
-    if(buddy != NULL){
-        void *addr = buddy->addr;
-        buddy->addr = NULL;
-        return addr;
-    }
+static struct emi_buf *__alloc_emi_buf(struct emi_buf *top, int order, int order_num){
+    struct emi_buf *tmp = get_emi_buf(top, order, order_num);
 
-    return NULL;
+    if(tmp == NULL)
+        return NULL;
+
+    tmp->order = -1;
+
+    update_buf_order(tmp, top, order, order_num);
+
+    return tmp;
 }
 
-void __emi_msgbuf_free(void *addr){
-    
+static void __free_emi_buddy(struct emi_buf *buddy, struct emi_buf *top, int order, int order_num){
+
+    buddy->order = order;
+
+    update_buf_order(buddy, top, order, order_num);
 }
 
+int init_emi_buf(){
+    return 0;
+}

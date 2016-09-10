@@ -14,30 +14,20 @@ else
 DEBUG =
 endif
 
-CFLAGS=-O2 -Wall $(DEBUG) -I../include/ -I./include
-SENDERLDFLAGS=-L../.out/lib/ -lemis
-RECEIVERLDFLAGS=-L../.out/lib/ -lemi -pthread
+CFLAGS = -O2 -Wall $(DEBUG) -I../include/ -I./include
+LDFLAGS = -L../.out/lib/ -lemi -pthread
 
+SRCS=$(shell find . -name "*.c")
+OBJS=$(patsubst %.c, $(BUILDPATH)%.o, $(SRCS))
+EXES=$(patsubst %.o, $(BUILDPATH)%, $(OBJS))
 
-SENDERSRCS=$(shell find sender -name "*.c")
-SENDEROBJS=$(patsubst %.c, $(BUILDPATH)%.o, $(SENDERSRCS))
-SENDEREXES=$(patsubst %.o, $(BUILDPATH)%, $(SENDEROBJS))
+all: $(EXES)
 
-RECEIVERSRCS=$(shell find receiver -name "*.c")
-RECEIVEROBJS=$(patsubst %.c, $(BUILDPATH)%.o, $(RECEIVERSRCS))
-RECEIVEREXES=$(patsubst %.o, $(BUILDPATH)%, $(RECEIVEROBJS))
-
-all: $(SENDEREXES) $(RECEIVEREXES)
-
-$(SENDEREXES):%: %.c
+$(EXES):%: %.c
 	@mkdir -p $(dir $@)
-	@$(CC) $(STATIC) $(CFLAGS) $< -o $@ $(SENDERLDFLAGS)
-
-$(RECEIVEREXES):%: %.c
-	@mkdir -p $(dir $@)
-	@$(CC) $(STATIC) $(CFLAGS) $< -o $@ $(RECEIVERLDFLAGS)
+	@$(CC) $(STATIC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
 clean:
-	rm -rf $(SENDEROBJS) $(SENDEREXES) $(RECEIVEROBJS) $(RECEIVEREXES)
+	rm -rf $(OBJS) $(EXES)
 
 	
