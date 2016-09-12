@@ -64,6 +64,7 @@ static size_t shmem_size = 0;
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
 
 int emi_shm_init(const char *name, size_t size, int mode){
     int shm_id;

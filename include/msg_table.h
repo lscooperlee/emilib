@@ -24,8 +24,9 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 
 #include "emi_types.h"
 
-
+#ifndef EMI_HASH_MASK
 #define EMI_HASH_MASK    12
+#endif
 
 #define ARRAY_SIZE(array)    (sizeof(array)/sizeof(array[0]))
 

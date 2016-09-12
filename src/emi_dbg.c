@@ -23,6 +23,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <arpa/inet.h>
 #include "emi.h"
 #include "emi_config.h"
+#include "msg_table.h"
 
 
 struct msgandnum{
@@ -142,7 +143,7 @@ void debug_msg_table(struct msg_map **table){
     struct msg_map *tmp;
 
     printf("printing msg_table\n");
-    for(i=0;i<EMI_MAX_MSG;i++){
+    for(i=0;i<EMI_MSG_TABLE_SIZE;i++){
             printf("  line %d",i);
             for(j=0,tmp=(*(table+i));tmp!=NULL;tmp=tmp->next,j++){
                 printf("\n        chan %d: ",j);
@@ -158,7 +159,7 @@ void debug_msg_full_table(struct msg_map **table){
     struct msg_map *tmp;
 
     printf("printing full msg_table\n");
-    for(i=0;i<EMI_MAX_MSG;i++){
+    for(i=0;i<EMI_MSG_TABLE_SIZE;i++){
         if(*(table+i)!=NULL){
             printf("  line %d",i);
             for(j=0,tmp=(*(table+i));tmp!=NULL;tmp=tmp->next,j++){

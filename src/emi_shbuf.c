@@ -26,68 +26,23 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi.h"
 
 
-LIST_HEAD(__msg_list);
-LIST_HEAD(__data_list);
-eu32 __num_busy_data=0;
-eu32 __num_busy_msg=0;
-
 elock_t __emi_msg_space_lock;
 elock_t __emi_data_space_lock;
 
 elock_t msg_map_lock;
 elock_t critical_shmem_lock;
 
-#ifdef DEBUG
-void debug_emi_transfer_buf(struct emi_transfer_buf *buf){
-    printf("debug_emi_transfer_buf:\n    ");
-    printf("buf->offset=%d,buf->busy=%d,buf->addr=%p\n",buf->offset,buf->busy,buf->addr);
-}
-#endif
-
-int emi_init_space(struct list_head *head,eu32 num,es32 bias_base,eu32 size){
-    int i;
-    struct emi_transfer_buf *buf;
-    struct list_head *lh;
-    for(i=1;i<=num;i++){
-        if((buf=(struct emi_transfer_buf *)malloc(sizeof(struct emi_transfer_buf)))==NULL){
-            goto e1;
-        }
-        list_add_tail(&buf->list,head);
-        buf->offset=bias_base+i*size;
-        buf->busy=SPACE_FREE;
-        buf->addr=NULL;
-    }
-    return 0;
-e1:
-    list_for_each(lh,head){
-        buf=container_of(lh,struct emi_transfer_buf,list);
-        list_del(&buf->list);
-        free(buf);
-    }
-    return -1;
-}
-
-/*
- *
- * three locks need to be initialized:
- * __emi_msg_space_lock:when allocing emi_msg space to store a recieved emi_msg, we should use the lock-->alloc-->unlock sequence.
- * msg_map_lock:this lock is used for emi_core to search hash table to find the right process.
- * critical_shmem_lock:the critical_shmem_lock is used for msg space index area ,the index area contains one sizeof(int) length of index for each process ,the total size of which is sizeof(int)*(system max process number).when one process recieved more than one massages,the only index can not point to two emi_msg space,thus critical_shmem_lock is needed.
- *
- *
- * */
 void emi_init_locks(void){
     emi_lock_init(&__emi_msg_space_lock);
     emi_lock_init(&msg_map_lock);
     emi_lock_init(&critical_shmem_lock);
 };
+/// new 
 
-
-void *emi_membuf_base_addr = NULL;
-struct emi_buddy *emi_buddy_allocator = NULL;
+void *emi_shmbuf_base_addr = NULL;
+struct emi_buf *emi_buf_vector = NULL;
 
 #define BUDDY_IDX(buf, top)   ((buf) - (top))
-
 #define PARENT(buf, top)    (((BUDDY_IDX(buf, top) + 1) >> 1) + top - 1)
 #define SON(buf, top)    ((BUDDY_IDX(buf, top) << 1) + top + 1)
 #define DAUGHTER(buf, top)    ((BUDDY_IDX(buf, top) << 1) + top + 2)
@@ -125,8 +80,8 @@ static void update_buf_order(struct emi_buf *buf, struct emi_buf *top, int order
         struct emi_buf *sibling = SIBLING(buf, top);
         struct emi_buf *parent = PARENT(buf, top);
 
-        if(sibling->order == -1 && buf->order == -1){
-            parent->order = -1;
+        if(sibling->order < 0 && buf->order < 0){
+            parent->order = -order;
         }else if(sibling->order == buf->order){
             parent->order++;
         }else{
@@ -159,7 +114,7 @@ static struct emi_buf *__alloc_emi_buf(struct emi_buf *top, int order, int order
     if(tmp == NULL)
         return NULL;
 
-    tmp->order = -1;
+    tmp->order = -order - 1;
 
     update_buf_order(tmp, top, order, order_num);
 
@@ -173,6 +128,26 @@ static void __free_emi_buddy(struct emi_buf *buddy, struct emi_buf *top, int ord
     update_buf_order(buddy, top, order, order_num);
 }
 
-int init_emi_buf(){
-    return 0;
+int init_emi_buf(void *base){
+    struct emi_buf *top = (struct emi_buf *)malloc(((1<<EMI_ORDER_NUM) - 1) * BUDDY_SIZE);
+    if(top == NULL)
+        return -1;
+
+    emi_shmbuf_base_addr = base;
+    emi_buf_vector = top;
+
+    return __init_emi_buf(top, base, EMI_ORDER_NUM);
 }
+
+struct emi_buf *alloc_emi_buf(int order){
+    //size->order
+
+    return __alloc_emi_buf(emi_buf_vector, order, EMI_ORDER_NUM);
+}
+
+void free_emi_buf(struct emi_buf *buf){
+    int order = -buf->order - 1;
+
+    __free_emi_buddy(buf, emi_buf_vector, order, EMI_ORDER_NUM);
+}
+

@@ -24,8 +24,7 @@ the obsolete parameter emi_max_data is defined for max data ,because new design 
  */
 static struct emi_config __emi_config={
     .emi_port=USR_EMI_PORT,
-    .emi_data_size_per_msg=EMI_DATA_SIZE_PER_MSG,
-    .emi_key=EMI_KEY,
+    .emi_data_size_per_msg=EMI_MAX_MSG_SIZE,
 };
 
 
@@ -36,14 +35,12 @@ struct emi_config *emi_config=&__emi_config;
 void debug_config(struct emi_config *config){
     printf("config->emi_port=%d\n",config->emi_port);
     printf("config->emi_data_size_per_msg=%d\n",config->emi_data_size_per_msg);
-    printf("config->emi_key=%x\n",config->emi_key);
 }
 #endif
 
 void set_default_config(struct emi_config *config){
     emi_config->emi_port=config->emi_port;
     emi_config->emi_data_size_per_msg=config->emi_data_size_per_msg;
-    emi_config->emi_key=config->emi_key;
     return;
 }
 

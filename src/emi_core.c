@@ -31,6 +31,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <pthread.h>
+
 #include "emi.h"
 #include "msg_table.h"
 #include "emi_shbuf.h"
@@ -55,7 +56,7 @@ static int core_shmid=-1;
 static struct sk_dpr *sd=NULL;
 static struct sk_dpr *client_sd=NULL;
 static void *emi_base_addr=NULL;
-static struct msg_map *msg_table[EMI_MAX_MSG];
+static struct msg_map *msg_table[EMI_MSG_TABLE_SIZE];
 
 
 static int emi_recieve_operation(void *args);
@@ -71,7 +72,7 @@ void emi_release(void){
 
 static int init_msg_table(struct msg_map *table[]){
     int i;
-    for(i=0;i<EMI_MAX_MSG;i++)
+    for(i=0;i<EMI_MSG_TABLE_SIZE;i++)
         table[i]=NULL;
     return 0;
 }
@@ -79,7 +80,7 @@ static int init_msg_table(struct msg_map *table[]){
 
 
 static int int_global_shm_space(int pid_max){
-    if((core_shmid=emi_shm_init("emilib", pid_max*sizeof(int)+sizeof(struct emi_msg)*(EMI_MAX_MSG)+(emi_config->emi_data_size_per_msg)*(EMI_MAX_MSG),EMI_SHM_CREATE))<0){
+    if((core_shmid=emi_shm_init("emilib", pid_max * sizeof(int) + BUDDY_SIZE * EMI_MSG_BUF_SIZE, EMI_SHM_CREATE))<0){
         coreprt("emi_shm_init error\n");
         return -1;
     }
@@ -130,7 +131,6 @@ static int __emi_core(void){
 
     pid_max=get_pid_max();
 
-/*initialize all needed locks*/
     emi_init_locks();
 
     if(int_global_shm_space(pid_max)){
@@ -138,12 +138,7 @@ static int __emi_core(void){
         return -1;
     }
 
-/*
- *
- *the function is called to alloc a listed structures,which is for managing msg sharing area.
- *
- */
-    if(emi_init_msg_space(EMI_MAX_MSG,pid_max*sizeof(int))){
+    if(emi_init_msg_space(emi_base_addr)){
         coreprt("init msg space error\n");
         return -1;
     }
@@ -209,15 +204,17 @@ static int __emi_core(void){
 
 static int emi_recieve_operation(void *args){
     int ret,pid_ret=-1;
+    struct emi_buf *msg_buf;
     struct emi_msg *msg_pos;
 
 /*
  * get an empty area in the share memory for a recieving msg.
 */
-    if((msg_pos=emi_obtain_msg_space(((struct clone_args *)args)->base))==NULL){
+    if((msg_buf=emi_get_msg_space(((struct clone_args *)args)->base))==NULL){
         coreprt("emi_obtain_msg_space error\n");
         goto e0;
     }
+    msg_pos = msg_buf->addr;
 
 /*
  * read the remote msg into this alloced memory, if this one got an error, probably emi_init has sent a guess message to emi_core, which
@@ -306,7 +303,7 @@ static int emi_recieve_operation(void *args){
 /*
  *    get the offset of the msg in "msg split" area (see develop.txt). this offset will be writed into the BASE_ADDR+pid address afterward, inform the according process to get it.
  */
-        nth=obtain_space_msg_num(((struct clone_args *)args)->base,msg_pos);
+        nth=emi_get_space_msg_num(((struct clone_args *)args)->base,msg_pos);
 
         msg_map_fill(&p,msg_pos->msg,0);
 
@@ -434,7 +431,7 @@ static int emi_recieve_operation(void *args){
 
 e0:
     emi_close(((struct clone_args *)args)->client_sd);
-    emi_return_msg_space(msg_pos);
+    emi_return_msg_space(msg_buf);
     free(args);
     pthread_exit(NULL);
     return ret;

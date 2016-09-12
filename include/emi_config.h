@@ -3,11 +3,14 @@
 
 #include "emi_types.h"
 #include "msg_table.h"
+#include "emi_shbuf.h"
 
-#define EMI_MAX_MSG    (1<<EMI_HASH_MASK)
-#define EMI_DATA_SIZE_PER_MSG    (1024)
+#define EMI_MSG_TABLE_SIZE    (1<<EMI_HASH_MASK)
+#define EMI_MAX_MSG_SIZE (0x1FF)
 #define EMI_MAX_DATA    (EMI_MAX_MSG/5)
 #define USR_EMI_PORT    1361
+
+#define EMI_MSG_BUF_SIZE    (1<<(EMI_ORDER_NUM - 1))
 
 struct emi_config{
     eu32 emi_port;
