@@ -81,7 +81,7 @@ static void update_buf_order(struct emi_buf *buf, struct emi_buf *top, int order
         struct emi_buf *parent = PARENT(buf, top);
 
         if(sibling->order < 0 && buf->order < 0){
-            parent->order = -order;
+            parent->order = -order-1;
         }else if(sibling->order == buf->order){
             parent->order++;
         }else{
@@ -139,8 +139,17 @@ int init_emi_buf(void *base){
     return __init_emi_buf(top, base, EMI_ORDER_NUM);
 }
 
-struct emi_buf *alloc_emi_buf(int order){
-    //size->order
+struct emi_buf *alloc_emi_buf(size_t size){
+    if(size == 0)
+        return NULL;
+
+    int order = 0;
+    size = (size-1) >> BUDDY_SHIFT;
+
+    while(size > 0){
+        size >>= 1;
+        order++;
+    }
 
     return __alloc_emi_buf(emi_buf_vector, order, EMI_ORDER_NUM);
 }
@@ -151,3 +160,22 @@ void free_emi_buf(struct emi_buf *buf){
     __free_emi_buddy(buf, emi_buf_vector, order, EMI_ORDER_NUM);
 }
 
+#define ADDR_BUF_OFFSET  (sizeof(struct emi_buf *))
+#define GET_ALLOC_ADDR(buf)    ((void *)(buf)->addr + ADDR_BUF_OFFSET)
+#define GET_BUF_ADDR(addr)    *(struct emi_buf **)(((void *)addr) - ADDR_BUF_OFFSET)
+
+void *emi_alloc(size_t size){
+    struct emi_buf *buf = alloc_emi_buf(size + sizeof(struct emi_buf *));
+    
+    void *addr = GET_ALLOC_ADDR(buf);
+    
+    GET_BUF_ADDR(addr) = buf;
+
+    return addr;
+}
+
+void emi_free(void *addr){
+    struct emi_buf *buf = GET_BUF_ADDR(addr);
+
+    free_emi_buf(buf);
+}

@@ -29,15 +29,10 @@ extern elock_t __emi_msg_space_lock;
 extern elock_t msg_map_lock;
 extern elock_t critical_shmem_lock;
 
-#define emi_init_msg_space(base)    init_emi_buf(base)
-#define emi_get_msg_space(order)    alloc_emi_buf(0)
-#define emi_return_msg_space(buf)   free_emi_buf(buf) 
-
 #define emi_get_space_msg_num(base,addr) __get_space_num(base,addr,1)
 static inline int __get_space_num(void *base,void *addr,int size){
     return ((char *)addr-(char *)base)/size;
 }
-
 
 
 extern void emi_init_locks(void);
@@ -46,7 +41,9 @@ extern void emi_init_locks(void);
 #define EMI_ORDER_NUM 10
 #endif
 
-#define BUDDY_SIZE  ((sizeof(struct emi_msg) + EMI_MAX_MSG_SIZE) & ~EMI_MAX_MSG_SIZE)
+#define BUDDY_SHIFT 8
+#define BUDDY_SIZE  (1<<BUDDY_SHIFT)
+//#define BUDDY_SIZE  ((sizeof(struct emi_msg) + EMI_MAX_MSG_SIZE) & ~EMI_MAX_MSG_SIZE)
 
 struct emi_buf{
     void *addr;
@@ -55,9 +52,12 @@ struct emi_buf{
 
 extern int init_emi_buf(void *base);
 
-extern struct emi_buf *alloc_emi_buf(int order);
+extern struct emi_buf *alloc_emi_buf(size_t size);
 
 extern void free_emi_buf(struct emi_buf *buf);
 
+extern void *emi_alloc(size_t size);
+    
+extern void emi_free(void *addr);
 
 #endif

@@ -138,7 +138,7 @@ static int __emi_core(void){
         return -1;
     }
 
-    if(emi_init_msg_space(emi_base_addr)){
+    if(init_emi_buf(emi_base_addr)){
         coreprt("init msg space error\n");
         return -1;
     }
@@ -204,17 +204,15 @@ static int __emi_core(void){
 
 static int emi_recieve_operation(void *args){
     int ret,pid_ret=-1;
-    struct emi_buf *msg_buf;
     struct emi_msg *msg_pos;
 
 /*
  * get an empty area in the share memory for a recieving msg.
 */
-    if((msg_buf=emi_get_msg_space(((struct clone_args *)args)->base))==NULL){
+    if((msg_pos=emi_alloc(sizeof(struct emi_msg)))==NULL){
         coreprt("emi_obtain_msg_space error\n");
         goto e0;
     }
-    msg_pos = msg_buf->addr;
 
 /*
  * read the remote msg into this alloced memory, if this one got an error, probably emi_init has sent a guess message to emi_core, which
@@ -431,7 +429,7 @@ static int emi_recieve_operation(void *args){
 
 e0:
     emi_close(((struct clone_args *)args)->client_sd);
-    emi_return_msg_space(msg_buf);
+    emi_free(msg_pos);
     free(args);
     pthread_exit(NULL);
     return ret;
