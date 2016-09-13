@@ -217,7 +217,7 @@ int emi_init(){
 
     eu32 pid_max = get_pid_max();
 
-    if((emi_global.shm_id=emi_shm_init("emilib", pid_max*sizeof(int)+BUDDY_SIZE * EMI_MSG_BUF_SIZE, 0))<0){
+    if((emi_global.shm_id=emi_shm_init("emilib", pid_max*sizeof(int) + (BUDDY_SIZE << EMI_ORDER_NUM) , 0))<0){
         dbg("emi_shm_init error\n");
         return -1;
     }

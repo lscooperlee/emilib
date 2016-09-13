@@ -25,10 +25,16 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi.h"
 #include "emi_config.h"
 
+
+#define emi_msg_shbuf_alloc()             (struct emi_msg *)emi_alloc(sizeof(struct emi_msg))
+#define emi_msg_shbuf_free(addr)          emi_free(addr)
+#define emi_msg_shbuf_realloc(emi_msg)    emi_msg_realloc_for_data(emi_msg)
+
 #define emi_get_space_msg_num(base,addr) __get_space_num(base,addr,1)
 static inline int __get_space_num(void *base,void *addr,int size){
     return ((char *)addr-(char *)base)/size;
 }
+
 
 #ifndef EMI_ORDER_NUM
 #define EMI_ORDER_NUM 10
@@ -52,5 +58,7 @@ extern void free_emi_buf(struct emi_buf *buf);
 extern void *emi_alloc(size_t size);
     
 extern void emi_free(void *addr);
+
+extern struct emi_msg *emi_msg_realloc_for_data(struct emi_msg *msg);
 
 #endif

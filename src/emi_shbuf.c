@@ -152,7 +152,7 @@ void free_emi_buf(struct emi_buf *buf){
 #define GET_BUF_ADDR(addr)    *(struct emi_buf **)(((void *)addr) - ADDR_BUF_OFFSET)
 
 void *emi_alloc(size_t size){
-    struct emi_buf *buf = alloc_emi_buf(size + sizeof(struct emi_buf *));
+    struct emi_buf *buf = alloc_emi_buf(size + ADDR_BUF_OFFSET);
     
     void *addr = GET_ALLOC_ADDR(buf);
     
@@ -166,3 +166,23 @@ void emi_free(void *addr){
 
     free_emi_buf(buf);
 }
+
+struct emi_msg *emi_msg_realloc_for_data(struct emi_msg *msg){
+
+    int newsize =msg->size;
+    
+    struct emi_buf *buf = GET_BUF_ADDR(msg);
+    int order = -buf->order - 1;
+
+    int oldsize = (1<<order) << BUDDY_SHIFT;
+
+    if(oldsize >= newsize){
+        return msg;
+    }
+
+    struct emi_msg *newaddr = (struct emi_msg *)emi_alloc(newsize);
+    memcpy(newaddr, msg, sizeof(struct emi_msg));
+    emi_free(msg);
+    return newaddr;
+}
+

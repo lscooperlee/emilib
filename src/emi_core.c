@@ -88,7 +88,7 @@ static int init_msg_table(struct msg_map *table[]){
 
 
 static int int_global_shm_space(int pid_max){
-    if((core_shmid=emi_shm_init("emilib", pid_max * sizeof(int) + BUDDY_SIZE * EMI_MSG_BUF_SIZE, EMI_SHM_CREATE))<0){
+    if((core_shmid=emi_shm_init("emilib", pid_max * sizeof(int) + (BUDDY_SIZE << EMI_ORDER_NUM), EMI_SHM_CREATE))<0){
         coreprt("emi_shm_init error\n");
         return -1;
     }
@@ -217,7 +217,7 @@ static int emi_recieve_operation(void *args){
 /*
  * get an empty area in the share memory for a recieving msg.
 */
-    if((msg_pos=emi_alloc(sizeof(struct emi_msg)))==NULL){
+    if((msg_pos=emi_msg_shbuf_alloc())==NULL){
         coreprt("emi_obtain_msg_space error\n");
         goto e0;
     }
@@ -284,12 +284,19 @@ static int emi_recieve_operation(void *args){
 
         if(msg_pos->size > 0){
             coreprt("this is a send msg with data \n");
-            if (msg_pos->size < emi_config->emi_data_size_per_msg) {
+            
+            /*
+             * now emi_core could receive arbitary data as long as emi_core has enough memory to hold it.
+             */
+            msg_pos = emi_msg_shbuf_realloc(msg_pos);
+            if (msg_pos != NULL) {
+
                 if ((ret = emi_read(((struct clone_args *) args)->client_sd,
                         msg_pos->data, msg_pos->size)) < msg_pos->size) {
                     coreprt("emi_read from client error\n");
                     goto e0;
                 }
+
             }else{
                 /*
                  * we should do something, for example write back a emi_msg hint that the data size exceeds a default one.
@@ -437,7 +444,7 @@ static int emi_recieve_operation(void *args){
 
 e0:
     emi_close(((struct clone_args *)args)->client_sd);
-    emi_free(msg_pos);
+    emi_msg_shbuf_free(msg_pos);
     free(args);
     pthread_exit(NULL);
     return ret;

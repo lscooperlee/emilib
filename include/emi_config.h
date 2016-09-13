@@ -10,7 +10,7 @@
 #define EMI_MAX_DATA    (EMI_MAX_MSG/5)
 #define USR_EMI_PORT    1361
 
-#define EMI_MSG_BUF_SIZE    (1<<(EMI_ORDER_NUM - 1))
+#define EMI_MSG_BUF_SIZE    (1<<EMI_ORDER_NUM)
 
 struct emi_config{
     eu32 emi_port;
