@@ -25,17 +25,10 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi.h"
 #include "emi_config.h"
 
-extern elock_t __emi_msg_space_lock;
-extern elock_t msg_map_lock;
-extern elock_t critical_shmem_lock;
-
 #define emi_get_space_msg_num(base,addr) __get_space_num(base,addr,1)
 static inline int __get_space_num(void *base,void *addr,int size){
     return ((char *)addr-(char *)base)/size;
 }
-
-
-extern void emi_init_locks(void);
 
 #ifndef EMI_ORDER_NUM
 #define EMI_ORDER_NUM 10

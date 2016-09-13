@@ -51,6 +51,8 @@ struct clone_args{
     struct msg_map **msg_table;
 };
 
+static int emi_recieve_operation(void *args);
+
 
 static int core_shmid=-1;
 static struct sk_dpr *sd=NULL;
@@ -58,8 +60,14 @@ static struct sk_dpr *client_sd=NULL;
 static void *emi_base_addr=NULL;
 static struct msg_map *msg_table[EMI_MSG_TABLE_SIZE];
 
+elock_t msg_map_lock;
+elock_t critical_shmem_lock;
 
-static int emi_recieve_operation(void *args);
+void emi_init_locks(void){
+    emi_lock_init(&msg_map_lock);
+    emi_lock_init(&critical_shmem_lock);
+};
+
 
 void emi_release(void){
     emi_close(sd);

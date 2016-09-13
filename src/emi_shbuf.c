@@ -26,19 +26,6 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi.h"
 
 
-elock_t __emi_msg_space_lock;
-elock_t __emi_data_space_lock;
-
-elock_t msg_map_lock;
-elock_t critical_shmem_lock;
-
-void emi_init_locks(void){
-    emi_lock_init(&__emi_msg_space_lock);
-    emi_lock_init(&msg_map_lock);
-    emi_lock_init(&critical_shmem_lock);
-};
-/// new 
-
 void *emi_shmbuf_base_addr = NULL;
 struct emi_buf *emi_buf_vector = NULL;
 

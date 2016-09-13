@@ -16,3 +16,7 @@ __pycache__
 .project
 .settings
 .pydevproject
+
+
+/test/unit_test/*
+!/test/unit_test/*.c

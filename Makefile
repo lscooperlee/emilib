@@ -118,4 +118,4 @@ python_test:
 	@python3 -W ignore test/python_test.py
 
 unit_test:
-	@./test/lowleveltest/test_buddy_algorithm
+	@./test/unit_test/test_buddy_algorithm
