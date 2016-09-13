@@ -30,7 +30,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #define emi_msg_shbuf_free(addr)          emi_free(addr)
 #define emi_msg_shbuf_realloc(emi_msg)    emi_msg_realloc_for_data(emi_msg)
 
-#define emi_get_space_msg_num(base,addr) __get_space_num(base,addr,1)
+#define emi_get_space_msg_num(base,addr) __get_space_num((base),(addr),1)
 static inline int __get_space_num(void *base,void *addr,int size){
     return ((char *)addr-(char *)base)/size;
 }

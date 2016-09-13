@@ -47,8 +47,6 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 struct clone_args{
     struct sk_dpr *sd;
     struct sk_dpr *client_sd;
-    void *base;
-    struct msg_map **msg_table;
 };
 
 static int emi_recieve_operation(void *args);
@@ -57,7 +55,8 @@ static int emi_recieve_operation(void *args);
 static int core_shmid=-1;
 static struct sk_dpr *sd=NULL;
 static struct sk_dpr *client_sd=NULL;
-static void *emi_base_addr=NULL;
+static eu32 *emi_base_addr = NULL;
+static void *emi_shbuf_base_addr = NULL;
 static struct msg_map *msg_table[EMI_MSG_TABLE_SIZE];
 
 elock_t msg_map_lock;
@@ -88,15 +87,18 @@ static int init_msg_table(struct msg_map *table[]){
 
 
 static int int_global_shm_space(int pid_max){
-    if((core_shmid=emi_shm_init("emilib", pid_max * sizeof(int) + (BUDDY_SIZE << EMI_ORDER_NUM), EMI_SHM_CREATE))<0){
+    if((core_shmid=emi_shm_init("emilib", pid_max * sizeof(eu32) + (BUDDY_SIZE << EMI_ORDER_NUM), EMI_SHM_CREATE))<0){
         coreprt("emi_shm_init error\n");
         return -1;
     }
-    if((emi_base_addr=(void *)emi_shm_alloc(core_shmid, EMI_SHM_READ|EMI_SHM_WRITE))==(void *)-1){
+    if((emi_base_addr=(void *)emi_shm_alloc(core_shmid, EMI_SHM_READ|EMI_SHM_WRITE))==NULL){
         coreprt("emi_shm_alloc error\n");
         emi_shm_destroy("emilib", core_shmid);
         return -1;
     }
+
+    emi_shbuf_base_addr = (void *)emi_base_addr + pid_max * sizeof(eu32);
+
     return 0;
 }
 
@@ -146,7 +148,7 @@ static int __emi_core(void){
         return -1;
     }
 
-    if(init_emi_buf(emi_base_addr)){
+    if(init_emi_buf(emi_shbuf_base_addr)){
         coreprt("init msg space error\n");
         return -1;
     }
@@ -195,8 +197,6 @@ static int __emi_core(void){
         }
 
         arg->client_sd=client_sd;
-        arg->base=emi_base_addr;
-        arg->msg_table=msg_table;
 
         if((ret=pthread_create(&tid,NULL,(void *)emi_recieve_operation,arg))){
             coreprt("pthread cancel error\n");
@@ -241,7 +241,7 @@ static int emi_recieve_operation(void *args){
         struct msg_map p;
         msg_map_fill(&p,msg_pos->msg,msg_pos->src_addr.pid);
         emi_lock(&msg_map_lock);
-        emi_hinsert(((struct clone_args *)args)->msg_table,&p);
+        emi_hinsert(msg_table,&p);
         emi_unlock(&msg_map_lock);
 
         /*
@@ -257,7 +257,7 @@ static int emi_recieve_operation(void *args){
             coreprt("the received msg is an block msg\n");
             struct msg_map *mp;
             int tmpnum=0;
-            mp=__emi_hsearch(((struct clone_args *)args)->msg_table,&p,&tmpnum);
+            mp=__emi_hsearch(msg_table,&p,&tmpnum);
             if(mp!=NULL){
                 msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
             }
@@ -269,7 +269,6 @@ static int emi_recieve_operation(void *args){
             coreprt("emi_read from client error\n");
         }
 
-//        debug_msg_full_table(((struct clone_args *)args)->msg_table);
         goto e0;
 
     }else{
@@ -280,7 +279,7 @@ static int emi_recieve_operation(void *args){
         int num;
         struct msg_map p,*m;
         int nth;
-        eu32 *pid_num;
+        eu32 *pid_num_addr;
 
         if(msg_pos->size > 0){
             coreprt("this is a send msg with data \n");
@@ -316,7 +315,7 @@ static int emi_recieve_operation(void *args){
 /*
  *    get the offset of the msg in "msg split" area (see develop.txt). this offset will be writed into the BASE_ADDR+pid address afterward, inform the according process to get it.
  */
-        nth=emi_get_space_msg_num(((struct clone_args *)args)->base,msg_pos);
+        nth=emi_get_space_msg_num(emi_base_addr, msg_pos);
 
         msg_map_fill(&p,msg_pos->msg,0);
 
@@ -325,14 +324,14 @@ static int emi_recieve_operation(void *args){
  */
         for(num=0;;num+=1){
             emi_lock(&msg_map_lock);
-            if((m=__emi_hsearch(((struct clone_args *)args)->msg_table,&p,&num))==NULL){
+            if((m=__emi_hsearch(msg_table,&p,&num))==NULL){
                 emi_unlock(&msg_map_lock);
                 break;
             }
             emi_unlock(&msg_map_lock);
 
 /*
- * pid_num is the index for emi_msg space in share memory
+ * pid_num_addr is the index for emi_msg space in share memory
  * It is used for passing the number which tells the recievers
  * where the transfered msg could be found,at the same time, 
  * as a flag judged by emi_core weather the reciever has finished operating it,
@@ -345,15 +344,15 @@ static int emi_recieve_operation(void *args){
  *
  */
             /*get process id address in critical shmem index area*/
-            pid_num=(eu32 *)((eu32 *)(((struct clone_args *)args)->base)+m->pid);
+            pid_num_addr = emi_base_addr + m->pid;
 
             emi_lock(&critical_shmem_lock);//FIXME:this is ugly,all process conpete the only lock.
 
             /*write emi_msg space offset to the index address.*/
-            *pid_num=nth;
+            *pid_num_addr = nth;
             pid_ret=kill(m->pid,SIGUSR2);
             if(pid_ret<0){
-                *pid_num=0;
+                *pid_num_addr = 0;
             }else{
                 msg_pos->count++;
             }
@@ -363,7 +362,7 @@ static int emi_recieve_operation(void *args){
              * So here we are waiting for the signal handler (func_sterotype)
              * to release the pid_num index.
              */
-            while(*pid_num){
+            while(*pid_num_addr){
                 sleep(0);
             };
 
@@ -377,7 +376,7 @@ static int emi_recieve_operation(void *args){
              */
             if(pid_ret<0){
                 emi_lock(&msg_map_lock);
-                emi_hdelete(((struct clone_args *)args)->msg_table,m);
+                emi_hdelete(msg_table,m);
                 emi_unlock(&msg_map_lock);
             }
         }

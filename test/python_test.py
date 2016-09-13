@@ -101,14 +101,14 @@ class TestEmiLib(unittest.TestCase):
             nonlocal received
             self.assertEqual(msg.contents.msg, 3)
             self.assertEqual(msg.contents.cmd, 1)
-            self.assertEqual(msg.contents.data, b"11112222")
+            self.assertEqual(msg.contents.data, b"11112222"*1024)
             received = received + 1
             return 0
 
         ret = emi_msg_register(3, func)
         self.assertEqual(ret, 0)
 
-        msg = emi_msg(msgnum=3, cmd=1, ipaddr="127.0.0.1", data=b'11112222')
+        msg = emi_msg(msgnum=3, cmd=1, ipaddr="127.0.0.1", data=b'11112222'*1024)
         ret = emi_msg_send(msg)
         self.assertEqual(ret[0], 0)
 
