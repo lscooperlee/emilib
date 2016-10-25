@@ -60,11 +60,14 @@ static void *emi_shbuf_base_addr = NULL;
 static struct msg_map *msg_table[EMI_MSG_TABLE_SIZE];
 
 elock_t msg_map_lock;
-elock_t critical_shmem_lock;
+elock_t *share_index_area_lock;
 
-void emi_init_locks(void){
+int emi_init_locks(int pid_max){
     emi_lock_init(&msg_map_lock);
-    emi_lock_init(&critical_shmem_lock);
+    if((share_index_area_lock = (elock_t *)malloc(pid_max * sizeof(elock_t))) == NULL){
+        return -1;
+    }
+    return 0;
 };
 
 
@@ -83,8 +86,6 @@ static int init_msg_table(struct msg_map *table[]){
         table[i]=NULL;
     return 0;
 }
-
-
 
 static int int_global_shm_space(int pid_max){
     if((core_shmid=emi_shm_init("emilib", pid_max * sizeof(eu32) + (BUDDY_SIZE << EMI_ORDER_NUM), EMI_SHM_CREATE))<0){
@@ -141,7 +142,10 @@ static int __emi_core(void){
 
     pid_max=get_pid_max();
 
-    emi_init_locks();
+    if(emi_init_locks(pid_max)){
+        coreprt("init locks error\n");
+        return -1;
+    }
 
     if(int_global_shm_space(pid_max)){
         coreprt("init shm space error\n");
@@ -155,7 +159,6 @@ static int __emi_core(void){
 
     if((sd=emi_open(AF_INET))==NULL){
         coreprt("emi_open error\n");
-        emi_shm_destroy("emilib", core_shmid);
         return -1;
     }
 
@@ -169,14 +172,12 @@ static int __emi_core(void){
     if(emi_bind(sd,emi_config->emi_port)<0){
         coreprt("bind error\n");
         emi_close(sd);
-        emi_shm_destroy("emilib", core_shmid);
         return -1;
     }
 
     if(emi_listen(sd)<0){
         coreprt("listen err\n");
         emi_close(sd);
-        emi_shm_destroy("emilib", core_shmid);
         return -1;
     }
 
@@ -211,7 +212,7 @@ static int __emi_core(void){
 }
 
 static int emi_recieve_operation(void *args){
-    int ret,pid_ret=-1;
+    int ret;
     struct emi_msg *msg_pos;
 
 /*
@@ -239,10 +240,12 @@ static int emi_recieve_operation(void *args){
     if(msg_pos->flag&EMI_MSG_CMD_REGISTER){
         coreprt("receive a register msg\n");
         struct msg_map p;
-        msg_map_fill(&p,msg_pos->msg,msg_pos->src_addr.pid);
+        msg_map_init(&p,msg_pos->msg,msg_pos->src_addr.pid);
         emi_lock(&msg_map_lock);
         emi_hinsert(msg_table,&p);
         emi_unlock(&msg_map_lock);
+        
+        emi_lock_init(&share_index_area_lock[p.pid]);
 
         /*
          * for register a non block mode, the default flag should always be SUCCEEDED, for the block mode, we should also assume that
@@ -276,8 +279,7 @@ static int emi_recieve_operation(void *args){
 /*
  * otherwise, we should operate it carefully. if the msg is a data msg, we should recieve the date first.
  */
-        int num;
-        struct msg_map p,*m;
+        struct msg_map p;
         int nth;
         eu32 *pid_num_addr;
 
@@ -317,77 +319,43 @@ static int emi_recieve_operation(void *args){
  */
         nth=emi_get_space_msg_num(emi_base_addr, msg_pos);
 
-        msg_map_fill(&p,msg_pos->msg,0);
+        msg_map_init(&p,msg_pos->msg,0);
 
-/*
- *        each cycle would find a msg_map associated with corresponding MSG NUMBER.
- */
-        for(num=0;;num+=1){
-            emi_lock(&msg_map_lock);
-            if((m=__emi_hsearch(msg_table,&p,&num))==NULL){
-                emi_unlock(&msg_map_lock);
-                break;
-            }
-            emi_unlock(&msg_map_lock);
+        struct list_head msg_map_list = LIST_HEAD_INIT(msg_map_list);
 
-/*
- * pid_num_addr is the index for emi_msg space in share memory
- * It is used for passing the number which tells the recievers
- * where the transfered msg could be found,at the same time, 
- * as a flag judged by emi_core weather the reciever has finished operating it,
- * which means that it is safe for emi_core to unlock and to reuse it again.
- * so it is quite critial.
- *
- * moreover,pid_num must be identified no less than EMI_MAX_MSG messages,
- * thus may be not enough if defined as a char type sometimes.
- * so here we treat as an int.
- *
- */
-            /*get process id address in critical shmem index area*/
-            pid_num_addr = emi_base_addr + m->pid;
+        emi_lock(&msg_map_lock);
+        emi_hsearch(msg_table, &p, &msg_map_list);
+        emi_unlock(&msg_map_lock);
 
-            emi_lock(&critical_shmem_lock);//FIXME:this is ugly,all process conpete the only lock.
+        while(!list_empty(&msg_map_list)){
+            struct msg_map *map;
+            list_for_each_entry(map, &msg_map_list, same){
+                pid_num_addr = emi_base_addr + map->pid;
 
-            /*write emi_msg space offset to the index address.*/
-            *pid_num_addr = nth;
-            pid_ret=kill(m->pid,SIGUSR2);
-            if(pid_ret<0){
-                *pid_num_addr = 0;
-            }else{
-                msg_pos->count++;
-            }
+                if(emi_trylock(&share_index_area_lock[map->pid])){ //Other thread is using the pid index area
+                    continue;
+                }else{
 
-            /*
-             * if pid_num == nth, means the the SIGUSR2 is sent successfully.
-             * So here we are waiting for the signal handler (func_sterotype)
-             * to release the pid_num index.
-             */
-            while(*pid_num_addr){
-                sleep(0);
-            };
+                    *pid_num_addr = nth;
+                    if(kill(map->pid, SIGUSR2)){ //Error when sending msg, meaning the registered process has exited.
+                        emi_lock(&msg_map_lock);
+                        emi_hdelete(msg_table,map);
+                        emi_unlock(&msg_map_lock);
+                    }else{
+                        msg_pos->count++;
+                        while (*pid_num_addr) {
+                            sched_yield(); //Need discussion
+                        };
+                        list_del(&map->same);
+                    }
 
-            emi_unlock(&critical_shmem_lock);
-
-            /*
-             * if pid_ret < 0, means no process with pid_num.
-             * This is not an error, eg, the receiver process might just exit
-             * by some reason. It only means the emi_core kept an redundant map.
-             * So we should delete the redundance and continue
-             */
-            if(pid_ret<0){
-                emi_lock(&msg_map_lock);
-                emi_hdelete(msg_table,m);
-                emi_unlock(&msg_map_lock);
+                    emi_unlock(&share_index_area_lock[map->pid]);
+                }
             }
         }
 
-        /*
-         * Waiting for receiver process to finish all job.
-         * Target process need to down this count once finishing the operation.
-         * remember to lock and unlock when down the count.
-         */
         while(msg_pos->count){
-            sleep(0);
+            sched_yield();
         }
 
         /*

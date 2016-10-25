@@ -119,7 +119,8 @@ void debug_msg_map(struct msg_map **table,struct msg_map *map){
     printf("msg_map debugging:\n");
     i=emi_hash(map);
     printf("    hash value is %d\n",i);
-    if((tmp=emi_hsearch(table,map))==NULL){
+    int j=0;
+    if((tmp=__emi_hsearch(table,map,&j))==NULL){
         printf("    map is not in the table\n");
     }else{
         debug_single_map(tmp);
