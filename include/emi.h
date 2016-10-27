@@ -42,8 +42,7 @@ struct emi_addr{
 
 
 struct emi_msg{
-    struct emi_addr dest_addr;
-    struct emi_addr src_addr;
+    struct emi_addr addr;
     eu32 flag;
 
 

@@ -61,7 +61,7 @@ extern void emi_msg_free(struct emi_msg *msg);
 
 
 /**
- * emi_msg_send - send a msg to the address that filled in the msg->dest_addr.ipv4.
+ * emi_msg_send - send a msg to the address that filled in the msg->addr.ipv4.
  * @msg:    sended msg.
  *
  * @return:    a minus value indicates the process failed.
@@ -110,35 +110,14 @@ extern int emi_fill_msg(struct emi_msg *msg,char *dest_ip,void *data,eu32 cmd,eu
  */
 extern int emi_fill_addr(struct emi_addr *addr,char *ip,int port);
 
-/**
- *
- *
- */
+extern int emi_msg_send_highlevel(char *ipaddr, int msgnum, void *send_data, int send_size, void *ret_data, int ret_size, eu32 cmd, eu32 flag);
 
-int emi_msg_send_highlevel_block(char *ipaddr, int msgnum,void *send_data,int send_size,void *ret_data, int ret_size, eu32 cmd);
+extern int emi_msg_send_highlevel_block(char *ipaddr, int msgnum,void *send_data,int send_size,void *ret_data, int ret_size, eu32 cmd);
 
+extern int emi_msg_send_highlevel_nonblock(char *ipaddr, int msgnum,void *send_data,int send_size, eu32 cmd);
 
+extern int emi_msg_prepare_return_data(struct emi_msg *msg, void *data, eu32 size);
 
-/**
- *
- *
- *
- */
-
-int emi_msg_send_highlevel_nonblock(char *ipaddr, int msgnum,void *send_data,int send_size, eu32 cmd);
-
-/**
- *
- *
- *
- */
-int emi_msg_prepare_return_data(struct emi_msg *msg, void *data, eu32 size);
-
-/**
- *emi_init -    you may use it at the very beginning of your program
- *                and speed up very a little when responding the recieved msg.
- *
- */
 extern int emi_init(void);
 
 extern void emi_loop(void);

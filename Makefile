@@ -119,3 +119,4 @@ python_test:
 
 unit_test:
 	@./test/unit_test/test_buddy_algorithm
+	@./test/unit_test/test_send_functions

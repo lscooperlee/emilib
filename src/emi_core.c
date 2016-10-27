@@ -240,7 +240,7 @@ static int emi_recieve_operation(void *args){
     if(msg_pos->flag&EMI_MSG_CMD_REGISTER){
         coreprt("receive a register msg\n");
         struct msg_map p;
-        msg_map_init(&p,msg_pos->msg,msg_pos->src_addr.pid);
+        msg_map_init(&p,msg_pos->msg,msg_pos->addr.pid);
         emi_lock(&msg_map_lock);
         emi_hinsert(msg_table,&p);
         emi_unlock(&msg_map_lock);

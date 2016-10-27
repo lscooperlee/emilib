@@ -60,8 +60,7 @@ class emi_addr(ctypes.Structure):
 class emi_msg(ctypes.Structure):
 
     _fields_ = [
-        ("dest_addr", emi_addr),
-        ("src_addr", emi_addr),
+        ("addr", emi_addr),
         ("flag", ctypes.c_uint, 32),
         ("count", ctypes.c_uint, 32),
         ("size", ctypes.c_uint, 32),

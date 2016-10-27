@@ -95,10 +95,7 @@ void debug_msg(struct emi_msg *msg,int more){
     if(!more)
         return;
 
-    debug_addr(&msg->src_addr,"src_addr");
-//    printf("%s\n",inet_ntoa((msg->dest_addr->ipv4.sin_addr)));
-//    if(msg->dest_addr!=NULL)
-//        debug_addr(msg->dest_addr,"dest_addr");
+    debug_addr(&msg->addr,"addr");
 
     debug_msg_body(msg);
 

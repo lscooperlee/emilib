@@ -125,15 +125,15 @@ static int __emi_msg_register(eu32 defined_msg,emi_func func){
     }
     memset(&cmd,0,sizeof(struct emi_msg));
 
-    cmd.src_addr.ipv4.sin_addr.s_addr=inet_addr("127.0.0.1");
-    cmd.src_addr.ipv4.sin_port=htons(emi_config->emi_port);
-    cmd.src_addr.ipv4.sin_family=AF_INET;
-    cmd.src_addr.pid=getpid();
+    cmd.addr.ipv4.sin_addr.s_addr=inet_addr("127.0.0.1");
+    cmd.addr.ipv4.sin_port=htons(emi_config->emi_port);
+    cmd.addr.ipv4.sin_family=AF_INET;
+    cmd.addr.pid=getpid();
 
     cmd.msg=defined_msg;
     cmd.flag=EMI_MSG_CMD_REGISTER;
 
-    if((ret=emi_connect(sd,&cmd.src_addr,1))<0){
+    if((ret=emi_connect(sd,&cmd.addr,1))<0){
         emi_close(sd);
         dbg("emi_connect error\n");
         return -1;
