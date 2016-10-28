@@ -152,7 +152,8 @@ static int __emi_core(void){
         return -1;
     }
 
-    if(init_emi_buf(emi_shbuf_base_addr)){
+    char buf_vector[sizeof(struct emi_buf)<<EMI_ORDER_NUM];
+    if(init_emi_buf(emi_shbuf_base_addr, buf_vector)){
         coreprt("init msg space error\n");
         return -1;
     }

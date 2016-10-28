@@ -1,72 +1,68 @@
+
+/* Change the emilib EMI_ORDER_NUM to 4 before testing */
+
+
 #include <stdlib.h>
+#include <stdio.h>
 #include "emi_shbuf.h"
 
-/*
-void print_emi_buf(struct emi_buf *mgr){
-    int i;
-    for(i=0;i<ORDER_NUM;i++){
-        int j;
-        int current_order = 1<<i;
-        struct emi_buf *tmp = LEFT_MOST_OFFSPRING(i, mgr);
-        printf("%d ", ORDER_NUM - i - 1);
-        for (j = 0; j < current_order; j++, tmp++)
-        {
-            printf("addr:%lx,order:%d  ", (long)tmp->addr&0xFF, tmp->order);
-        }
-        printf("\n");
+int get_order(int s){
+    int size = s+1;
+    int order = 0;
+    while(size > 0){
+        size >>= 1;
+        order++;
     }
-    printf("\n");
+    return order;
 }
-*/
+
+void print_emi_buf(struct emi_buf *mgr){
+    int k;
+    int t=0;
+    for(k=0;k<(1<<EMI_ORDER_NUM)-1; k++){
+        struct emi_buf *tmp = &mgr[k];
+        printf("ofst:%d,odr:%d  ", tmp->blk_offset, tmp->order);
+
+        if(t==0){
+            printf("\n");
+            t=1<<get_order(k);
+        }
+            t--;
+    }
+    printf("\n\n");
+}
 
 int main(){
-/*
-    int base_addr[1<<(ORDER_NUM - 1)] = {0};
-    struct emi_buf array[(1<<ORDER_NUM) - 1] = {0};
+
+    void *base_addr = malloc(BUDDY_SIZE << EMI_ORDER_NUM);
+    struct emi_buf array[(1<<EMI_ORDER_NUM) - 1] = {0};
     struct emi_buf *a,*b,*c,*d;
 
-    __init_emi_buf(array, base_addr, ORDER_NUM);
+    init_emi_buf(base_addr, array);
     print_emi_buf(array);
 
-    a = __alloc_emi_buddy(array, 0);
+    a = alloc_emi_buf(BUDDY_SIZE>>1);
     print_emi_buf(array);
 
-    b = __alloc_emi_buddy(array, 0);
+    b = alloc_emi_buf(BUDDY_SIZE/2 + BUDDY_SIZE);
     print_emi_buf(array);
 
-    c = __alloc_emi_buddy(array, 0);
+    c = alloc_emi_buf(BUDDY_SIZE/2);
     print_emi_buf(array);
 
-    d = __alloc_emi_buddy(array, 0);
+    d = alloc_emi_buf(BUDDY_SIZE/2 + BUDDY_SIZE);
     print_emi_buf(array);
 
-    __free_emi_buddy(a, array, 0);
+    free_emi_buf(b);
+    print_emi_buf(array);
+    
+    free_emi_buf(d);
     print_emi_buf(array);
 
-    __free_emi_buddy(b, array, 0);
+    free_emi_buf(a);
     print_emi_buf(array);
 
-    __free_emi_buddy(c, array, 0);
+    free_emi_buf(c);
     print_emi_buf(array);
 
-    __free_emi_buddy(d, array, 0);
-    print_emi_buf(array);
-
-    a = __alloc_emi_buddy(array, 0);
-    print_emi_buf(array);
-    b = __alloc_emi_buddy(array, 1);
-    print_emi_buf(array);
-    c = __alloc_emi_buddy(array, 0);
-    print_emi_buf(array);
-
-    __free_emi_buddy(b, array, 1);
-    print_emi_buf(array);
-
-    __free_emi_buddy(c, array, 0);
-    print_emi_buf(array);
-
-    __free_emi_buddy(a, array, 0);
-    print_emi_buf(array);
-
-    */
 }

@@ -45,11 +45,11 @@ static inline int __get_space_num(void *base,void *addr,int size){
 //#define BUDDY_SIZE  ((sizeof(struct emi_msg) + EMI_MAX_MSG_SIZE) & ~EMI_MAX_MSG_SIZE)
 
 struct emi_buf{
-    void *addr;
+    int blk_offset;
     int order;
 };
 
-extern int init_emi_buf(void *base);
+extern int init_emi_buf(void *base, void *emi_buf_top);
 
 extern struct emi_buf *alloc_emi_buf(size_t size);
 

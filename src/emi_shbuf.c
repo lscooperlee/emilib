@@ -78,7 +78,7 @@ static void update_buf_order(struct emi_buf *buf, struct emi_buf *top, int order
     }
 }
 
-static int __init_emi_buf(struct emi_buf *top, void *addr, int order){
+static int __init_emi_buf(struct emi_buf *top, int order){
     int i;
     for (i = 0; i < order; i++)
     {
@@ -87,8 +87,9 @@ static int __init_emi_buf(struct emi_buf *top, void *addr, int order){
         struct emi_buf *tmp = LEFT_MOST_OFFSPRING(i, top);
         for (j = 0; j < current_order; j++, tmp++)
         {
-            tmp->addr = addr + j * (order - i) * BUDDY_SIZE;
+            tmp->blk_offset = j * (order - i);
             tmp->order = order - i - 1;
+            printf("%d,%d\n",tmp->blk_offset, tmp->order);
         }
     }
 
@@ -115,15 +116,12 @@ static void __free_emi_buddy(struct emi_buf *buddy, struct emi_buf *top, int ord
     update_buf_order(buddy, top, order, order_num);
 }
 
-int init_emi_buf(void *base){
-    struct emi_buf *top = (struct emi_buf *)malloc(((1<<EMI_ORDER_NUM) - 1) * BUDDY_SIZE);
-    if(top == NULL)
-        return -1;
+int init_emi_buf(void *base, void *emi_buf_top){
 
     emi_shmbuf_base_addr = base;
-    emi_buf_vector = top;
+    emi_buf_vector = emi_buf_top;
 
-    return __init_emi_buf(top, base, EMI_ORDER_NUM);
+    return __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 }
 
 struct emi_buf *alloc_emi_buf(size_t size){
@@ -148,7 +146,7 @@ void free_emi_buf(struct emi_buf *buf){
 }
 
 #define ADDR_BUF_OFFSET  (sizeof(struct emi_buf *))
-#define GET_ALLOC_ADDR(buf)    ((void *)(buf)->addr + ADDR_BUF_OFFSET)
+#define GET_ALLOC_ADDR(buf)    (((buf)->blk_offset << BUDDY_SHIFT) + emi_shmbuf_base_addr + ADDR_BUF_OFFSET)
 #define GET_BUF_ADDR(addr)    *(struct emi_buf **)(((void *)addr) - ADDR_BUF_OFFSET)
 
 void *emi_alloc(size_t size){
