@@ -57,6 +57,7 @@ static struct sk_dpr *sd=NULL;
 static struct sk_dpr *client_sd=NULL;
 static void *msg_shm_base_addr = NULL;
 static void *emibuf_shm_base_addr = NULL;
+static espinlock_t *emibuf_lock_shm = NULL;
 static eu32 *pididx_shm_base_addr = NULL;
 static elock_t *pidlock_shm_base_addr = NULL;
 
@@ -72,13 +73,6 @@ void emi_release(void){
     }
 }
 
-
-static int init_msg_table(struct msg_map *table[]){
-    int i;
-    for(i=0;i<EMI_MSG_TABLE_SIZE;i++)
-        table[i]=NULL;
-    return emi_spin_init(&msg_map_lock);
-}
 
 static int int_global_shm_space(int pid_max){
     void *base;
@@ -96,6 +90,7 @@ static int int_global_shm_space(int pid_max){
 
     msg_shm_base_addr = GET_MSG_BASE(base);
     emibuf_shm_base_addr = GET_EMIBUF_BASE(base);
+    emibuf_lock_shm = GET_EMIBUF_LOCK_BASE(base);
     pididx_shm_base_addr = GET_PIDIDX_BASE(base);
     pidlock_shm_base_addr = GET_PIDLOCK_BASE(base, pid_max);
 
@@ -134,7 +129,7 @@ static int __emi_core(void){
     eu32 pid_max;
     int ret;
 
-    if(init_msg_table(msg_table)){
+    if(init_msg_table_lock(msg_table, &msg_map_lock)){
         coreprt("init msg table error\n");
         return -1;
     }
@@ -146,7 +141,7 @@ static int __emi_core(void){
         return -1;
     }
 
-    if(init_emi_buf(msg_shm_base_addr, emibuf_shm_base_addr)){
+    if(init_emi_buf_lock(msg_shm_base_addr, emibuf_shm_base_addr, emibuf_lock_shm)){
         coreprt("init msg space error\n");
         return -1;
     }
@@ -212,7 +207,7 @@ static int emi_recieve_operation(void *args){
 /*
  * get an empty area in the share memory for a recieving msg.
 */
-    if((msg_pos=emi_msg_shbuf_alloc())==NULL){
+    if((msg_pos=(struct emi_msg *)emi_alloc_lock(sizeof(struct emi_msg), emibuf_lock_shm))==NULL){
         coreprt("emi_obtain_msg_space error\n");
         goto e0;
     }
@@ -280,7 +275,7 @@ static int emi_recieve_operation(void *args){
             /*
              * now emi_core could receive arbitary data as long as emi_core has enough memory to hold it.
              */
-            msg_pos = emi_msg_shbuf_realloc(msg_pos);
+            msg_pos = emi_realloc_for_data_lock(msg_pos, emibuf_lock_shm);
             if (msg_pos != NULL) {
 
                 if ((ret = emi_read(((struct clone_args *) args)->client_sd,
@@ -398,7 +393,7 @@ static int emi_recieve_operation(void *args){
 
 e0:
     emi_close(((struct clone_args *)args)->client_sd);
-    emi_msg_shbuf_free(msg_pos);
+    emi_free_lock(msg_pos,emibuf_lock_shm);
     free(args);
     pthread_exit(NULL);
     return ret;

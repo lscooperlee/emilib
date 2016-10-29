@@ -24,10 +24,7 @@
 
 #include "list.h"
 #include "emi_semaphore.h"
-
-#ifndef EMI_HASH_MASK
-#define EMI_HASH_MASK    12
-#endif
+#include "emi_config.h"
 
 #define ARRAY_SIZE(array)    (sizeof(array)/sizeof(array[0]))
 
@@ -153,6 +150,13 @@ static inline int emi_hdelete(struct msg_map **table, struct msg_map *map) {
         }
         return -1;
     }
+}
+
+static inline int init_msg_table_lock(struct msg_map *table[], espinlock_t *lock){
+    int i;
+    for(i=0;i<EMI_MSG_TABLE_SIZE;i++)
+        table[i]=NULL;
+    return emi_spin_init(lock);
 }
 
 static inline int emi_hinsert_lock(struct msg_map **table, struct msg_map *p, espinlock_t *lock){

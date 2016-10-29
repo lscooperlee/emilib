@@ -148,8 +148,15 @@ void free_emi_buf(struct emi_buf *buf){
 #define GET_ALLOC_ADDR(buf)    (((buf)->blk_offset << BUDDY_SHIFT) + emi_shmbuf_base_addr + ADDR_BUF_OFFSET)
 #define GET_BUF_ADDR(addr)    *(struct emi_buf **)(((void *)addr) - ADDR_BUF_OFFSET)
 
-void *emi_alloc(size_t size){
+int init_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock){
+    init_emi_buf(base, emi_buf_top);
+    return emi_spin_init(lock);
+}
+
+void *emi_alloc_lock(size_t size, espinlock_t *lock){
+    emi_spin_lock(lock);
     struct emi_buf *buf = alloc_emi_buf(size + ADDR_BUF_OFFSET);
+    emi_spin_unlock(lock);
     
     void *addr = GET_ALLOC_ADDR(buf);
     
@@ -158,13 +165,15 @@ void *emi_alloc(size_t size){
     return addr;
 }
 
-void emi_free(void *addr){
+void emi_free_lock(void *addr, espinlock_t *lock){
     struct emi_buf *buf = GET_BUF_ADDR(addr);
 
+    emi_spin_lock(lock);
     free_emi_buf(buf);
+    emi_spin_unlock(lock);
 }
 
-struct emi_msg *emi_msg_realloc_for_data(struct emi_msg *msg){
+struct emi_msg *emi_realloc_for_data_lock(struct emi_msg *msg, espinlock_t *lock){
 
     int newsize =msg->size;
     
@@ -177,9 +186,11 @@ struct emi_msg *emi_msg_realloc_for_data(struct emi_msg *msg){
         return msg;
     }
 
-    struct emi_msg *newaddr = (struct emi_msg *)emi_alloc(newsize);
+    struct emi_msg *newaddr = (struct emi_msg *)emi_alloc_lock(newsize, lock);
+
     memcpy(newaddr, msg, sizeof(struct emi_msg));
-    emi_free(msg);
+
+    emi_free_lock(msg, lock);
+
     return newaddr;
 }
-

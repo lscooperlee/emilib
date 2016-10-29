@@ -2,8 +2,11 @@
 #define __EMI_CONFIG_H__
 
 #include "emi_types.h"
-#include "msg_table.h"
 #include "emi_shbuf.h"
+
+#ifndef EMI_HASH_MASK
+#define EMI_HASH_MASK    12
+#endif
 
 #define EMI_MSG_TABLE_SIZE    (1<<EMI_HASH_MASK)
 #define EMI_MAX_MSG_SIZE (0x1FF)
