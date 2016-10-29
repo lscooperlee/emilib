@@ -23,6 +23,7 @@
 #include <stdlib.h>
 
 #include "list.h"
+#include "emi_semaphore.h"
 
 #ifndef EMI_HASH_MASK
 #define EMI_HASH_MASK    12
@@ -152,6 +153,30 @@ static inline int emi_hdelete(struct msg_map **table, struct msg_map *map) {
         }
         return -1;
     }
+}
+
+static inline int emi_hinsert_lock(struct msg_map **table, struct msg_map *p, espinlock_t *lock){
+    int ret;
+    emi_spin_lock(lock);
+    ret = emi_hinsert(table, p);
+    emi_spin_unlock(lock);
+    return ret;
+}
+
+static inline int emi_hdelete_lock(struct msg_map **table, struct msg_map *p, espinlock_t *lock){
+    int ret;
+    emi_spin_lock(lock);
+    ret = emi_hdelete(table, p);
+    emi_spin_unlock(lock);
+    return ret;
+}
+
+static inline int emi_hsearch_lock(struct msg_map **table, struct msg_map *p, struct list_head *head, espinlock_t *lock){
+    int ret;
+    emi_spin_lock(lock);
+    ret = emi_hsearch(table, p, head);
+    emi_spin_unlock(lock);
+    return ret;
 }
 
 #endif

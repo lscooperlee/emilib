@@ -61,11 +61,7 @@ static eu32 *pididx_shm_base_addr = NULL;
 static elock_t *pidlock_shm_base_addr = NULL;
 
 static struct msg_map *msg_table[EMI_MSG_TABLE_SIZE];
-elock_t msg_map_lock;
-
-int emi_init_locks(void){
-    return emi_lock_init(&msg_map_lock);
-};
+espinlock_t msg_map_lock;
 
 
 void emi_release(void){
@@ -81,7 +77,7 @@ static int init_msg_table(struct msg_map *table[]){
     int i;
     for(i=0;i<EMI_MSG_TABLE_SIZE;i++)
         table[i]=NULL;
-    return 0;
+    return emi_spin_init(&msg_map_lock);
 }
 
 static int int_global_shm_space(int pid_max){
@@ -144,11 +140,6 @@ static int __emi_core(void){
     }
 
     pid_max=get_pid_max();
-
-    if(emi_init_locks()){
-        coreprt("init locks error\n");
-        return -1;
-    }
 
     if(int_global_shm_space(pid_max)){
         coreprt("init shm space error\n");
@@ -243,9 +234,7 @@ static int emi_recieve_operation(void *args){
         coreprt("receive a register msg\n");
         struct msg_map p;
         msg_map_init(&p,msg_pos->msg,msg_pos->addr.pid);
-        emi_lock(&msg_map_lock);
-        emi_hinsert(msg_table,&p);
-        emi_unlock(&msg_map_lock);
+        emi_hinsert_lock(msg_table,&p, &msg_map_lock);
         
         emi_lock_init(&pidlock_shm_base_addr[p.pid]);
 
@@ -325,9 +314,7 @@ static int emi_recieve_operation(void *args){
 
         struct list_head msg_map_list = LIST_HEAD_INIT(msg_map_list);
 
-        emi_lock(&msg_map_lock);
-        emi_hsearch(msg_table, &p, &msg_map_list);
-        emi_unlock(&msg_map_lock);
+        emi_hsearch_lock(msg_table, &p, &msg_map_list, &msg_map_lock);
 
         while(!list_empty(&msg_map_list)){
             struct msg_map *map;
@@ -340,9 +327,7 @@ static int emi_recieve_operation(void *args){
 
                     *pid_num_addr = nth;
                     if(kill(map->pid, SIGUSR2)){ //Error when sending msg, meaning the registered process has exited.
-                        emi_lock(&msg_map_lock);
-                        emi_hdelete(msg_table,map);
-                        emi_unlock(&msg_map_lock);
+                        emi_hdelete_lock(msg_table,map, &msg_map_lock);
                     }else{
                         msg_pos->count++;
                         while (*pid_num_addr) {
