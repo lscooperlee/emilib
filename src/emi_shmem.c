@@ -4,8 +4,8 @@
 #include <fcntl.h>
 
 #include "emi_shmem.h"
+#include "emi_core.h"
 #include "emi_config.h"
-#include "emi_dbg.h"
 
 #if defined(SYSV_SHMEM)
 
@@ -197,6 +197,5 @@ void *emi_shm_alloc(int id, int flag){
 int emi_shm_free(void *addr){
     return munmap(addr, shmem_size);
 }
-
 
 #endif //SYSV_SHMEM

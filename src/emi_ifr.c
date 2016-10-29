@@ -58,21 +58,23 @@ void func_sterotype(int no_use){
     struct emi_msg *shmsg;
     eu32 *baseshmsg;
     struct list_head *lh;
+    void *base;
 
     id=emi_global.shm_id;
 
-    if((baseshmsg=(void *)emi_shm_alloc(id, EMI_SHM_READ|EMI_SHM_WRITE))==NULL){
+    if((base=(void *)emi_shm_alloc(id, EMI_SHM_READ|EMI_SHM_WRITE))==NULL){
         dbg("emi_shm_alloc error, did you run emi_init() ?! \n");
         exit(-1);
     }
 
     pid=getpid();
-    nth=*(baseshmsg+pid);
+    baseshmsg = GET_PIDIDX_BASE(base);
+    nth=baseshmsg[pid];
 
-    shmsg=(struct emi_msg *)((char *)baseshmsg+nth);
+    shmsg = get_msg_shbuf_from_offset(base, nth);
 
     //this address is the pid_num in emi_core.it should be changed as soon as possable.emi_core will wait the zero to make sure the this process recieved the signal ,and send the same signal to other process that registered the same massage.
-    *(eu32 *)((eu32 *)baseshmsg+pid)=0;
+    baseshmsg[pid] = 0;
 
     list_for_each(lh,&__func_list){
         struct func_list *fl;
@@ -104,7 +106,7 @@ void func_sterotype(int no_use){
     //FIXME:unlock
 
 
-    if(emi_shm_free(baseshmsg)){
+    if(emi_shm_free(base)){
         dbg("emi_shm_free error\n");
         return;
     }
@@ -217,7 +219,7 @@ int emi_init(){
 
     eu32 pid_max = get_pid_max();
 
-    if((emi_global.shm_id=emi_shm_init("emilib", pid_max*sizeof(eu32) + (BUDDY_SIZE << EMI_ORDER_NUM) , 0))<0){
+    if((emi_global.shm_id=emi_shm_init("emilib", GET_SHM_SIZE(pid_max), 0))<0){
         dbg("emi_shm_init error\n");
         return -1;
     }

@@ -89,7 +89,6 @@ static int __init_emi_buf(struct emi_buf *top, int order){
         {
             tmp->blk_offset = j * (order - i);
             tmp->order = order - i - 1;
-            printf("%d,%d\n",tmp->blk_offset, tmp->order);
         }
     }
 

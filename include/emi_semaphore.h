@@ -4,6 +4,7 @@
 #include <pthread.h>
 
 typedef pthread_mutex_t elock_t;
+typedef pthread_spinlock_t espinlock_t;
 
 static int inline emi_lock_init(elock_t *p){
     return pthread_mutex_init(p,NULL);

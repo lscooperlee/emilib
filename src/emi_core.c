@@ -55,19 +55,16 @@ static int emi_recieve_operation(void *args);
 static int core_shmid=-1;
 static struct sk_dpr *sd=NULL;
 static struct sk_dpr *client_sd=NULL;
-static eu32 *emi_base_addr = NULL;
-static void *emi_shbuf_base_addr = NULL;
+static void *msg_shm_base_addr = NULL;
+static void *emibuf_shm_base_addr = NULL;
+static eu32 *pididx_shm_base_addr = NULL;
+static elock_t *pidlock_shm_base_addr = NULL;
+
 static struct msg_map *msg_table[EMI_MSG_TABLE_SIZE];
-
 elock_t msg_map_lock;
-elock_t *share_index_area_lock;
 
-int emi_init_locks(int pid_max){
-    emi_lock_init(&msg_map_lock);
-    if((share_index_area_lock = (elock_t *)malloc(pid_max * sizeof(elock_t))) == NULL){
-        return -1;
-    }
-    return 0;
+int emi_init_locks(void){
+    return emi_lock_init(&msg_map_lock);
 };
 
 
@@ -88,17 +85,23 @@ static int init_msg_table(struct msg_map *table[]){
 }
 
 static int int_global_shm_space(int pid_max){
-    if((core_shmid=emi_shm_init("emilib", pid_max * sizeof(eu32) + (BUDDY_SIZE << EMI_ORDER_NUM), EMI_SHM_CREATE))<0){
+    void *base;
+
+    if((core_shmid=emi_shm_init("emilib", GET_SHM_SIZE(pid_max), EMI_SHM_CREATE))<0){
         coreprt("emi_shm_init error\n");
         return -1;
     }
-    if((emi_base_addr=(void *)emi_shm_alloc(core_shmid, EMI_SHM_READ|EMI_SHM_WRITE))==NULL){
+
+    if((base=(void *)emi_shm_alloc(core_shmid, EMI_SHM_READ|EMI_SHM_WRITE))==NULL){
         coreprt("emi_shm_alloc error\n");
         emi_shm_destroy("emilib", core_shmid);
         return -1;
     }
 
-    emi_shbuf_base_addr = (void *)emi_base_addr + pid_max * sizeof(eu32);
+    msg_shm_base_addr = GET_MSG_BASE(base);
+    emibuf_shm_base_addr = GET_EMIBUF_BASE(base);
+    pididx_shm_base_addr = GET_PIDIDX_BASE(base);
+    pidlock_shm_base_addr = GET_PIDLOCK_BASE(base, pid_max);
 
     return 0;
 }
@@ -142,7 +145,7 @@ static int __emi_core(void){
 
     pid_max=get_pid_max();
 
-    if(emi_init_locks(pid_max)){
+    if(emi_init_locks()){
         coreprt("init locks error\n");
         return -1;
     }
@@ -152,8 +155,7 @@ static int __emi_core(void){
         return -1;
     }
 
-    char buf_vector[sizeof(struct emi_buf)<<EMI_ORDER_NUM];
-    if(init_emi_buf(emi_shbuf_base_addr, buf_vector)){
+    if(init_emi_buf(msg_shm_base_addr, emibuf_shm_base_addr)){
         coreprt("init msg space error\n");
         return -1;
     }
@@ -234,7 +236,6 @@ static int emi_recieve_operation(void *args){
     }
 
     debug_msg(msg_pos,0);
-
 /*
  *    if it is a register msg ,then:
  */
@@ -246,7 +247,7 @@ static int emi_recieve_operation(void *args){
         emi_hinsert(msg_table,&p);
         emi_unlock(&msg_map_lock);
         
-        emi_lock_init(&share_index_area_lock[p.pid]);
+        emi_lock_init(&pidlock_shm_base_addr[p.pid]);
 
         /*
          * for register a non block mode, the default flag should always be SUCCEEDED, for the block mode, we should also assume that
@@ -318,7 +319,7 @@ static int emi_recieve_operation(void *args){
 /*
  *    get the offset of the msg in "msg split" area (see develop.txt). this offset will be writed into the BASE_ADDR+pid address afterward, inform the according process to get it.
  */
-        nth=emi_get_space_msg_num(emi_base_addr, msg_pos);
+        nth=emi_get_msg_shbuf_offset(msg_shm_base_addr, msg_pos);
 
         msg_map_init(&p,msg_pos->msg,0);
 
@@ -331,9 +332,9 @@ static int emi_recieve_operation(void *args){
         while(!list_empty(&msg_map_list)){
             struct msg_map *map;
             list_for_each_entry(map, &msg_map_list, same){
-                pid_num_addr = emi_base_addr + map->pid;
+                pid_num_addr = &pididx_shm_base_addr[map->pid];
 
-                if(emi_trylock(&share_index_area_lock[map->pid])){ //Other thread is using the pid index area
+                if(emi_trylock(&pidlock_shm_base_addr[map->pid])){ //Other thread is using the pid index area
                     continue;
                 }else{
 
@@ -350,7 +351,7 @@ static int emi_recieve_operation(void *args){
                         list_del(&map->same);
                     }
 
-                    emi_unlock(&share_index_area_lock[map->pid]);
+                    emi_unlock(&pidlock_shm_base_addr[map->pid]);
                 }
             }
         }
