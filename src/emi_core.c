@@ -207,7 +207,7 @@ static int emi_recieve_operation(void *args){
 /*
  * get an empty area in the share memory for a recieving msg.
 */
-    if((msg_pos=(struct emi_msg *)emi_alloc_lock(sizeof(struct emi_msg), emibuf_lock_shm))==NULL){
+    if((msg_pos=(struct emi_msg *)emi_alloc(sizeof(struct emi_msg)))==NULL){
         coreprt("emi_obtain_msg_space error\n");
         goto e0;
     }
@@ -275,7 +275,7 @@ static int emi_recieve_operation(void *args){
             /*
              * now emi_core could receive arbitary data as long as emi_core has enough memory to hold it.
              */
-            msg_pos = emi_realloc_for_data_lock(msg_pos, emibuf_lock_shm);
+            msg_pos = emi_realloc_for_data(msg_pos);
             if (msg_pos != NULL) {
 
                 if ((ret = emi_read(((struct clone_args *) args)->client_sd,
@@ -393,7 +393,7 @@ static int emi_recieve_operation(void *args){
 
 e0:
     emi_close(((struct clone_args *)args)->client_sd);
-    emi_free_lock(msg_pos,emibuf_lock_shm);
+    emi_free(msg_pos);
     free(args);
     pthread_exit(NULL);
     return ret;

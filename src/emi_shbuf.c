@@ -26,8 +26,8 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi.h"
 
 
-void *emi_shmbuf_base_addr = NULL;
-struct emi_buf *emi_buf_vector = NULL;
+static void *emi_shmbuf_base_addr = NULL;
+static struct emi_buf *emi_buf_vector = NULL;
 
 #define BUDDY_IDX(buf, top)   ((buf) - (top))
 #define PARENT(buf, top)    (((BUDDY_IDX(buf, top) + 1) >> 1) + top - 1)
@@ -148,15 +148,18 @@ void free_emi_buf(struct emi_buf *buf){
 #define GET_ALLOC_ADDR(buf)    (((buf)->blk_offset << BUDDY_SHIFT) + emi_shmbuf_base_addr + ADDR_BUF_OFFSET)
 #define GET_BUF_ADDR(addr)    *(struct emi_buf **)(((void *)addr) - ADDR_BUF_OFFSET)
 
+static espinlock_t *emi_buf_lock = NULL;
+
 int init_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock){
     init_emi_buf(base, emi_buf_top);
-    return emi_spin_init(lock);
+    emi_buf_lock = lock;
+    return emi_spin_init(emi_buf_lock);
 }
 
-void *emi_alloc_lock(size_t size, espinlock_t *lock){
-    emi_spin_lock(lock);
+void *emi_alloc(size_t size){
+    emi_spin_lock(emi_buf_lock);
     struct emi_buf *buf = alloc_emi_buf(size + ADDR_BUF_OFFSET);
-    emi_spin_unlock(lock);
+    emi_spin_unlock(emi_buf_lock);
     
     void *addr = GET_ALLOC_ADDR(buf);
     
@@ -165,15 +168,15 @@ void *emi_alloc_lock(size_t size, espinlock_t *lock){
     return addr;
 }
 
-void emi_free_lock(void *addr, espinlock_t *lock){
+void emi_free(void *addr){
     struct emi_buf *buf = GET_BUF_ADDR(addr);
 
-    emi_spin_lock(lock);
+    emi_spin_lock(emi_buf_lock);
     free_emi_buf(buf);
-    emi_spin_unlock(lock);
+    emi_spin_unlock(emi_buf_lock);
 }
 
-struct emi_msg *emi_realloc_for_data_lock(struct emi_msg *msg, espinlock_t *lock){
+struct emi_msg *emi_realloc_for_data(struct emi_msg *msg){
 
     int newsize =msg->size;
     
@@ -186,11 +189,11 @@ struct emi_msg *emi_realloc_for_data_lock(struct emi_msg *msg, espinlock_t *lock
         return msg;
     }
 
-    struct emi_msg *newaddr = (struct emi_msg *)emi_alloc_lock(newsize, lock);
+    struct emi_msg *newaddr = (struct emi_msg *)emi_alloc(newsize);
 
     memcpy(newaddr, msg, sizeof(struct emi_msg));
 
-    emi_free_lock(msg, lock);
+    emi_free(msg);
 
     return newaddr;
 }

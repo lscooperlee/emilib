@@ -44,9 +44,9 @@ extern struct emi_buf *alloc_emi_buf(size_t size);
 extern void free_emi_buf(struct emi_buf *buf);
 
 extern int init_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock);
-extern void *emi_alloc_lock(size_t size, espinlock_t *lock);
-extern void emi_free_lock(void *addr, espinlock_t *lock);
-extern struct emi_msg *emi_realloc_for_data_lock(struct emi_msg *msg, espinlock_t *lock);
+extern void *emi_alloc(size_t size);
+extern void emi_free(void *addr);
+extern struct emi_msg *emi_realloc_for_data(struct emi_msg *msg);
 
 #define emi_get_msg_shbuf_offset(base,addr) ((char *)(addr)-(char *)(base))
 #define get_msg_shbuf_from_offset(base,offset) (struct emi_msg *)((void*)base + offset)
