@@ -46,11 +46,18 @@ extern void free_emi_buf(struct emi_buf *buf);
 extern int init_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock);
 extern void *emi_alloc(size_t size);
 extern void emi_free(void *addr);
-extern struct emi_msg *emi_realloc_for_data(struct emi_msg *msg);
 
-#define emi_get_msg_shbuf_offset(base,addr) ((char *)(addr)-(char *)(base))
-#define get_msg_shbuf_from_offset(base,offset) (struct emi_msg *)((void*)base + offset)
+extern struct emi_msg *alloc_shared_msg(eu32 size);
+void free_shared_msg(struct emi_msg *msg);
+extern struct emi_msg *realloc_shared_msg(struct emi_msg *msg);
 
+extern void put_msg_data_addr(struct emi_msg *msg);
+extern void put_msg_data_offset(struct emi_msg *msg);
+
+extern void update_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock);
+
+#define get_shbuf_offset(base, addr) ((char *)(addr)-(char *)(base))
+#define get_shbuf_addr(base, offset) ((void*)base + offset)
 
 
 #endif

@@ -144,9 +144,9 @@ void free_emi_buf(struct emi_buf *buf){
     __free_emi_buddy(buf, emi_buf_vector, order, EMI_ORDER_NUM);
 }
 
-#define ADDR_BUF_OFFSET  (sizeof(struct emi_buf *))
+#define ADDR_BUF_OFFSET  (sizeof(eu32))
 #define GET_ALLOC_ADDR(buf)    (((buf)->blk_offset << BUDDY_SHIFT) + emi_shmbuf_base_addr + ADDR_BUF_OFFSET)
-#define GET_BUF_ADDR(addr)    *(struct emi_buf **)(((void *)addr) - ADDR_BUF_OFFSET)
+#define GET_BUF_ADDR(addr)    *(eu32 *)(((void *)addr) - ADDR_BUF_OFFSET)
 
 static espinlock_t *emi_buf_lock = NULL;
 
@@ -156,6 +156,12 @@ int init_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock){
     return emi_spin_init(emi_buf_lock);
 }
 
+void update_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock){
+    emi_shmbuf_base_addr = base;
+    emi_buf_vector = emi_buf_top;
+    emi_buf_lock = lock;
+}
+
 void *emi_alloc(size_t size){
     emi_spin_lock(emi_buf_lock);
     struct emi_buf *buf = alloc_emi_buf(size + ADDR_BUF_OFFSET);
@@ -163,24 +169,41 @@ void *emi_alloc(size_t size){
     
     void *addr = GET_ALLOC_ADDR(buf);
     
-    GET_BUF_ADDR(addr) = buf;
+    GET_BUF_ADDR(addr) = buf - emi_buf_vector;
 
     return addr;
 }
 
 void emi_free(void *addr){
-    struct emi_buf *buf = GET_BUF_ADDR(addr);
+    struct emi_buf *buf = GET_BUF_ADDR(addr) + emi_buf_vector;
 
     emi_spin_lock(emi_buf_lock);
     free_emi_buf(buf);
     emi_spin_unlock(emi_buf_lock);
 }
 
-struct emi_msg *emi_realloc_for_data(struct emi_msg *msg){
+struct emi_msg *alloc_shared_msg(eu32 size){
+    struct emi_msg *msg=emi_alloc(sizeof(struct emi_msg) + size);
+    if(msg != NULL){
+        msg->data = (char *)(msg + 1);
+    }
 
-    int newsize =msg->size;
+    return msg;
+}
+
+void free_shared_msg(struct emi_msg *msg){
+    if(msg->data != (char *)(msg + 1)){
+        emi_free(msg->data);
+    }
+
+    emi_free(msg);
+}
+
+struct emi_msg *realloc_shared_msg(struct emi_msg *msg){
+
+    int newsize =msg->size + sizeof(struct emi_msg);
     
-    struct emi_buf *buf = GET_BUF_ADDR(msg);
+    struct emi_buf *buf = GET_BUF_ADDR(msg) + emi_buf_vector;
     int order = -buf->order - 1;
 
     int oldsize = (1<<order) << BUDDY_SHIFT;
@@ -189,11 +212,17 @@ struct emi_msg *emi_realloc_for_data(struct emi_msg *msg){
         return msg;
     }
 
-    struct emi_msg *newaddr = (struct emi_msg *)emi_alloc(newsize);
+    msg->data = emi_alloc(msg->size);
 
-    memcpy(newaddr, msg, sizeof(struct emi_msg));
+    return msg;
+}
 
-    emi_free(msg);
+void put_msg_data_offset(struct emi_msg *msg){
+    long offset = get_shbuf_offset(emi_shmbuf_base_addr, msg->data);
+    msg->data = (void *)offset;
+}
 
-    return newaddr;
+void put_msg_data_addr(struct emi_msg *msg){
+    long offset = (long)msg->data;
+    msg->data = get_shbuf_addr(emi_shmbuf_base_addr, offset);
 }

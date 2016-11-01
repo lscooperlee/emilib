@@ -110,7 +110,7 @@ struct emi_config *guess_config(){
 
     config=emi_config;
     emi_fill_addr(&src_addr,"127.0.0.1",config->emi_port);
-    if((ret=emi_connect(sd,&src_addr,1))==0){
+    if((ret=emi_connect(sd, &src_addr, 1))==0){
         goto OK;
     }
 

@@ -71,10 +71,17 @@ void func_sterotype(int no_use){
     baseshmsg = GET_PIDIDX_BASE(base);
     nth=baseshmsg[pid];
 
-    shmsg = get_msg_shbuf_from_offset(base, nth);
+    shmsg = (struct emi_msg *)get_shbuf_addr(base, nth);
 
     //this address is the pid_num in emi_core.it should be changed as soon as possable.emi_core will wait the zero to make sure the this process recieved the signal ,and send the same signal to other process that registered the same massage.
     baseshmsg[pid] = 0;
+
+    //For the possible user retdata allocation
+    void *emibuf_top = GET_EMIBUF_BASE(base);
+    espinlock_t *lock = GET_EMIBUF_LOCK_BASE(base);
+    update_emi_buf_lock(base, emibuf_top, lock);
+
+    put_msg_data_addr(shmsg);
 
     list_for_each(lh,&__func_list){
         struct func_list *fl;
@@ -84,14 +91,17 @@ void func_sterotype(int no_use){
             if(shmsg->flag&EMI_MSG_MODE_BLOCK){
                 int ret;
                 ret=(fl->func)(shmsg);
-//in BLOCK mode, if function return with error,then msg->flag must be set to FAILED to ensure the emi_core return failed result to the sender.
+
+                //in BLOCK mode, if function return with error,
+                //then msg->flag must be set to FAILED to ensure the emi_core return failed result to the sender.
                 if(ret){
                     dbg("the msg handler returned an error ret=%d\n",ret);
                     shmsg->flag&=~EMI_MSG_RET_SUCCEEDED;
                 }else{
                     shmsg->flag|=EMI_MSG_RET_SUCCEEDED;
                 }
-            //should break here because BLOCK msg is an exclusive msg.
+                
+                //should break here because BLOCK msg is an exclusive msg.
                 break;
             }else{
                 (fl->func)(shmsg);
@@ -100,11 +110,13 @@ void func_sterotype(int no_use){
         }
     }
 
+    //must be called before semaphore, emi_core should continue after msg->data has been reset to offset
+    put_msg_data_offset(shmsg);
 
-    //FIXME:lock
+    //semaphore with emi_core
+    //FIXME: lock and unlock. Multiple process may register the same message, so may modify the shared emi_msg
+    //at the same time.
     shmsg->count--;
-    //FIXME:unlock
-
 
     if(emi_shm_free(base)){
         dbg("emi_shm_free error\n");
@@ -178,28 +190,6 @@ static int __emi_msg_register(eu32 defined_msg,emi_func func){
 
 int emi_msg_register(eu32 defined_msg,emi_func func){
     return __emi_msg_register(defined_msg,func);
-}
-
-void emi_msg_unregister(eu32 defined_msg,emi_func func){
-    struct list_head *lh;
-    list_for_each(lh,&__func_list){     //is this correct? NOTE THAT
-        struct func_list *fl;
-        fl=container_of(lh,struct func_list,list);
-        if(NULL==func){
-            if(defined_msg==fl->msg){
-                list_del(lh);
-                free(fl);
-            }
-        }else{
-            if((defined_msg==fl->msg)&&(func==fl->func)){
-                list_del(lh);
-                free(fl);
-                return;
-            }
-        }
-    }
-    return;
-
 }
 
 /*

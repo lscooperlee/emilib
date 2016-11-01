@@ -59,17 +59,19 @@ struct emi_msg *emi_msg_alloc(eu32 size) {
 
     struct emi_msg *msg;
     if ((msg = (struct emi_msg *) malloc(sizeof(struct emi_msg) + size)) == NULL) {
-        goto error;
+        return NULL;
     }
-    memset(msg, 0, sizeof(struct emi_msg));
+    memset(msg, 0, sizeof(struct emi_msg) + size);
     msg->size = size;
+    msg->data = (char *)(msg + 1);
 
     return msg;
-
-    error: return NULL;
 }
 
 void emi_msg_free(struct emi_msg *msg) {
+    if((char *)(msg + 1) != msg->data)
+        free(msg->data);
+
     free(msg);
     return;
 }
@@ -110,12 +112,15 @@ int emi_fill_msg(struct emi_msg *msg, char *dest_ip, void *data, eu32 cmd,
         if (emi_fill_addr(&(msg->addr), dest_ip, port))
             return -1;
     }
+
     if (data != NULL) {
-        memcpy((msg)->data, data, msg->size);
+        memcpy(msg->data, data, msg->size);
     }
-    (msg)->cmd = cmd;
-    (msg)->msg = defined_msg;
-    (msg)->flag |= flag;
+
+    msg->cmd = cmd;
+    msg->msg = defined_msg;
+    msg->flag |= flag;
+
     return 0;
 }
 
@@ -145,38 +150,20 @@ int emi_msg_send(struct emi_msg *msg) {
         }
     }
 
-    //waiting for optimizing
     if (msg->flag & EMI_MSG_MODE_BLOCK) {
 
-        /*
-         * keep consistent with the emi_core, try to read an emi_msg struct first, if the msg handler function returns an error, emi_core
-         *      will not send us the emi_msg struct, but we don't know that, so try to read it, if we read returns an error, that means
-         *      emi_core has close the client_sd (accepted socket), some errors must be occured.
-         *
-         *         there are two things that should be noticed.
-         *
-         *         first, currently
-         *         the returned extra data will be not larger than the sent msg->size data, because we have no way to return this
-         *         extra data ,so we will use msg->data to store the returned extra data, which means the returned data size should not
-         *         large than the sent data size.
-         *
-         *         NOTE: THAT this will probably be changed in the future, if we use buddy allocator to manager the msg->data space,
-         *         than we can return even bigger size of extra data back.
-         *
-         *
-         *         second, currently
-         *         this returned extra data is not required to be check and it will be probably received with no error,
-         *         if we receive returned emi_msg, it must be a SCCEEDED state, we don't have to check SCCEEDED again for
-         *         receiving extra data if it has.
-         *         because all the  checks were done by the emi_msg_prepare_return and func_sterotype, see the two functions for details.
-         *
-         */
         if ((emi_read(sd, msg, sizeof(struct emi_msg)))
                 < sizeof(struct emi_msg)) {
             dbg("block mode:read msg emi_read from remote process error\n");
             goto out;
         }
+        msg->data = (char *)(msg + 1);
+
         if ((msg->flag & EMI_MSG_RET_WITHDATA) && (msg->size > 0)) {
+            msg->data = (char *)malloc(msg->size);
+            if(msg->data == NULL){
+                goto out;
+            }
             if ((emi_read(sd, msg->data, msg->size)) < msg->size) {
                 dbg("block mode:read extra data emi_read from remote process error\n");
                 goto out;
@@ -188,16 +175,16 @@ int emi_msg_send(struct emi_msg *msg) {
         ret = 0;
         dbg("a nonblock msg sent successfully\n");
     }
-    out: emi_close(sd);
+
+out: 
+    emi_close(sd);
     return ret;
 }
 
 int emi_msg_send_highlevel(char *ipaddr, int msgnum, void *send_data,
         int send_size, void *ret_data, int ret_size, eu32 cmd, eu32 flag) {
 
-    int size = send_size > ret_size ? send_size : ret_size;
-
-    struct emi_msg *msg = emi_msg_alloc(size);
+    struct emi_msg *msg = emi_msg_alloc(send_size);
     if (msg == NULL) {
         dbg("emi_msg_alloc error\n");
         return -1;
@@ -212,24 +199,13 @@ int emi_msg_send_highlevel(char *ipaddr, int msgnum, void *send_data,
     }
 
     if (ret_data != NULL && msg->size > 0) {
-        memcpy(ret_data, msg->data, msg->size);
+        memcpy(ret_data, msg->data, ret_size);
     }
 
     emi_msg_free(msg);
     return 0;
 }
 
-/*
- * NOTE:
- *     BE CAREFUL, the ret_size in this function is supposed to be the expected return data size from the receiver.
- *         normally this should be awared by both receiver and sender.
- *         the receiver can return data as much as possible, only limited by the emi max space range.
- *         but the sender can not know how much data the receiver will return, if the receiver returns a large amount of data,
- *         but the sender only prepares a small size buffer to store it, the sender will probably get some kind of system memory error.
- *
- *         this of course can be fixed by cycling read and realloc, but I don't want to do that recently.
- *
- */
 int emi_msg_send_highlevel_block(char *ipaddr, int msgnum, void *send_data,
         int send_size, void *ret_data, int ret_size, eu32 cmd) {
     eu32 flag = EMI_MSG_MODE_BLOCK;
@@ -246,22 +222,6 @@ int emi_msg_send_highlevel_nonblock(char *ipaddr, int msgnum, void *send_data,
             cmd, flag);
 }
 
-/*
- * this function should be called inside msg handler function, preparing returned extra data, several steps:
- *      step 1: check if size > MAX_SIZE_THAT_CAN_BE_ALLOC, at this version emi_config->emi_data_size_per_msg,
- *      the ret data size can be larger than the received data size, an example is the sender has no data to be transmit to
- *      the receiver, thus the received data size should be zero, but need the receiver to write back an extra data, so the
- *      returned data size is larger than the received one.
- *
- *      step 2: check if msg is ~BLOCK. Because the sender will not receive returned msg
- *      if it sends an ~BLOCK msg.
- *
- *      step 3: change msg->flag to EMI_MSG_RET_WITHDATA
- *
- *      when using this function in msg handler,
- *      we must check the return value of this function and must not return 0(success)
- *      in msg handler when emi_msg_prepare_return_data return -1(fail)
- */
 int emi_msg_prepare_return_data(struct emi_msg *msg, void *data, eu32 size) {
 
     if (size > emi_config->emi_data_size_per_msg) {

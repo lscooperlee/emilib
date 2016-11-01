@@ -58,7 +58,7 @@ int func_block(struct emi_msg *msg){
 
 void usage(void){
     printf("usage: sar [-b] -r msg [-R retdata]\n");
-    printf("usage: sar [-b] -s addr -m msg [ -c cmd ] [-d sentdata] [-D retdatasize]\n");
+    printf("usage: sar [-b] -s addr -m msg [ -c cmd ] [-d sentdata]\n");
 }
 
 #define BLOCK_MODE     0x20
@@ -72,7 +72,7 @@ void usage(void){
 int main(int argc,char **argv){
 
     char opt;
-    int option=0, retdatasize=0;
+    int option=0;
     long msgr=-1,msgnum=-1;
     unsigned long cmd=0;
     char addr[32]={0};
@@ -103,10 +103,6 @@ int main(int argc,char **argv){
                         option|=MSG_DATA;     //for send data
                         sentsize=strlen(*(argv+1));
                         strcpy(sentdata,*(argv+1));
-                        break;
-                    case 'D':
-                        option|=MSG_RETDATA;     //ret data of the receiver
-                        retdatasize=atol(*(argv+1));
                         break;
                     case 'R':
                         option|=MSG_DATA;     //ret data of the sender
@@ -155,12 +151,6 @@ int main(int argc,char **argv){
         emi_loop();
 
     }else if(option&(SEND_MSG|MSG_NUM)){
-
-        /* 
-         * The msg->data should still be allocated if expecting returning data, 
-         * though no data to be sent.
-         */
-        sentsize = sentsize > retdatasize ? sentsize : retdatasize;
 
         struct emi_msg *msg = emi_msg_alloc(sentsize);
         if (msg == NULL) {

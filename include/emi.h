@@ -70,7 +70,7 @@ struct emi_msg{
     eu32 size;
     eu32 cmd;
     eu32 msg;
-    char data[];
+    char *data;
 };
 
 typedef int (*emi_func)(struct emi_msg *);

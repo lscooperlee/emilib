@@ -207,9 +207,9 @@ static int emi_recieve_operation(void *args){
 /*
  * get an empty area in the share memory for a recieving msg.
 */
-    if((msg_pos=(struct emi_msg *)emi_alloc(sizeof(struct emi_msg)))==NULL){
+    if((msg_pos=alloc_shared_msg(0))==NULL){
         coreprt("emi_obtain_msg_space error\n");
-        goto e0;
+        goto e1;
     }
 
 /*
@@ -220,6 +220,7 @@ static int emi_recieve_operation(void *args){
         coreprt("emi_read from client error or emi_init is guessing port\n");
         goto e0;
     }
+    msg_pos->data = (char *)(msg_pos + 1);
 
     debug_msg(msg_pos,0);
 /*
@@ -275,8 +276,8 @@ static int emi_recieve_operation(void *args){
             /*
              * now emi_core could receive arbitary data as long as emi_core has enough memory to hold it.
              */
-            msg_pos = emi_realloc_for_data(msg_pos);
-            if (msg_pos != NULL) {
+            msg_pos = realloc_shared_msg(msg_pos);
+            if (msg_pos->data != NULL) {
 
                 if ((ret = emi_read(((struct clone_args *) args)->client_sd,
                         msg_pos->data, msg_pos->size)) < msg_pos->size) {
@@ -303,13 +304,13 @@ static int emi_recieve_operation(void *args){
 /*
  *    get the offset of the msg in "msg split" area (see develop.txt). this offset will be writed into the BASE_ADDR+pid address afterward, inform the according process to get it.
  */
-        nth=emi_get_msg_shbuf_offset(msg_shm_base_addr, msg_pos);
+        nth=get_shbuf_offset(msg_shm_base_addr, msg_pos);
 
         msg_map_init(&p,msg_pos->msg,0);
-
         struct list_head msg_map_list = LIST_HEAD_INIT(msg_map_list);
-
         emi_hsearch_lock(msg_table, &p, &msg_map_list, &msg_map_lock);
+
+        put_msg_data_offset(msg_pos);
 
         while(!list_empty(&msg_map_list)){
             struct msg_map *map;
@@ -339,6 +340,9 @@ static int emi_recieve_operation(void *args){
         while(msg_pos->count){
             sched_yield();
         }
+        
+        //Must be called after semaphore
+        put_msg_data_addr(msg_pos);
 
         /*
          * After the receiver process finishes everything.
@@ -370,6 +374,7 @@ static int emi_recieve_operation(void *args){
 
                 if ((msg_pos->flag & EMI_MSG_RET_WITHDATA) && (msg_pos->size > 0)) {
                     coreprt("Emi message handler returns extra data \n");
+
                     if ((ret = emi_write(
                             ((struct clone_args *) args)->client_sd,
                             msg_pos->data, msg_pos->size)) < msg_pos->size) {
@@ -392,8 +397,9 @@ static int emi_recieve_operation(void *args){
     }
 
 e0:
+    free_shared_msg(msg_pos);
+e1:
     emi_close(((struct clone_args *)args)->client_sd);
-    emi_free(msg_pos);
     free(args);
     pthread_exit(NULL);
     return ret;
