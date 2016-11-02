@@ -51,6 +51,12 @@ extern void emi_addr_free(struct emi_addr *addr);
  */
 extern struct emi_msg *emi_msg_alloc(eu32 size);
 
+/**
+ * emi_msg_free_data - free the emi_msg data field if it is allocated.
+ * @msg:    the emi_msg structure pointer.
+ *
+ */
+extern void emi_msg_free_data(struct emi_msg *msg);
 
 /**
  * emi_msg_free - free the emi_msg structure alloced.

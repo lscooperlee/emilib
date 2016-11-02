@@ -115,7 +115,7 @@ emi_test:
 	@python3 test/emi_test.py
 
 python_test: 
-	@python3 -W ignore test/python_test.py
+	@python3 -W ignore test/python_test.py -v
 
 unit_test:
 	@./test/unit_test/test_buddy_algorithm

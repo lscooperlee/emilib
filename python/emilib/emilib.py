@@ -3,6 +3,8 @@ import struct
 import signal
 
 _emilib = ctypes.cdll.LoadLibrary("libemi.so")
+_libc = ctypes.cdll.LoadLibrary("libc.so.6")
+_libc.free.argtypes = (ctypes.c_void_p,)
 
 class emi_flag:
     EMI_MSG_MODE_BLOCK = 0x00000100
@@ -66,15 +68,17 @@ class emi_msg(ctypes.Structure):
         ("size", ctypes.c_uint, 32),
         ("cmd", ctypes.c_uint, 32),
         ("msg", ctypes.c_uint, 32),
+        ("_data", ctypes.c_void_p),
     ]
 
     def __new__(cls, *args, **kwargs):
-        size = len(kwargs.get("data", b''))
-        msg_void = ctypes.create_string_buffer(size + ctypes.sizeof(cls))
-        EMITYPE = ctypes.POINTER(emi_msg)
-        msg = EMITYPE(msg_void)
-        msg.contents.size = size
-        return msg.contents
+        msg = super().__new__(cls, args, kwargs)
+        msg.size = len(kwargs.get("data", b''))
+        msg._data = ctypes.cast(ctypes.create_string_buffer(msg.size), ctypes.c_void_p)
+        return msg
+        
+    def _try_free(self):
+        _libc.free(self._data)
 
     def __str__(self):
         return "emi_addr:{{ msg: {0}, cmd: {1} }}".format(
@@ -90,7 +94,6 @@ class emi_msg(ctypes.Structure):
         cipaddr = ctypes.c_char_p(ipaddr.encode())
 
         size = len(data)
-        csize = ctypes.c_size_t(size)
         cdata = (ctypes.c_ubyte * size).from_buffer(bytearray(data))
 
         ccmd = ctypes.c_uint(cmd)
@@ -103,7 +106,7 @@ class emi_msg(ctypes.Structure):
 
     @property
     def data(self):
-        ccharp = ctypes.c_char_p(ctypes.addressof(self) + ctypes.sizeof(self))
+        ccharp = ctypes.cast(self._data, ctypes.c_char_p)
         return ccharp.value[:self.size]
 
 
@@ -113,6 +116,8 @@ _emilib.emi_init.restype = ctypes.c_int
 _emilib.emi_msg_register.argtypes = (
     ctypes.c_uint, ctypes.CFUNCTYPE(ctypes.c_int, ctypes.POINTER(emi_msg)))
 _emilib.emi_msg_register.restype = ctypes.c_int
+
+_emilib.emi_msg_free_data.argtypes = (ctypes.POINTER(emi_msg),)
 
 _emilib.emi_msg_send.argtypes = (ctypes.POINTER(emi_msg), )
 _emilib.emi_msg_send.restype = ctypes.c_int
@@ -148,7 +153,9 @@ def emi_msg_register(msg_num, func):
 
 def emi_msg_send(emi_msg):
     ret = _emilib.emi_msg_send(ctypes.pointer(emi_msg))
-    return ret, bytes(emi_msg.data) if emi_msg.flag & emi_flag.EMI_MSG_RET_WITHDATA else b''
+    retdata = bytes(emi_msg.data) if emi_msg.flag & emi_flag.EMI_MSG_RET_WITHDATA else b''
+    _emilib.emi_msg_free_data(emi_msg)
+    return ret, retdata
 
 
 def emi_msg_send_highlevel(msgnum,

@@ -66,6 +66,11 @@ struct emi_msg{
  */
 #define EMI_MSG_RET_WITHDATA        0x00020000
 
+/*
+ * Used for marking if msg->data is allocated, if so the data area could be free
+ */
+#define EMI_MSG_FLAG_ALLOCDATA        0x00040000
+
     eu32 count;                //the member is used for count the processes when several processes share one massage.it is internally,do not use it. useful in ~BLOCK msg.
     eu32 size;
     eu32 cmd;

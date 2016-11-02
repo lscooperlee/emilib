@@ -192,9 +192,8 @@ struct emi_msg *alloc_shared_msg(eu32 size){
 }
 
 void free_shared_msg(struct emi_msg *msg){
-    if(msg->data != (char *)(msg + 1)){
+    if(msg->flag & EMI_MSG_FLAG_ALLOCDATA)
         emi_free(msg->data);
-    }
 
     emi_free(msg);
 }
@@ -213,6 +212,10 @@ struct emi_msg *realloc_shared_msg(struct emi_msg *msg){
     }
 
     msg->data = emi_alloc(msg->size);
+    if(msg->data == NULL)
+        return NULL;
+
+    msg->flag |= EMI_MSG_FLAG_ALLOCDATA;
 
     return msg;
 }

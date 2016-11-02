@@ -68,13 +68,16 @@ struct emi_msg *emi_msg_alloc(eu32 size) {
     return msg;
 }
 
-void emi_msg_free(struct emi_msg *msg) {
-    if((char *)(msg + 1) != msg->data)
+void emi_msg_free_data(struct emi_msg *msg) {
+    if(msg->flag & EMI_MSG_FLAG_ALLOCDATA)
         free(msg->data);
-
-    free(msg);
-    return;
 }
+
+void emi_msg_free(struct emi_msg *msg) {
+    emi_msg_free_data(msg);
+    free(msg);
+}
+
 
 static int split_ipaddr(char *mixip, char *ip, int *port) {
     int ret = 0;
@@ -160,10 +163,13 @@ int emi_msg_send(struct emi_msg *msg) {
         msg->data = (char *)(msg + 1);
 
         if ((msg->flag & EMI_MSG_RET_WITHDATA) && (msg->size > 0)) {
+
             msg->data = (char *)malloc(msg->size);
             if(msg->data == NULL){
                 goto out;
             }
+            msg->flag |= EMI_MSG_FLAG_ALLOCDATA;
+
             if ((emi_read(sd, msg->data, msg->size)) < msg->size) {
                 dbg("block mode:read extra data emi_read from remote process error\n");
                 goto out;
