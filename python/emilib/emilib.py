@@ -3,8 +3,6 @@ import struct
 import signal
 
 _emilib = ctypes.cdll.LoadLibrary("libemi.so")
-_libc = ctypes.cdll.LoadLibrary("libc.so.6")
-_libc.free.argtypes = (ctypes.c_void_p,)
 
 class emi_flag:
     EMI_MSG_MODE_BLOCK = 0x00000100
@@ -77,9 +75,6 @@ class emi_msg(ctypes.Structure):
         msg._data = ctypes.cast(ctypes.create_string_buffer(msg.size), ctypes.c_void_p)
         return msg
         
-    def _try_free(self):
-        _libc.free(self._data)
-
     def __str__(self):
         return "emi_addr:{{ msg: {0}, cmd: {1} }}".format(
             str(self.msg), str(self.cmd))
@@ -143,10 +138,19 @@ _registered_callback = []
 
 
 def emi_msg_register(msg_num, func):
+
+    def callback_decorator(func):
+        def f(msg):
+            return func(msg.contents)
+        return f
+
     num = ctypes.c_uint(msg_num)
+
     CMPFUNC = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.POINTER(emi_msg))
-    callback = CMPFUNC(func)
+    callback = CMPFUNC(callback_decorator(func))
+
     _registered_callback.append(callback)
+
     ret = _emilib.emi_msg_register(num, callback)
     return ret
 

@@ -76,8 +76,8 @@ class TestEmiLib(unittest.TestCase):
 
         def func(msg):
             nonlocal received
-            self.assertEqual(msg.contents.msg, 2)
-            self.assertEqual(msg.contents.cmd, 1)
+            self.assertEqual(msg.msg, 2)
+            self.assertEqual(msg.cmd, 1)
             received = received + 1
             return 0
 
@@ -99,9 +99,9 @@ class TestEmiLib(unittest.TestCase):
 
         def func(msg):
             nonlocal received
-            self.assertEqual(msg.contents.msg, 3)
-            self.assertEqual(msg.contents.cmd, 1)
-            self.assertEqual(msg.contents.data, b"11112222"*1024)
+            self.assertEqual(msg.msg, 3)
+            self.assertEqual(msg.cmd, 1)
+            self.assertEqual(msg.data, b"11112222"*1024)
             received = received + 1
             return 0
 
@@ -123,9 +123,9 @@ class TestEmiLib(unittest.TestCase):
 
         def func(msg):
             nonlocal received
-            self.assertEqual(msg.contents.msg, 4)
-            self.assertEqual(msg.contents.cmd, 1)
-            self.assertEqual(msg.contents.data, b"11112222")
+            self.assertEqual(msg.msg, 4)
+            self.assertEqual(msg.cmd, 1)
+            self.assertEqual(msg.data, b"11112222")
             received = received + 1
             return 0
 
@@ -152,9 +152,9 @@ class TestEmiLib(unittest.TestCase):
 
         def func(msg):
             nonlocal received
-            self.assertEqual(msg.contents.msg, 5)
-            self.assertEqual(msg.contents.cmd, 1)
-            self.assertEqual(msg.contents.data, b"11112222")
+            self.assertEqual(msg.msg, 5)
+            self.assertEqual(msg.cmd, 1)
+            self.assertEqual(msg.data, b"11112222")
             received = received + 1
             emi_msg_prepare_return_data(msg, b'abcdef')
             return 0
@@ -183,9 +183,9 @@ class TestEmiLib(unittest.TestCase):
 
         def func(msg):
             nonlocal received
-            self.assertEqual(msg.contents.msg, 6)
-            self.assertEqual(msg.contents.cmd, 1)
-            self.assertEqual(msg.contents.data, b"11112222")
+            self.assertEqual(msg.msg, 6)
+            self.assertEqual(msg.cmd, 1)
+            self.assertEqual(msg.data, b"11112222")
             received = received + 1
             emi_msg_prepare_return_data(msg, b'abcdefghijkmln')
             return 0
@@ -214,9 +214,9 @@ class TestEmiLib(unittest.TestCase):
         @emi_register(7)
         def func(msg):
             nonlocal received
-            self.assertEqual(msg.contents.msg, 7)
-            self.assertEqual(msg.contents.cmd, 1)
-            self.assertEqual(msg.contents.data, b"11112222")
+            self.assertEqual(msg.msg, 7)
+            self.assertEqual(msg.cmd, 1)
+            self.assertEqual(msg.data, b"11112222")
             received = received + 1
             emi_msg_prepare_return_data(msg, b'abcdefghijkmln')
             return 0
@@ -242,14 +242,14 @@ class TestEmiLib(unittest.TestCase):
 
         def func1(msg):
             self.assertEqual(func1.__name__, "func1")
-            self.assertEqual(msg.contents.msg, 8)
-            self.assertEqual(msg.contents.cmd, 1)
+            self.assertEqual(msg.msg, 8)
+            self.assertEqual(msg.cmd, 1)
             return 0
 
         def func2(msg):
             self.assertEqual(func2.__name__, "func2")
-            self.assertEqual(msg.contents.msg, 9)
-            self.assertEqual(msg.contents.cmd, 1)
+            self.assertEqual(msg.msg, 9)
+            self.assertEqual(msg.cmd, 1)
             return 0
 
         ret = emi_msg_register(8, func1)

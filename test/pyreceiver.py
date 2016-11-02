@@ -5,14 +5,14 @@ import emilib
 
 @emilib.emi_register(1)
 def func(emi):
-    msgnum = emi.contents.msg
-    cmd = emi.contents.cmd
-    data = emi.contents.data
-    flag = emi.contents.flag
+    msgnum = emi.msg
+    cmd = emi.cmd
+    data = emi.data
+    flag = emi.flag
     print((msgnum, cmd, data))
     
     if flag & emilib.emi_flag.EMI_MSG_MODE_BLOCK and data:
-        retdata = b'1' * emi.contents.size
+        retdata = b'1' * emi.size
 
         emilib.emi_msg_prepare_return_data(emi, retdata)
 
