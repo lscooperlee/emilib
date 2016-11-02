@@ -191,10 +191,13 @@ struct emi_msg *alloc_shared_msg(eu32 size){
     return msg;
 }
 
-void free_shared_msg(struct emi_msg *msg){
+void free_shared_msg_data(struct emi_msg *msg){
     if(msg->flag & EMI_MSG_FLAG_ALLOCDATA)
         emi_free(msg->data);
+}
 
+void free_shared_msg(struct emi_msg *msg){
+    free_shared_msg_data(msg);
     emi_free(msg);
 }
 

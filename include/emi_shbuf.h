@@ -48,8 +48,9 @@ extern void *emi_alloc(size_t size);
 extern void emi_free(void *addr);
 
 extern struct emi_msg *alloc_shared_msg(eu32 size);
-void free_shared_msg(struct emi_msg *msg);
 extern struct emi_msg *realloc_shared_msg(struct emi_msg *msg);
+extern void free_shared_msg_data(struct emi_msg *msg);
+extern void free_shared_msg(struct emi_msg *msg);
 
 extern void put_msg_data_addr(struct emi_msg *msg);
 extern void put_msg_data_offset(struct emi_msg *msg);

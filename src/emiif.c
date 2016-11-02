@@ -46,13 +46,12 @@ struct emi_addr *emi_addr_alloc() {
     memset(addr, 0, sizeof(struct emi_addr));
 
     return addr;
-    error: return NULL;
+error: 
+    return NULL;
 }
 
 void emi_addr_free(struct emi_addr *addr) {
-
     free(addr);
-    return;
 }
 
 struct emi_msg *emi_msg_alloc(eu32 size) {
@@ -77,7 +76,6 @@ void emi_msg_free(struct emi_msg *msg) {
     emi_msg_free_data(msg);
     free(msg);
 }
-
 
 static int split_ipaddr(char *mixip, char *ip, int *port) {
     int ret = 0;
@@ -226,24 +224,4 @@ int emi_msg_send_highlevel_nonblock(char *ipaddr, int msgnum, void *send_data,
 
     return emi_msg_send_highlevel(ipaddr, msgnum, send_data, send_size, NULL, 0,
             cmd, flag);
-}
-
-int emi_msg_prepare_return_data(struct emi_msg *msg, void *data, eu32 size) {
-
-    if (size > emi_config->emi_data_size_per_msg) {
-        dbg("the size of returned extra data is too large\n");
-        msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
-        return -1;
-    }
-
-    if (!(msg->flag & EMI_MSG_MODE_BLOCK)) {
-        dbg("an ~BLOCK msg is sent, receiver is not expecting receive data");
-        msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
-        return -1;
-    }
-
-    msg->size = size;
-    memcpy(msg->data, data, size);
-    msg->flag |= EMI_MSG_RET_WITHDATA;
-    return 0;
 }

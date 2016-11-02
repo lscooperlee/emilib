@@ -192,6 +192,42 @@ int emi_msg_register(eu32 defined_msg,emi_func func){
     return __emi_msg_register(defined_msg,func);
 }
 
+void *emi_retdata_alloc(struct emi_msg *msg, eu32 size){
+    void *addr = msg->data;
+
+    if (!(msg->flag & EMI_MSG_MODE_BLOCK)) {
+        dbg("an ~BLOCK msg is sent, receiver is not expecting receive data");
+        msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
+        return NULL;
+    }
+
+    if(size > msg->size){
+        addr = emi_alloc(size);
+        if(addr == NULL){
+            msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
+            return NULL;
+        }
+
+        free_shared_msg_data(msg);
+        msg->data = addr;
+    }
+
+    msg->size = size;
+    msg->flag |= EMI_MSG_RET_WITHDATA;
+    
+    return addr;
+}
+
+int emi_msg_prepare_return_data(struct emi_msg *msg, void *data, eu32 size) {
+    void *retdata = emi_retdata_alloc(msg, size);
+    if(retdata == NULL){
+        return -1;
+    }
+
+    memcpy(retdata, data, size);
+    return 0;
+}
+
 /*
  *emi_init must be used before recieving process.it uses the emi_config struct, which may requre emi config file.
  *
