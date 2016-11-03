@@ -30,7 +30,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <sys/ipc.h>
 
 #include "emi.h"
-#include "emisocket.h"
+#include "emi_sock.h"
 #include "emi_shbuf.h"
 #include "list.h"
 #include "emi_semaphore.h"
@@ -128,7 +128,7 @@ void func_sterotype(int no_use){
 
 static int __emi_msg_register(eu32 defined_msg,emi_func func){
     struct sk_dpr *sd;
-    int ret;
+    int ret = -1;
     struct sigaction act, old_act;
     struct func_list *fl;
     struct emi_msg cmd;
@@ -147,29 +147,24 @@ static int __emi_msg_register(eu32 defined_msg,emi_func func){
     cmd.msg=defined_msg;
     cmd.flag=EMI_MSG_CMD_REGISTER;
 
-    if((ret=emi_connect(sd,&cmd.addr,1))<0){
-        emi_close(sd);
-        dbg("emi_connect error\n");
-        return -1;
+    if(emi_connect(sd,&cmd.addr,1)){
+        goto out;
     }
-    if((ret=emi_write(sd,(void *)&cmd,sizeof(struct emi_msg)))<sizeof(struct emi_msg)){
-        emi_close(sd);
-        dbg("emi_write error\n");
-        return -1;
+
+    if(emi_msg_write_payload(sd,&cmd)){
+        goto out;
     }
-    if((ret=emi_read(sd,(void *)&cmd,sizeof(struct emi_msg)))<sizeof(struct emi_msg)){
-        emi_close(sd);
-        dbg("emi_read register back error\n");
-        return -1;
+
+    if(emi_msg_read_payload(sd, &cmd)){
+        goto out;
     }
+
     if(!(cmd.flag&EMI_MSG_RET_SUCCEEDED)){
-        dbg("emi returns an ~SUCCEEDED flag\n");
-        return -1;
+        goto out;
     }
 
     if((fl=(struct func_list *)malloc(sizeof(struct func_list)))==NULL){
-        dbg("malloc error\n");
-        return -ENOMEM;
+        goto out;
     }
     memset(fl,0,sizeof(struct func_list));
     fl->func=func;
@@ -181,11 +176,14 @@ static int __emi_msg_register(eu32 defined_msg,emi_func func){
     sigdelset(&act.sa_mask,SIGUSR2);
 //    act.sa_flags=SA_INTERRUPT;
     act.sa_flags= SA_RESTART;    //this is important, RESTART system call during signal handler.
-    if((ret=sigaction(SIGUSR2,&act,&old_act))<0){
-        dbg("sigaction error\n");
-        return ret;
+    if(sigaction(SIGUSR2,&act,&old_act)){
+        goto out;
     }
-    return 0;
+    
+    ret = 0;
+out:
+    emi_close(sd);
+    return ret;
 }
 
 int emi_msg_register(eu32 defined_msg,emi_func func){
@@ -213,7 +211,6 @@ void *emi_retdata_alloc(struct emi_msg *msg, eu32 size){
     }
 
     msg->size = size;
-    msg->flag |= EMI_MSG_RET_WITHDATA;
     
     return addr;
 }

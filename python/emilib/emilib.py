@@ -7,7 +7,7 @@ _emilib = ctypes.cdll.LoadLibrary("libemi.so")
 class emi_flag:
     EMI_MSG_MODE_BLOCK = 0x00000100
     EMI_MSG_RET_SUCCEEDED = 0x00010000
-    EMI_MSG_RET_WITHDATA = 0x00020000
+    EMI_MSG_FLAG_ALLOCDATA = 0x00040000
 
 
 class EMIError(Exception):
@@ -62,11 +62,11 @@ class emi_msg(ctypes.Structure):
     _fields_ = [
         ("addr", emi_addr),
         ("flag", ctypes.c_uint, 32),
-        ("count", ctypes.c_uint, 32),
-        ("size", ctypes.c_uint, 32),
-        ("cmd", ctypes.c_uint, 32),
         ("msg", ctypes.c_uint, 32),
+        ("cmd", ctypes.c_uint, 32),
+        ("size", ctypes.c_uint, 32),
         ("_data", ctypes.c_void_p),
+        ("count", ctypes.c_uint, 32),
     ]
 
     def __new__(cls, *args, **kwargs):
@@ -157,7 +157,7 @@ def emi_msg_register(msg_num, func):
 
 def emi_msg_send(emi_msg):
     ret = _emilib.emi_msg_send(ctypes.pointer(emi_msg))
-    retdata = bytes(emi_msg.data) if emi_msg.flag & emi_flag.EMI_MSG_RET_WITHDATA else b''
+    retdata = bytes(emi_msg.data)
     _emilib.emi_msg_free_data(emi_msg)
     return ret, retdata
 

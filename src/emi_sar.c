@@ -19,8 +19,9 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <emiif.h>
-#include <emi_dbg.h>
+
+#include "emi_if.h"
+#include "emi_dbg.h"
 
 char retdata[1024] = {0};
 unsigned int retsize = 0;

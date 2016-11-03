@@ -35,7 +35,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi.h"
 #include "msg_table.h"
 #include "emi_shbuf.h"
-#include "emisocket.h"
+#include "emi_sock.h"
 #include "emi_semaphore.h"
 #include "emi_dbg.h"
 #include "emi_config.h"
@@ -216,7 +216,7 @@ static int emi_recieve_operation(void *args){
  * read the remote msg into this alloced memory, if this one got an error, probably emi_init has sent a guess message to emi_core, which
  * is a connection to emi_core without any data transfered.
  */
-    if((ret=emi_read(((struct clone_args *)args)->client_sd,msg_pos,sizeof(struct emi_msg)))<(sizeof(struct emi_msg))){
+    if((ret=emi_msg_read_payload(((struct clone_args *)args)->client_sd,msg_pos)) < 0){
         coreprt("emi_read from client error or emi_init is guessing port\n");
         goto e0;
     }
@@ -255,7 +255,7 @@ static int emi_recieve_operation(void *args){
 
 
 //tell the process the registeration result
-        if((ret=emi_write(((struct clone_args *)args)->client_sd,msg_pos,sizeof(struct emi_msg)))<(sizeof(struct emi_msg))){
+        if((ret=emi_msg_write_payload(((struct clone_args *)args)->client_sd,msg_pos)) < 0){
             coreprt("emi_read from client error\n");
         }
 
@@ -279,8 +279,7 @@ static int emi_recieve_operation(void *args){
             msg_pos = realloc_shared_msg(msg_pos);
             if (msg_pos->data != NULL) {
 
-                if ((ret = emi_read(((struct clone_args *) args)->client_sd,
-                        msg_pos->data, msg_pos->size)) < msg_pos->size) {
+                if ((ret = emi_msg_read_data(((struct clone_args *) args)->client_sd, msg_pos)) < 0) {
                     coreprt("emi_read from client error\n");
                     goto e0;
                 }
@@ -358,28 +357,10 @@ static int emi_recieve_operation(void *args){
  *  goto e0 and close(client_fd) immediately, though the sender is expecting return info from emi_core, we send nothing.
  *  just close the socket. The sender will get an error code as the return value of read function, indicating some errors occured.
  *
- *  if we are lucky enough that everything goes perfectly well, an SUCCEEDED flag will be set.
- *  In this condition, first we write msg_pos (an emi_msg struct) back to the sender. That means
- *  the receiver could make use of this feature to return data to the sender by putting it to
- *  emi_msg strcture body.
- *
- *  if EMI_MSG_RET_WITHDATA is set and msg_pos->size > 0, we send extra data (msg_pos->data) back,
  */
             if (msg_pos->flag & EMI_MSG_RET_SUCCEEDED) {
-                if ((ret = emi_write(((struct clone_args *) args)->client_sd,
-                        msg_pos, sizeof(struct emi_msg)))
-                        < sizeof(struct emi_msg)) {
+                if((ret = emi_msg_write(((struct clone_args *) args)->client_sd, msg_pos))< 0){
                     goto e0;
-                }
-
-                if ((msg_pos->flag & EMI_MSG_RET_WITHDATA) && (msg_pos->size > 0)) {
-                    coreprt("Emi message handler returns extra data \n");
-
-                    if ((ret = emi_write(
-                            ((struct clone_args *) args)->client_sd,
-                            msg_pos->data, msg_pos->size)) < msg_pos->size) {
-                        goto e0;
-                    }
                 }
 
             } else {

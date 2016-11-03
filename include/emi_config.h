@@ -17,8 +17,6 @@
 
 struct emi_config{
     eu32 emi_port;
-    eu32 emi_data_size_per_msg;
-    eu32 emi_key;
 };
 
 extern struct emi_config *emi_config;

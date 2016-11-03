@@ -21,9 +21,10 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <errno.h>
 #include "emi.h"
-#include "emisocket.h"
+#include "emi_sock.h"
 
 
 struct sk_dpr *emi_open(int addr_family){
@@ -54,10 +55,6 @@ void emi_close(struct sk_dpr *sd){
             close(sd->d);
         free(sd);
     }
-    else{
-        return;
-    }
-    return;
 }
 int emi_listen(struct sk_dpr *sd){
     if(listen(sd->d,SOMAXCONN)<0){
@@ -75,12 +72,8 @@ int emi_connect(struct sk_dpr *sd,struct emi_addr *dest_addr,eu32 retry){
                     return 0;
                 if(i<(2^retry))
                     usleep(1000*(i<<3));
-//                dest_addr->ipv4.sin_port=htons(GET_PORT);
             }
-//            perror("connect error\n");
             return -1;
-//        case AF_BLUETOOTH:
-//        case AF_USB:
         default:
             return -1;
     }
@@ -98,7 +91,6 @@ int emi_bind(struct sk_dpr *sd,int emi_port){
                 return -1;
             }
             return 0;
-//        case AF_BLUETOOTH:
         default:
             return -1;
     }
@@ -119,7 +111,6 @@ struct sk_dpr *emi_accept(struct sk_dpr *sd,union emi_sock_addr *addr){
     if((sd_dest=(struct sk_dpr *)malloc(sizeof(struct sk_dpr)))==NULL)
         return NULL;
     if((sd_dest->d=accept(sd->d,(struct sockaddr *)addr,&len))<0){
-//        perror("accept error\n");
         return NULL;
     }
     if(addr!=NULL){
@@ -128,4 +119,66 @@ struct sk_dpr *emi_accept(struct sk_dpr *sd,union emi_sock_addr *addr){
         sd_dest->af=0;
     }
     return sd_dest;
+}
+
+int emi_msg_write_payload(struct sk_dpr *sd, struct emi_msg *msg){
+    if (emi_write(sd, (void *) msg, EMI_MSG_PAYLOAD_SIZE) < EMI_MSG_PAYLOAD_SIZE) {
+        return -1;
+    }
+    return 0;
+}
+
+int emi_msg_write_data(struct sk_dpr *sd, struct emi_msg *msg){
+    if (emi_write(sd, msg->data, msg->size) < msg->size) {
+        return -1;
+    }
+    return 0;
+}
+
+int emi_msg_write(struct sk_dpr *sd, struct emi_msg *msg){
+    if (emi_msg_write_payload(sd, msg)){
+        return -1;
+    }
+    if (msg->size > 0 && (void *) msg->data != NULL) {
+        return emi_msg_write_data(sd, msg);    
+    }
+    return 0;
+}
+
+
+int emi_msg_read_payload(struct sk_dpr *sd, struct emi_msg *msg){
+    if (emi_read(sd, msg, EMI_MSG_PAYLOAD_SIZE) < EMI_MSG_PAYLOAD_SIZE) {
+        return -1;
+    }
+    return 0;
+}
+
+int emi_msg_read_data(struct sk_dpr *sd, struct emi_msg *msg){
+    if(emi_read(sd, msg->data, msg->size) < msg->size) {
+        return -1;
+    }
+    return 0;
+}
+
+int emi_msg_read(struct sk_dpr *sd, struct emi_msg *msg){
+    unsigned int oldsize = msg->size;
+    if (emi_msg_read_payload(sd, msg)){
+        return -1;
+    }
+
+    if (msg->size > 0) {
+        if(msg->size > oldsize){
+            msg->data = (char *)malloc(msg->size);
+            if(msg->data == NULL){
+                return -1;
+            }
+            msg->flag |= EMI_MSG_FLAG_ALLOCDATA;
+        }
+
+        if (emi_msg_read_data(sd, msg)) {
+            return -1;
+        }
+    }
+
+    return 0;
 }

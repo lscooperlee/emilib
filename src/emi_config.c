@@ -10,8 +10,8 @@
 #include "emi.h"
 #include "emi_config.h"
 #include "emi_dbg.h"
-#include "emisocket.h"
-#include "emiif.h"
+#include "emi_sock.h"
+#include "emi_if.h"
 
 
 /*global emi_config using default value,
@@ -24,24 +24,14 @@ the obsolete parameter emi_max_data is defined for max data ,because new design 
  */
 static struct emi_config __emi_config={
     .emi_port=USR_EMI_PORT,
-    .emi_data_size_per_msg=EMI_MAX_MSG_SIZE,
 };
 
 
 
 struct emi_config *emi_config=&__emi_config;
 
-#ifdef DEBUG
-void debug_config(struct emi_config *config){
-    printf("config->emi_port=%d\n",config->emi_port);
-    printf("config->emi_data_size_per_msg=%d\n",config->emi_data_size_per_msg);
-}
-#endif
-
 void set_default_config(struct emi_config *config){
     emi_config->emi_port=config->emi_port;
-    emi_config->emi_data_size_per_msg=config->emi_data_size_per_msg;
-    return;
 }
 
 struct emi_config *get_config(void){

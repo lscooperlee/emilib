@@ -29,7 +29,7 @@
 #include <signal.h>
 #include <errno.h>
 #include "emi.h"
-#include "emisocket.h"
+#include "emi_sock.h"
 #include "emi_config.h"
 #include "emi_dbg.h"
 
@@ -138,40 +138,13 @@ int emi_msg_send(struct emi_msg *msg) {
         goto out;
     }
 
-    if ((emi_write(sd, (void *) msg, sizeof(struct emi_msg)))
-            < sizeof(struct emi_msg)) {
-        dbg("block mode:error when emi_write to remote daemon\n");
+    if(emi_msg_write(sd, msg)){
         goto out;
     }
 
-    if (msg->size > 0 && (void *) msg->data != NULL) {
-        if ((emi_write(sd, msg->data, msg->size)) < msg->size) {
-            dbg("nonblock mode:DATA:emi_write to remote prcess local data with error\n");
-            goto out;
-        }
-    }
-
     if (msg->flag & EMI_MSG_MODE_BLOCK) {
-
-        if ((emi_read(sd, msg, sizeof(struct emi_msg)))
-                < sizeof(struct emi_msg)) {
-            dbg("block mode:read msg emi_read from remote process error\n");
+        if(emi_msg_read(sd, msg)){
             goto out;
-        }
-        msg->data = (char *)(msg + 1);
-
-        if ((msg->flag & EMI_MSG_RET_WITHDATA) && (msg->size > 0)) {
-
-            msg->data = (char *)malloc(msg->size);
-            if(msg->data == NULL){
-                goto out;
-            }
-            msg->flag |= EMI_MSG_FLAG_ALLOCDATA;
-
-            if ((emi_read(sd, msg->data, msg->size)) < msg->size) {
-                dbg("block mode:read extra data emi_read from remote process error\n");
-                goto out;
-            }
         }
         ret = 0;
         dbg("a block msg sent successfully\n");

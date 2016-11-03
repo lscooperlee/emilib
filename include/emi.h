@@ -62,21 +62,23 @@ struct emi_msg{
 #define EMI_MSG_RET_SUCCEEDED       0x00010000
 
 /*
- * This flag is used in BLOCK mode to indicate that extra data is returned from emi message handler function
- */
-#define EMI_MSG_RET_WITHDATA        0x00020000
-
-/*
- * Used for marking if msg->data is allocated, if so the data area could be free
+ * Used for marking if msg->data is allocated, if so the data area should be freed when msg area is freed
  */
 #define EMI_MSG_FLAG_ALLOCDATA        0x00040000
 
-    eu32 count;                //the member is used for count the processes when several processes share one massage.it is internally,do not use it. useful in ~BLOCK msg.
-    eu32 size;
-    eu32 cmd;
     eu32 msg;
+    eu32 cmd;
+    eu32 size;
+
+/** The members above this line are payload, meaning they will be sent in communication **/
+/** The members below will not be sent, they are for local use and may be initialized locally **/
+
     char *data;
+    eu32 count;
 };
+
+#define EMI_MSG_PAYLOAD_SIZE    ((unsigned long)&((struct emi_msg *)0)->data)
+
 
 typedef int (*emi_func)(struct emi_msg *);
 

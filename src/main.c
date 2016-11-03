@@ -35,7 +35,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi.h"
 #include "msg_table.h"
 #include "emi_shbuf.h"
-#include "emisocket.h"
+#include "emi_sock.h"
 #include "emi_semaphore.h"
 #include "emi_dbg.h"
 #include "emi_config.h"
