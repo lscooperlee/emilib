@@ -219,7 +219,6 @@ static int emi_recieve_operation(void *args){
         coreprt("emi_read from client error or emi_init is guessing port\n");
         goto e0;
     }
-    msg_pos->data = (char *)(msg_pos + 1);
 
     debug_msg(msg_pos,0);
 
@@ -272,7 +271,15 @@ static int emi_recieve_operation(void *args){
 
         msg_map_init(&p,msg_pos->msg,0);
         struct list_head msg_map_list = LIST_HEAD_INIT(msg_map_list);
-        emi_hsearch_lock(msg_table, &p, &msg_map_list);
+        
+        if(msg_pos->flag&EMI_MSG_MODE_BLOCK){
+            struct msg_map *mp = emi_hsearch_first_lock(msg_table, &p);
+            if(mp != NULL){
+                list_add(&mp->same, &msg_map_list);
+            }
+        }else{
+            emi_hsearch_lock(msg_table, &p, &msg_map_list);
+        }
 
         put_msg_data_offset(msg_pos);
 
@@ -289,7 +296,11 @@ static int emi_recieve_operation(void *args){
                     if(kill(map->pid, SIGUSR2)){ //Error when sending msg, meaning the registered process has exited.
                         emi_hdelete_lock(msg_table,map);
                     }else{
+
+                        emi_spin_lock(&msg_pos->lock);
                         msg_pos->count++;
+                        emi_spin_unlock(&msg_pos->lock);
+
                         while (*pid_num_addr) {
                             sched_yield(); //Need discussion
                         };

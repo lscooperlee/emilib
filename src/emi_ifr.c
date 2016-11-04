@@ -116,7 +116,9 @@ void func_sterotype(int no_use){
     //semaphore with emi_core
     //FIXME: lock and unlock. Multiple process may register the same message, so may modify the shared emi_msg
     //at the same time.
+    emi_spin_lock(&shmsg->lock);
     shmsg->count--;
+    emi_spin_unlock(&shmsg->lock);
 
     if(emi_shm_free(base)){
         dbg("emi_shm_free error\n");

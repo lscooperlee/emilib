@@ -76,6 +76,7 @@ struct emi_msg{
 
     char *data;
     eu32 count;
+    espinlock_t lock;
 };
 
 #define EMI_MSG_PAYLOAD_SIZE    ((unsigned long)&((struct emi_msg *)0)->data)

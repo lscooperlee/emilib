@@ -187,6 +187,7 @@ struct emi_msg *alloc_shared_msg(eu32 size){
     if(msg != NULL){
         msg->data = (char *)(msg + 1);
     }
+    emi_spin_init(&msg->lock);
 
     return msg;
 }

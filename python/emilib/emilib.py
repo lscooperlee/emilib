@@ -66,7 +66,7 @@ class emi_msg(ctypes.Structure):
         ("cmd", ctypes.c_uint, 32),
         ("size", ctypes.c_uint, 32),
         ("_data", ctypes.c_void_p),
-        ("count", ctypes.c_uint, 32),
+        #("count", ctypes.c_uint, 32),
     ]
 
     def __new__(cls, *args, **kwargs):
