@@ -24,6 +24,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <unistd.h>
 #include <netinet/in.h>
 #include "emi_types.h"
+#include "emi_semaphore.h"
 
 #ifdef BLUETOOTH
 #include <bluetooth/bluetooth.h>
@@ -80,7 +81,7 @@ struct emi_msg{
 #define EMI_MSG_PAYLOAD_SIZE    ((unsigned long)&((struct emi_msg *)0)->data)
 
 
-typedef int (*emi_func)(struct emi_msg *);
+typedef int (*emi_func)(struct emi_msg const *);
 
 
 #endif

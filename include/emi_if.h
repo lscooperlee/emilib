@@ -124,7 +124,7 @@ extern int emi_msg_send_highlevel_nonblock(char *ipaddr, int msgnum,void *send_d
 
 extern void *emi_retdata_alloc(struct emi_msg *msg, eu32 size);
 
-extern int emi_msg_prepare_return_data(struct emi_msg *msg, void *data, eu32 size);
+extern int emi_msg_prepare_return_data(struct emi_msg const *msg, void *data, eu32 size);
 
 extern int emi_init(void);
 

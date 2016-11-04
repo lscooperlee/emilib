@@ -28,6 +28,8 @@
 
 #define ARRAY_SIZE(array)    (sizeof(array)/sizeof(array[0]))
 
+static espinlock_t msg_table_lock;
+
 struct msg_map {
     eu32 msg;
     pid_t pid;
@@ -152,35 +154,44 @@ static inline int emi_hdelete(struct msg_map **table, struct msg_map *map) {
     }
 }
 
-static inline int init_msg_table_lock(struct msg_map *table[], espinlock_t *lock){
+static inline int init_msg_table_lock(struct msg_map *table[]){
     int i;
     for(i=0;i<EMI_MSG_TABLE_SIZE;i++)
         table[i]=NULL;
-    return emi_spin_init(lock);
+    return emi_spin_init(&msg_table_lock);
 }
 
-static inline int emi_hinsert_lock(struct msg_map **table, struct msg_map *p, espinlock_t *lock){
+static inline int emi_hinsert_lock(struct msg_map **table, struct msg_map *p){
     int ret;
-    emi_spin_lock(lock);
+    emi_spin_lock(&msg_table_lock);
     ret = emi_hinsert(table, p);
-    emi_spin_unlock(lock);
+    emi_spin_unlock(&msg_table_lock);
     return ret;
 }
 
-static inline int emi_hdelete_lock(struct msg_map **table, struct msg_map *p, espinlock_t *lock){
+static inline int emi_hdelete_lock(struct msg_map **table, struct msg_map *p){
     int ret;
-    emi_spin_lock(lock);
+    emi_spin_lock(&msg_table_lock);
     ret = emi_hdelete(table, p);
-    emi_spin_unlock(lock);
+    emi_spin_unlock(&msg_table_lock);
     return ret;
 }
 
-static inline int emi_hsearch_lock(struct msg_map **table, struct msg_map *p, struct list_head *head, espinlock_t *lock){
+static inline int emi_hsearch_lock(struct msg_map **table, struct msg_map *p, struct list_head *head){
     int ret;
-    emi_spin_lock(lock);
+    emi_spin_lock(&msg_table_lock);
     ret = emi_hsearch(table, p, head);
-    emi_spin_unlock(lock);
+    emi_spin_unlock(&msg_table_lock);
     return ret;
+}
+
+static inline struct msg_map *emi_hsearch_first_lock(struct msg_map **table, struct msg_map *p){
+    struct msg_map *mp;
+    int tmpnum=0;
+    emi_spin_lock(&msg_table_lock);
+    mp=__emi_hsearch(table, p, &tmpnum);
+    emi_spin_unlock(&msg_table_lock);
+    return mp; 
 }
 
 #endif

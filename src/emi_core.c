@@ -62,7 +62,6 @@ static eu32 *pididx_shm_base_addr = NULL;
 static elock_t *pidlock_shm_base_addr = NULL;
 
 static struct msg_map *msg_table[EMI_MSG_TABLE_SIZE];
-espinlock_t msg_map_lock;
 
 
 void emi_release(void){
@@ -129,7 +128,7 @@ static int __emi_core(void){
     eu32 pid_max;
     int ret;
 
-    if(init_msg_table_lock(msg_table, &msg_map_lock)){
+    if(init_msg_table_lock(msg_table)){
         coreprt("init msg table error\n");
         return -1;
     }
@@ -223,38 +222,25 @@ static int emi_recieve_operation(void *args){
     msg_pos->data = (char *)(msg_pos + 1);
 
     debug_msg(msg_pos,0);
-/*
- *    if it is a register msg ,then:
- */
+
     if(msg_pos->flag&EMI_MSG_CMD_REGISTER){
-        coreprt("receive a register msg\n");
+
         struct msg_map p;
         msg_map_init(&p,msg_pos->msg,msg_pos->addr.pid);
-        emi_hinsert_lock(msg_table,&p, &msg_map_lock);
-        
-        emi_lock_init(&pidlock_shm_base_addr[p.pid]);
 
         /*
-         * for register a non block mode, the default flag should always be SUCCEEDED, for the block mode, we should also assume that
-         *  the register process will succeed, unless msg_pos (mp in the next few lines) point to somebody, which means the same msg
-         *  has allocated to another one.
+         * for EMI_MSG_MODE_BLOCK mode, we should search the whole 
+         * msg_table to ensure this msg does not been registered before,
          */
-        msg_pos->flag|=EMI_MSG_RET_SUCCEEDED;
-/*
- *    for EMI_MSG_MODE_BLOCK mode, we should search the whole msg_table to ensure this msg does not been registered before,
- */
-        if(msg_pos->flag&EMI_MSG_MODE_BLOCK){
-            coreprt("the received msg is an block msg\n");
-            struct msg_map *mp;
-            int tmpnum=0;
-            mp=__emi_hsearch(msg_table,&p,&tmpnum);
-            if(mp!=NULL){
-                msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
-            }
+        if(msg_pos->flag&EMI_MSG_MODE_BLOCK && emi_hsearch_first_lock(msg_table, &p) != NULL){
+            msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
+        }else{
+            emi_hinsert_lock(msg_table,&p);
+            emi_lock_init(&pidlock_shm_base_addr[p.pid]);
+
+            msg_pos->flag|=EMI_MSG_RET_SUCCEEDED;
         }
 
-
-//tell the process the registeration result
         if((ret=emi_msg_write_payload(((struct clone_args *)args)->client_sd,msg_pos)) < 0){
             coreprt("emi_read from client error\n");
         }
@@ -262,52 +248,31 @@ static int emi_recieve_operation(void *args){
         goto e0;
 
     }else{
-        coreprt("receive an send msg\n");
-/*
- * otherwise, we should operate it carefully. if the msg is a data msg, we should recieve the date first.
- */
+
         struct msg_map p;
         int nth;
         eu32 *pid_num_addr;
 
         if(msg_pos->size > 0){
-            coreprt("this is a send msg with data \n");
-            
             /*
-             * now emi_core could receive arbitary data as long as emi_core has enough memory to hold it.
+             * emi_core could receive arbitary data as long as emi_core has enough memory to hold it.
              */
             msg_pos = realloc_shared_msg(msg_pos);
             if (msg_pos->data != NULL) {
-
                 if ((ret = emi_msg_read_data(((struct clone_args *) args)->client_sd, msg_pos)) < 0) {
                     coreprt("emi_read from client error\n");
                     goto e0;
                 }
-
             }else{
-                /*
-                 * we should do something, for example write back a emi_msg hint that the data size exceeds a default one.
-                 * but this won't work, you can only write back when the sender is ready to read, this is not the case for the sender
-                 * because the sender may write us a ~BLOCK msg which is an asynchronized one (read nothing from emi_core)
-                 *
-                 * here, simply close(client_fd) would help. for ~BLOCK mode, the sender does not care, for BLOCK mode,
-                 * the sender always read a result (either with or without an extra data), which means the read function in sender's
-                 * code would return an error code, indicating a lack of memory.
-                 */
-                    goto e0;
+                goto e0;
             }
         }
 
-        debug_msg(msg_pos,1);
-
-/*
- *    get the offset of the msg in "msg split" area (see develop.txt). this offset will be writed into the BASE_ADDR+pid address afterward, inform the according process to get it.
- */
         nth=get_shbuf_offset(msg_shm_base_addr, msg_pos);
 
         msg_map_init(&p,msg_pos->msg,0);
         struct list_head msg_map_list = LIST_HEAD_INIT(msg_map_list);
-        emi_hsearch_lock(msg_table, &p, &msg_map_list, &msg_map_lock);
+        emi_hsearch_lock(msg_table, &p, &msg_map_list);
 
         put_msg_data_offset(msg_pos);
 
@@ -322,7 +287,7 @@ static int emi_recieve_operation(void *args){
 
                     *pid_num_addr = nth;
                     if(kill(map->pid, SIGUSR2)){ //Error when sending msg, meaning the registered process has exited.
-                        emi_hdelete_lock(msg_table,map, &msg_map_lock);
+                        emi_hdelete_lock(msg_table,map);
                     }else{
                         msg_pos->count++;
                         while (*pid_num_addr) {
@@ -343,36 +308,19 @@ static int emi_recieve_operation(void *args){
         //Must be called after semaphore
         put_msg_data_addr(msg_pos);
 
-        /*
-         * After the receiver process finishes everything.
-         * We should check if that's an ~BLOCK msg or BLOCK msg.
-         * If it's an ~BLOCK msg, then simple return
-         * If it's and BLOCK msg, we should prepare the return data that
-         * the sender is expecting.
-         */
         if(msg_pos->flag&EMI_MSG_MODE_BLOCK){
-            coreprt("A block message, return states to the sender \n");
-/*
- * In BLOCK mode, if the result is ~SUCCEEDED (lack of memory, msg handler function failed etc.),
- *  goto e0 and close(client_fd) immediately, though the sender is expecting return info from emi_core, we send nothing.
- *  just close the socket. The sender will get an error code as the return value of read function, indicating some errors occured.
- *
- */
             if (msg_pos->flag & EMI_MSG_RET_SUCCEEDED) {
                 if((ret = emi_msg_write(((struct clone_args *) args)->client_sd, msg_pos))< 0){
                     goto e0;
                 }
 
             } else {
-                coreprt("Emi message handler returns a ~SUCCEEDED state\n");
+                coreprt("emi message handler returns a ~SUCCEEDED state\n");
                 goto e0;
             }
 
         }else{
             coreprt("this send msg is an nonblock msg\n");
-/*
- * in ~BLOCK mode, the logic here is very simple, just do the release work and return.
- */
             goto e0;
         }
     }

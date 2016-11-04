@@ -5,7 +5,7 @@
 
 #define TEST_MSG 0x1
 
-int func(struct emi_msg *msg){
+int func(struct emi_msg const *msg){
     printf("cmd: %d\n",msg->cmd);
     printf("data: %s\n",msg->data);
     return 0;

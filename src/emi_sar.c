@@ -29,7 +29,7 @@ unsigned int retsize = 0;
 unsigned int sentsize=0;
 char sentdata[1024]={0};
 
-void print_msg(struct emi_msg *msg){
+void print_msg(struct emi_msg const *msg){
     printf("msg = %X, ",msg->msg);
     printf("cmd = %X, ",msg->cmd);
     printf("flag = %X, ",msg->flag);
@@ -46,12 +46,12 @@ void print_retdata(unsigned int size, const char *data){
         printf("retdata = %s\n", data);
 }
 
-int func_noblock(struct emi_msg *msg){
+int func_noblock(struct emi_msg const *msg){
     print_msg(msg);
     return 0;
 }
 
-int func_block(struct emi_msg *msg){
+int func_block(struct emi_msg const *msg){
     print_msg(msg);
     print_retdata(retsize, retdata);
     return emi_msg_prepare_return_data(msg, retdata, retsize); 
