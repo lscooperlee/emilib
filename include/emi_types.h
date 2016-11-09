@@ -8,7 +8,11 @@ typedef int16_t __es16;
 typedef uint16_t __eu16;
 typedef int32_t __es32;
 typedef uint32_t __eu32;
+typedef int64_t __es64;
+typedef uint64_t __eu64;
 
+typedef __eu64 eu64;
+typedef __es64 es64;
 typedef __eu32 eu32;
 typedef __es32 es32;
 typedef __eu16 eu16;

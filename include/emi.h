@@ -63,9 +63,15 @@ struct emi_msg{
 #define EMI_MSG_RET_SUCCEEDED       0x00010000
 
 /*
+ * This flag is used indicate the emi message has extra data with it internally
+ */
+#define EMI_MSG_FLAG_RETDATA        0x00020000
+
+/*
  * Used for marking if msg->data is allocated, if so the data area should be freed when msg area is freed
  */
 #define EMI_MSG_FLAG_ALLOCDATA        0x00040000
+#define EMI_MSG_FLAG_ALLOCDATA_USER   0x00080000
 
     eu32 msg;
     eu32 cmd;
@@ -74,15 +80,18 @@ struct emi_msg{
 /** The members above this line are payload, meaning they will be sent in communication **/
 /** The members below will not be sent, they are for local use and may be initialized locally **/
 
-    char *data;
+    eu64 data_offset;
     eu32 count;
     espinlock_t lock;
 };
 
-#define EMI_MSG_PAYLOAD_SIZE    ((unsigned long)&((struct emi_msg *)0)->data)
+#define EMI_MSG_PAYLOAD_SIZE    ((unsigned long)&((struct emi_msg *)0)->data_offset)
 
 
 typedef int (*emi_func)(struct emi_msg const *);
 
+
+#define GET_OFFSET(base, addr) ((char *)(addr)-(char *)(base))
+#define GET_ADDR(base, offset) ((void*)(base) + (offset))
 
 #endif

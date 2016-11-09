@@ -61,9 +61,10 @@ void func_sterotype(int no_use){
     void *base;
 
     id=emi_global.shm_id;
+    emilog(EMI_DEBUG, "Signal received\n");
 
     if((base=(void *)emi_shm_alloc(id, EMI_SHM_READ|EMI_SHM_WRITE))==NULL){
-        dbg("emi_shm_alloc error, did you run emi_init() ?! \n");
+        emilog(EMI_ERROR, "Critical error when alloc shared area, exit\n");
         exit(-1);
     }
 
@@ -81,54 +82,43 @@ void func_sterotype(int no_use){
     espinlock_t *lock = GET_EMIBUF_LOCK_BASE(base);
     update_emi_buf_lock(base, emibuf_top, lock);
 
-    put_msg_data_addr(shmsg);
-
+    int ret=-1;
     list_for_each(lh,&__func_list){
         struct func_list *fl;
         fl=container_of(lh,struct func_list,list);
         if(fl->msg==shmsg->msg){
+            emilog(EMI_DEBUG, "Registerd function with msg num %d founded\n", shmsg->msg);
 
-            if(shmsg->flag&EMI_MSG_MODE_BLOCK){
-                int ret;
-                ret=(fl->func)(shmsg);
+            ret=(fl->func)(shmsg);
 
-                //in BLOCK mode, if function return with error,
-                //then msg->flag must be set to FAILED to ensure the emi_core return failed result to the sender.
-                if(ret){
-                    dbg("the msg handler returned an error ret=%d\n",ret);
-                    shmsg->flag&=~EMI_MSG_RET_SUCCEEDED;
-                }else{
-                    shmsg->flag|=EMI_MSG_RET_SUCCEEDED;
-                }
-                
-                //should break here because BLOCK msg is an exclusive msg.
-                break;
-            }else{
-                (fl->func)(shmsg);
-            }
-
+            //One function for one message in one process
+            break;
         }
     }
 
-    //must be called before semaphore, emi_core should continue after msg->data has been reset to offset
-    put_msg_data_offset(shmsg);
-
-    //semaphore with emi_core
-    //FIXME: lock and unlock. Multiple process may register the same message, so may modify the shared emi_msg
-    //at the same time.
+    emilog(EMI_DEBUG, "Handler for msg %d done, %d returned\n", shmsg->msg, ret);
     emi_spin_lock(&shmsg->lock);
+
+    //Don't need lock here, no one changes this bit.
+    if(shmsg->flag&EMI_MSG_MODE_BLOCK){
+
+        if(ret){
+            shmsg->flag&=~EMI_MSG_RET_SUCCEEDED;
+        }
+        
+    }
+    
     shmsg->count--;
     emi_spin_unlock(&shmsg->lock);
 
     if(emi_shm_free(base)){
-        dbg("emi_shm_free error\n");
         return;
     }
 
     return;
 }
 
-static int __emi_msg_register(eu32 defined_msg,emi_func func){
+static int __emi_msg_register(eu32 defined_msg,emi_func func, eu32 flag){
     struct sk_dpr *sd;
     int ret = -1;
     struct sigaction act, old_act;
@@ -136,7 +126,6 @@ static int __emi_msg_register(eu32 defined_msg,emi_func func){
     struct emi_msg cmd;
 
     if((sd=emi_open(AF_INET))==NULL){
-        dbg("emi_open error\n");
         return -1;
     }
     memset(&cmd,0,sizeof(struct emi_msg));
@@ -147,7 +136,7 @@ static int __emi_msg_register(eu32 defined_msg,emi_func func){
     cmd.addr.pid=getpid();
 
     cmd.msg=defined_msg;
-    cmd.flag=EMI_MSG_CMD_REGISTER;
+    cmd.flag=flag | EMI_MSG_CMD_REGISTER;
 
     if(emi_connect(sd,&cmd.addr,1)){
         goto out;
@@ -189,15 +178,17 @@ out:
 }
 
 int emi_msg_register(eu32 defined_msg,emi_func func){
-    return __emi_msg_register(defined_msg,func);
+    return __emi_msg_register(defined_msg,func, 0);
 }
 
 void *emi_retdata_alloc(struct emi_msg *msg, eu32 size){
-    void *addr = msg->data;
+    void *addr = GET_ADDR(msg, msg->data_offset);
+
+    emi_spin_lock(&msg->lock);
 
     if (!(msg->flag & EMI_MSG_MODE_BLOCK)) {
-        dbg("an ~BLOCK msg is sent, receiver is not expecting receive data");
         msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
+        emi_spin_unlock(&msg->lock);
         return NULL;
     }
 
@@ -205,25 +196,31 @@ void *emi_retdata_alloc(struct emi_msg *msg, eu32 size){
         addr = emi_alloc(size);
         if(addr == NULL){
             msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
+            emi_spin_unlock(&msg->lock);
             return NULL;
         }
 
         free_shared_msg_data(msg);
-        msg->data = addr;
+        msg->data_offset = GET_OFFSET(msg, addr);
     }
 
     msg->size = size;
+    msg->flag |= EMI_MSG_FLAG_RETDATA;
+
+    emi_spin_unlock(&msg->lock);
     
     return addr;
 }
 
 int emi_msg_prepare_return_data(struct emi_msg *msg, void *data, eu32 size) {
+    
     void *retdata = emi_retdata_alloc(msg, size);
     if(retdata == NULL){
         return -1;
     }
 
     memcpy(retdata, data, size);
+
     return 0;
 }
 
@@ -245,7 +242,6 @@ int emi_init(){
     eu32 pid_max = get_pid_max();
 
     if((emi_global.shm_id=emi_shm_init("emilib", GET_SHM_SIZE(pid_max), 0))<0){
-        dbg("emi_shm_init error\n");
         return -1;
     }
 

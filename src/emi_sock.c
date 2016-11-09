@@ -129,7 +129,8 @@ int emi_msg_write_payload(struct sk_dpr *sd, struct emi_msg *msg){
 }
 
 int emi_msg_write_data(struct sk_dpr *sd, struct emi_msg *msg){
-    if (emi_write(sd, msg->data, msg->size) < msg->size) {
+    void *data = GET_ADDR(msg, msg->data_offset);
+    if (emi_write(sd, data, msg->size) < msg->size) {
         return -1;
     }
     return 0;
@@ -139,7 +140,8 @@ int emi_msg_write(struct sk_dpr *sd, struct emi_msg *msg){
     if (emi_msg_write_payload(sd, msg)){
         return -1;
     }
-    if (msg->size > 0 && (void *) msg->data != NULL) {
+
+    if (msg->size > 0) {
         return emi_msg_write_data(sd, msg);    
     }
     return 0;
@@ -154,7 +156,8 @@ int emi_msg_read_payload(struct sk_dpr *sd, struct emi_msg *msg){
 }
 
 int emi_msg_read_data(struct sk_dpr *sd, struct emi_msg *msg){
-    if(emi_read(sd, msg->data, msg->size) < msg->size) {
+    void *data = GET_ADDR(msg, msg->data_offset);
+    if(emi_read(sd, data, msg->size) < msg->size) {
         return -1;
     }
     return 0;
@@ -168,11 +171,12 @@ int emi_msg_read(struct sk_dpr *sd, struct emi_msg *msg){
 
     if (msg->size > 0) {
         if(msg->size > oldsize){
-            msg->data = (char *)malloc(msg->size);
-            if(msg->data == NULL){
+            void *data = (char *)malloc(msg->size);
+            if(data == NULL){
                 return -1;
             }
-            msg->flag |= EMI_MSG_FLAG_ALLOCDATA;
+            msg->data_offset = GET_OFFSET(msg, data);
+            msg->flag |= EMI_MSG_FLAG_ALLOCDATA_USER;
         }
 
         if (emi_msg_read_data(sd, msg)) {

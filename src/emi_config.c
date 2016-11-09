@@ -94,7 +94,6 @@ struct emi_config *guess_config(){
     struct emi_addr src_addr;
 
     if((sd=emi_open(AF_INET))==NULL){
-        dbg("emi_open error\n");
         return NULL;
     }
 

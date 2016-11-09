@@ -123,7 +123,7 @@ static inline int emi_hinsert(struct msg_map **table, struct msg_map *map) {
     struct msg_map *tmp;
     for (tmp = *(table + emi_hash(map)); tmp != NULL; tmp = tmp->next) {
         if (!msg_map_same(tmp, map))
-            return 1;
+            return -1;
     }
     if (__emi_hinsert(table, map) < 0)
         return -1;

@@ -185,7 +185,8 @@ void emi_free(void *addr){
 struct emi_msg *alloc_shared_msg(eu32 size){
     struct emi_msg *msg=emi_alloc(sizeof(struct emi_msg) + size);
     if(msg != NULL){
-        msg->data = (char *)(msg + 1);
+        void *data = (char *)(msg + 1);
+        msg->data_offset = GET_OFFSET(msg, data);
     }
     emi_spin_init(&msg->lock);
 
@@ -193,8 +194,11 @@ struct emi_msg *alloc_shared_msg(eu32 size){
 }
 
 void free_shared_msg_data(struct emi_msg *msg){
-    if(msg->flag & EMI_MSG_FLAG_ALLOCDATA)
-        emi_free(msg->data);
+    if(msg->flag & EMI_MSG_FLAG_ALLOCDATA){
+        void *data = GET_ADDR(msg, msg->data_offset);
+        emi_free(data);
+        msg->flag &= ~EMI_MSG_FLAG_ALLOCDATA;
+    }
 }
 
 void free_shared_msg(struct emi_msg *msg){
@@ -215,21 +219,14 @@ struct emi_msg *realloc_shared_msg(struct emi_msg *msg){
         return msg;
     }
 
-    msg->data = emi_alloc(msg->size);
-    if(msg->data == NULL)
-        return NULL;
-
+    void *data = emi_alloc(msg->size);
+    if(data == NULL){
+        msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
+        return msg;
+    }
+    
+    msg->data_offset = GET_OFFSET(msg, data);
     msg->flag |= EMI_MSG_FLAG_ALLOCDATA;
 
     return msg;
-}
-
-void put_msg_data_offset(struct emi_msg *msg){
-    long offset = get_shbuf_offset(emi_shmbuf_base_addr, msg->data);
-    msg->data = (void *)offset;
-}
-
-void put_msg_data_addr(struct emi_msg *msg){
-    long offset = (long)msg->data;
-    msg->data = get_shbuf_addr(emi_shmbuf_base_addr, offset);
 }

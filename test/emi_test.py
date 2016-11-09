@@ -14,16 +14,16 @@ Rules = [
      "sender": "-s 127.0.0.1 -m 1 -c 2 -d 0123456789abcdefABCDEF", "receiver": "-r 1"},
 
     {"description" : "block sender, single receiver, without sent data, without ret data",
-     "sender": "-b -s 127.0.0.1 -m 1 -c 2", "receiver": "-b -r 1"},
+     "sender": "-b -s 127.0.0.1 -m 1 -c 2", "receiver": "-r 1"},
 
     {"description" : "block sender, single receiver, with sent data, without ret data",
-     "sender": "-b -s 127.0.0.1 -m 1 -c 2 -d 0123456789abcdefABCDEF", "receiver": "-b -r 1"},
+     "sender": "-b -s 127.0.0.1 -m 1 -c 2 -d 0123456789abcdefABCDEF", "receiver": "-r 1"},
 
     {"description" : "block sender, single receiver, without sent data, with ret data",
-     "sender": "-b -s 127.0.0.1 -m 1 -c 2", "receiver": "-b -r 1 -R abcdefABCDEF0123456789"},
+     "sender": "-b -s 127.0.0.1 -m 1 -c 2", "receiver": "-r 1 -R abcdefABCDEF0123456789"},
 
     {"description" : "block sender, single receiver, with sent data, with ret data",
-     "sender": "-b -s 127.0.0.1 -m 1 -c 2 -d 0123456789abcdefABCDEF", "receiver": "-b -r 1 -R abcdefABCDEF0123456789"},
+     "sender": "-b -s 127.0.0.1 -m 1 -c 2 -d 0123456789abcdefABCDEF", "receiver": "-r 1 -R abcdefABCDEF0123456789"},
 ]
 
 Cmds = [

@@ -62,14 +62,18 @@ struct emi_msg *emi_msg_alloc(eu32 size) {
     }
     memset(msg, 0, sizeof(struct emi_msg) + size);
     msg->size = size;
-    msg->data = (char *)(msg + 1);
+    void *data = (char *)(msg + 1);
+    msg->data_offset = GET_OFFSET(msg, data);
 
     return msg;
 }
 
 void emi_msg_free_data(struct emi_msg *msg) {
-    if(msg->flag & EMI_MSG_FLAG_ALLOCDATA)
-        free(msg->data);
+    if(msg->flag & EMI_MSG_FLAG_ALLOCDATA_USER){
+        void *data = GET_ADDR(msg, msg->data_offset);
+        free(data);
+        msg->flag &= ~EMI_MSG_FLAG_ALLOCDATA_USER;
+    }
 }
 
 void emi_msg_free(struct emi_msg *msg) {
@@ -115,7 +119,8 @@ int emi_fill_msg(struct emi_msg *msg, char *dest_ip, void *data, eu32 cmd,
     }
 
     if (data != NULL) {
-        memcpy(msg->data, data, msg->size);
+        void *msgdata = GET_ADDR(msg, msg->data_offset);
+        memcpy(msgdata, data, msg->size);
     }
 
     msg->cmd = cmd;
@@ -130,28 +135,33 @@ int emi_msg_send(struct emi_msg *msg) {
     int ret = -1;
 
     if ((sd = emi_open(AF_INET)) == NULL) {
-        dbg("emi_open error\n");
         return -1;
     }
     if ((emi_connect(sd, &(msg->addr), 1)) < 0) {
-        dbg("remote connected error\n");
         goto out;
     }
 
     if(emi_msg_write(sd, msg)){
+        emilog(EMI_ERROR, "Error when writing msg, msg num %d\n", msg->msg);
         goto out;
     }
+    emilog(EMI_DEBUG, "Msg sent succeeded, msg num %d\n", msg->msg);
+    debug_emi_msg(msg);
 
     if (msg->flag & EMI_MSG_MODE_BLOCK) {
         if(emi_msg_read(sd, msg)){
+            emilog(EMI_ERROR, "Error when reading msg\n");
             goto out;
         }
+
+        emilog(EMI_DEBUG, "Ret data received, size %d\n", msg->size);
+        debug_emi_msg(msg);
+
         ret = 0;
-        dbg("a block msg sent successfully\n");
     } else {
         ret = 0;
-        dbg("a nonblock msg sent successfully\n");
     }
+
 
 out: 
     emi_close(sd);
@@ -163,20 +173,19 @@ int emi_msg_send_highlevel(char *ipaddr, int msgnum, void *send_data,
 
     struct emi_msg *msg = emi_msg_alloc(send_size);
     if (msg == NULL) {
-        dbg("emi_msg_alloc error\n");
         return -1;
     }
 
     emi_fill_msg(msg, ipaddr, send_data, cmd, msgnum, flag);
 
     if (emi_msg_send(msg)) {
-        dbg("emi_msg_send error\n");
         emi_msg_free(msg);
         return -1;
     }
 
     if (ret_data != NULL && msg->size > 0) {
-        memcpy(ret_data, msg->data, ret_size);
+        void *data = GET_ADDR(msg, msg->data_offset);
+        memcpy(ret_data, data, ret_size);
     }
 
     emi_msg_free(msg);

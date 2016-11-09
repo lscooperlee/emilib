@@ -41,7 +41,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi_config.h"
 
 
-#define coreprt(a) emiprt(a)
+#define coreprt(a) printf(a)
 
 #define DAEMONIZE    0x00000001
 #define SINGLIZE    0x00000002
@@ -90,6 +90,8 @@ int main(int argc,char **argv){
     config=get_config();
     if(config==NULL)
         config=emi_config;
+
+    emilog_init();
 
     umask(0);
 

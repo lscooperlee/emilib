@@ -115,8 +115,9 @@ emi_test:
 	@python3 test/emi_test.py
 
 python_test: 
+#	@python3 -W ignore test/python_test.py -v TestEmiLib.test_emi_msg_send_block_noretdata
 	@python3 -W ignore test/python_test.py -v
 
 unit_test:
-	@./test/unit_test/test_buddy_algorithm
-	@./test/unit_test/test_send_functions
+	./test/unit_test/test_buddy_algorithm
+	./test/unit_test/test_send_functions

@@ -1,13 +1,16 @@
 import ctypes
 import struct
 import signal
+import enum
 
 _emilib = ctypes.cdll.LoadLibrary("libemi.so")
 
-class emi_flag:
+class emi_flag(enum.IntEnum):
     EMI_MSG_MODE_BLOCK = 0x00000100
     EMI_MSG_RET_SUCCEEDED = 0x00010000
     EMI_MSG_FLAG_ALLOCDATA = 0x00040000
+    EMI_MSG_FLAG_EXCLUSIVE = 0x00008000
+    EMI_MSG_FLAG_RETDATA = 0x00020000
 
 
 class EMIError(Exception):
@@ -56,24 +59,31 @@ class emi_addr(ctypes.Structure):
         return "emi_addr:{{ addr: {0}, pid: {1} }}".format(
             str(self.ipv4), str(self.pid_t), str(self.id))
 
+#_emilib.get_offset.argtypes = (ctypes.c_void_p, ctypes.c_void_p)
+#_emilib.get_offset.restype = ctypes.c_long
 
 class emi_msg(ctypes.Structure):
 
     _fields_ = [
         ("addr", emi_addr),
-        ("flag", ctypes.c_uint, 32),
+        ("_flag", ctypes.c_uint, 32),
         ("msg", ctypes.c_uint, 32),
         ("cmd", ctypes.c_uint, 32),
         ("size", ctypes.c_uint, 32),
+        ("data_offset", ctypes.c_ulong, 64),
         ("_data", ctypes.c_void_p),
-        #("count", ctypes.c_uint, 32),
+
+
     ]
 
-    def __new__(cls, *args, **kwargs):
-        msg = super().__new__(cls, args, kwargs)
-        msg.size = len(kwargs.get("data", b''))
-        msg._data = ctypes.cast(ctypes.create_string_buffer(msg.size), ctypes.c_void_p)
-        return msg
+#    def __new__(cls, *args, **kwargs):
+#        msg = super().__new__(cls, args, kwargs)
+#        msg.size = len(kwargs.get("data", b''))
+
+#        msg._data = ctypes.cast(ctypes.create_string_buffer(msg.size), ctypes.c_void_p)
+#        msg.data_offset = msg._data - ctypes.addressof(msg) 
+
+#        return msg
         
     def __str__(self):
         return "emi_addr:{{ msg: {0}, cmd: {1} }}".format(
@@ -88,21 +98,31 @@ class emi_msg(ctypes.Structure):
                  flag=0):
         cipaddr = ctypes.c_char_p(ipaddr.encode())
 
-        size = len(data)
-        cdata = (ctypes.c_ubyte * size).from_buffer(bytearray(data))
-
         ccmd = ctypes.c_uint(cmd)
         cflag = ctypes.c_uint(flag)
         cmsgnum = ctypes.c_uint(msgnum)
 
-        #        cport = ctypes.c_uint(port)
+        self.size = len(data)
+        self._data = ctypes.cast(ctypes.create_string_buffer(self.size), ctypes.c_void_p)
+        self.data_offset = self._data - ctypes.addressof(self) 
+
+        cdata = (ctypes.c_ubyte * self.size).from_buffer(bytearray(data))
+
         _emilib.emi_fill_msg(
             ctypes.byref(self), cipaddr, cdata, ccmd, cmsgnum, cflag)
 
+
+
     @property
     def data(self):
-        ccharp = ctypes.cast(self._data, ctypes.c_char_p)
+        addr = ctypes.addressof(self) + self.data_offset
+        ccharp = ctypes.cast(addr, ctypes.c_char_p)
         return ccharp.value[:self.size]
+
+    @property
+    def flag(self):
+        flags = [ name for name, _ in emi_flag.__members__.items() if _ & self._flag ]
+        return ",".join(flags)
 
 
 _emilib.emi_init.argtypes = (None)

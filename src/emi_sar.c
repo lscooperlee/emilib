@@ -32,10 +32,11 @@ char sentdata[1024]={0};
 void print_msg(struct emi_msg const *msg){
     printf("msg = %X, ",msg->msg);
     printf("cmd = %X, ",msg->cmd);
-    printf("flag = %X, ",msg->flag);
+//    printf("flag = %X, ",msg->flag);
     printf("msg.size = %d",msg->size);
     if(msg->size > 0){
-        printf(", msg.data = %s\n", msg->data);
+        char *data = GET_ADDR(msg, msg->data_offset);
+        printf(", msg.data = %s\n", data);
     }else{
         printf("\n");
     }
@@ -58,7 +59,7 @@ int func_block(struct emi_msg const *msg){
 }
 
 void usage(void){
-    printf("usage: sar [-b] -r msg [-R retdata]\n");
+    printf("usage: sar -r msg [-R retdata]\n");
     printf("usage: sar [-b] -s addr -m msg [ -c cmd ] [-d sentdata]\n");
 }
 
@@ -136,19 +137,20 @@ int main(int argc,char **argv){
             return -1;
         }
         
-        if(option&BLOCK_MODE){
-            /*In block mode, the callback function could choose to return some data to the sender*/
+        emi_func f;
 
-            if(emi_msg_register(msgr,func_block)){
-                printf("emi_msg_register error\n");
-                return -1;
-            }
+        if(option&MSG_DATA){
+            f = func_block;
+
         }else{
-            if(emi_msg_register(msgr,func_noblock)){
-                printf("emi_msg_register error\n");
-                return -1;
-            }
+            f = func_noblock;
         }
+
+        if(emi_msg_register(msgr,f)){
+            printf("emi_msg_register error\n");
+            return -1;
+        }
+
         emi_loop();
 
     }else if(option&(SEND_MSG|MSG_NUM)){
@@ -170,7 +172,8 @@ int main(int argc,char **argv){
                 return -1;
             }
             
-            print_retdata(msg->size, msg->data);
+            char *data = GET_ADDR(msg, msg->data_offset);
+            print_retdata(msg->size, data);
 
         }else{
 
@@ -187,6 +190,5 @@ int main(int argc,char **argv){
     }else{
         usage();
     }
-
 
 }

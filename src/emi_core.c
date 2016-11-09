@@ -41,8 +41,6 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi_config.h"
 #include "emi_shmem.h"
 
-#define coreprt(a) emiprt(a)
-
 
 struct clone_args{
     struct sk_dpr *sd;
@@ -77,12 +75,12 @@ static int int_global_shm_space(int pid_max){
     void *base;
 
     if((core_shmid=emi_shm_init("emilib", GET_SHM_SIZE(pid_max), EMI_SHM_CREATE))<0){
-        coreprt("emi_shm_init error\n");
+        emilog(EMI_ERROR, "emi_shm_init error\n");
         return -1;
     }
 
     if((base=(void *)emi_shm_alloc(core_shmid, EMI_SHM_READ|EMI_SHM_WRITE))==NULL){
-        coreprt("emi_shm_alloc error\n");
+        emilog(EMI_ERROR, "emi_shm_alloc error\n");
         emi_shm_destroy("emilib", core_shmid);
         return -1;
     }
@@ -129,42 +127,42 @@ static int __emi_core(void){
     int ret;
 
     if(init_msg_table_lock(msg_table)){
-        coreprt("init msg table error\n");
+        emilog(EMI_ERROR, "init msg table error\n");
         return -1;
     }
 
     pid_max=get_pid_max();
 
     if(int_global_shm_space(pid_max)){
-        coreprt("init shm space error\n");
+        emilog(EMI_ERROR, "init shm space error\n");
         return -1;
     }
 
     if(init_emi_buf_lock(msg_shm_base_addr, emibuf_shm_base_addr, emibuf_lock_shm)){
-        coreprt("init msg space error\n");
+        emilog(EMI_ERROR, "init msg space error\n");
         return -1;
     }
 
     if((sd=emi_open(AF_INET))==NULL){
-        coreprt("emi_open error\n");
+        emilog(EMI_ERROR, "emi_open error\n");
         return -1;
     }
 
     int yes=1;
     if(setsockopt(sd->d, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-        coreprt("setsockopt error");
+        emilog(EMI_ERROR, "setsockopt error");
         return -1;
     }
 
 
     if(emi_bind(sd,emi_config->emi_port)<0){
-        coreprt("bind error\n");
+        emilog(EMI_ERROR, "bind error\n");
         emi_close(sd);
         return -1;
     }
 
     if(emi_listen(sd)<0){
-        coreprt("listen err\n");
+        emilog(EMI_ERROR, "listen err\n");
         emi_close(sd);
         return -1;
     }
@@ -172,7 +170,7 @@ static int __emi_core(void){
 
     while(1){
         if((client_sd=emi_accept(sd,NULL))==NULL){
-            coreprt("emi_accept error\n");
+            emilog(EMI_WARNING, "emi_accept error\n");
             emi_close(client_sd);
             continue;
         }
@@ -181,19 +179,19 @@ static int __emi_core(void){
         struct clone_args *arg;
 
         if((arg=(struct clone_args *)malloc(sizeof(struct clone_args)))==NULL){
-            coreprt("mem error\n");
+            emilog(EMI_WARNING, "mem error\n");
             continue;
         }
 
         arg->client_sd=client_sd;
 
         if((ret=pthread_create(&tid,NULL,(void *)emi_recieve_operation,arg))){
-            coreprt("pthread cancel error\n");
+            emilog(EMI_WARNING, "pthread cancel error\n");
             continue;
         }
 
         if((ret=pthread_detach(tid))){
-            coreprt("pthread_detach error\n");
+            emilog(EMI_WARNING, "pthread_detach error\n");
             continue;
         }
     }
@@ -207,7 +205,7 @@ static int emi_recieve_operation(void *args){
  * get an empty area in the share memory for a recieving msg.
 */
     if((msg_pos=alloc_shared_msg(0))==NULL){
-        coreprt("emi_obtain_msg_space error\n");
+        emilog(EMI_WARNING, "emi_obtain_msg_space error\n");
         goto e1;
     }
 
@@ -216,38 +214,37 @@ static int emi_recieve_operation(void *args){
  * is a connection to emi_core without any data transfered.
  */
     if((ret=emi_msg_read_payload(((struct clone_args *)args)->client_sd,msg_pos)) < 0){
-        coreprt("emi_read from client error or emi_init is guessing port\n");
+        emilog(EMI_INFO, "emi_read from client error or emi_init is guessing port\n");
         goto e0;
     }
 
-    debug_msg(msg_pos,0);
 
     if(msg_pos->flag&EMI_MSG_CMD_REGISTER){
+        emilog(EMI_DEBUG, "Received a register msg with num %d and pid %d\n",
+                msg_pos->msg, msg_pos->addr.pid);
 
         struct msg_map p;
         msg_map_init(&p,msg_pos->msg,msg_pos->addr.pid);
 
         /*
-         * for EMI_MSG_MODE_BLOCK mode, we should search the whole 
-         * msg_table to ensure this msg does not been registered before,
+         * Make sure msg_map with the same pid and msgnum are not in msg_table,
+         * this prevents one process register multiple functions to the same msg number.
          */
-        if(msg_pos->flag&EMI_MSG_MODE_BLOCK && emi_hsearch_first_lock(msg_table, &p) != NULL){
+        if((ret = emi_hinsert_lock(msg_table,&p)) < 0){
             msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
         }else{
-            emi_hinsert_lock(msg_table,&p);
             emi_lock_init(&pidlock_shm_base_addr[p.pid]);
-
             msg_pos->flag|=EMI_MSG_RET_SUCCEEDED;
         }
+        
 
         if((ret=emi_msg_write_payload(((struct clone_args *)args)->client_sd,msg_pos)) < 0){
-            coreprt("emi_read from client error\n");
+            emilog(EMI_WARNING, "emi read payload from client error\n");
         }
 
         goto e0;
 
     }else{
-
         struct msg_map p;
         int nth;
         eu32 *pid_num_addr;
@@ -257,9 +254,9 @@ static int emi_recieve_operation(void *args){
              * emi_core could receive arbitary data as long as emi_core has enough memory to hold it.
              */
             msg_pos = realloc_shared_msg(msg_pos);
-            if (msg_pos->data != NULL) {
+            if (msg_pos != NULL) {
                 if ((ret = emi_msg_read_data(((struct clone_args *) args)->client_sd, msg_pos)) < 0) {
-                    coreprt("emi_read from client error\n");
+                    emilog(EMI_WARNING, "read data from client error\n");
                     goto e0;
                 }
             }else{
@@ -267,22 +264,18 @@ static int emi_recieve_operation(void *args){
             }
         }
 
+        emilog(EMI_DEBUG, "Received a sending msg with num %d\n", msg_pos->msg);
+        debug_emi_msg(msg_pos);
+
         nth=get_shbuf_offset(msg_shm_base_addr, msg_pos);
 
         msg_map_init(&p,msg_pos->msg,0);
         struct list_head msg_map_list = LIST_HEAD_INIT(msg_map_list);
         
-        if(msg_pos->flag&EMI_MSG_MODE_BLOCK){
-            struct msg_map *mp = emi_hsearch_first_lock(msg_table, &p);
-            if(mp != NULL){
-                list_add(&mp->same, &msg_map_list);
-            }
-        }else{
-            emi_hsearch_lock(msg_table, &p, &msg_map_list);
-        }
+        emi_hsearch_lock(msg_table, &p, &msg_map_list);
 
-        put_msg_data_offset(msg_pos);
-
+        // msg handler succeeded by default
+        msg_pos->flag |= EMI_MSG_RET_SUCCEEDED;
         while(!list_empty(&msg_map_list)){
             struct msg_map *map;
             list_for_each_entry(map, &msg_map_list, same){
@@ -301,6 +294,7 @@ static int emi_recieve_operation(void *args){
                         msg_pos->count++;
                         emi_spin_unlock(&msg_pos->lock);
 
+                        emilog(EMI_DEBUG, "Find msg_map for pid %d and msg %d in msg_table", map->pid, map->msg);
                         while (*pid_num_addr) {
                             sched_yield(); //Need discussion
                         };
@@ -308,30 +302,37 @@ static int emi_recieve_operation(void *args){
                     }
 
                     emi_unlock(&pidlock_shm_base_addr[map->pid]);
+
                 }
             }
         }
 
+        emilog(EMI_DEBUG, "Signal all processes with msg num %d, waiting for sync\n", msg_pos->msg);
         while(msg_pos->count){
             sched_yield();
         }
-        
-        //Must be called after semaphore
-        put_msg_data_addr(msg_pos);
 
+        //If the handler function does not have data to return, make size to be 0 to prevent sending received data back.
+        //Needs lock because EMI_MSG_FLAG_RETDATA bit might be changed when allocating shared area for return data.
+        if(!(msg_pos->flag & EMI_MSG_FLAG_RETDATA)){
+            msg_pos->size = 0;
+        }
+        
         if(msg_pos->flag&EMI_MSG_MODE_BLOCK){
+            emilog(EMI_DEBUG, "Return the state and possible data for block mode\n");
             if (msg_pos->flag & EMI_MSG_RET_SUCCEEDED) {
+                emilog(EMI_DEBUG, "Emi handler succeeded\n");
                 if((ret = emi_msg_write(((struct clone_args *) args)->client_sd, msg_pos))< 0){
                     goto e0;
                 }
 
             } else {
-                coreprt("emi message handler returns a ~SUCCEEDED state\n");
+                emilog(EMI_INFO, "emi message handler returns a ~SUCCEEDED state\n");
                 goto e0;
             }
 
         }else{
-            coreprt("this send msg is an nonblock msg\n");
+            emilog(EMI_DEBUG, "Return immediately for ~block mode\n");
             goto e0;
         }
     }

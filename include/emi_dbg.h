@@ -19,54 +19,33 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #ifndef    __DEBUG_H__
 #define    __DEBUG_H__
 
+#include <syslog.h>
+
+#define EMI_ERROR       LOG_ERR
+#define EMI_WARNING     LOG_WARNING
+#define EMI_INFO        LOG_INFO
+#define EMI_DEBUG       LOG_DEBUG
 
 #ifdef DEBUG
 
-#include "emi.h"
-#include "msg_table.h"
-#include "emi_config.h"
+extern void debug_emi_msg(struct emi_msg *msg);
 
+#define emilog_init()  openlog(NULL, 0, LOG_LOCAL0)
 
-/*
- * dbg is just a printf in console
- */
-#define dbg(format, arg...)                                            \
+#define emilog(priority, format, arg...)                                            \
     do {                                                            \
-        printf("EMIDEBUG:    %s: %s: " format,__FILE__, __func__, ## arg);         \
+        syslog(priority, "%s: %s: %d: "format, __FILE__, __func__, __LINE__, ## arg);         \
     } while (0)
-
-/*
- * emiprt can be changed into a log file, so emiprt should be used for emi_core only.
- *
- */
-#define emiprt(a) perror(a)
-
-extern void debug_flag(eu32 flag);
-extern void debug_addr(struct emi_addr *addr,char *p);
-extern void debug_msg(struct emi_msg *msg,int more);
-extern void debug_single_map(struct msg_map *map);
-extern void debug_msg_map(struct msg_map **table,struct msg_map *map);
-extern void debug_msg_table(struct msg_map **table);
-extern void debug_msg_full_table(struct msg_map **table);
-extern void debug_msg_chain(struct msg_map **table,struct msg_map *map);
-extern void debug_config(struct emi_config *config);
-extern void debug_msg_body(struct emi_msg *msg);
 
 #else
 
-#define dbg(a,arg...)
-#define debug_flag(flag)
-#define debug_addr(addr,p)
-#define debug_msg(msg,more)
-#define debug_single_map(map)
-#define debug_msg_map(table,map)
-#define debug_msg_table(table)
-#define debug_msg_chain(table,map)
-#define debug_msg_full_table(table)
-#define emiprt(a)
-#define debug_config(config)
-#define debug_msg_body(msg);
+extern void debug_emi_msg(struct emi_msg *msg);
+
+#define emilog_init()
+
+#define emilog(priority, format, arg...)                                            \
 
 #endif
 
 #endif
+
