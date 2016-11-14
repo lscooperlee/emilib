@@ -70,21 +70,13 @@ class emi_msg(ctypes.Structure):
         ("msg", ctypes.c_uint, 32),
         ("cmd", ctypes.c_uint, 32),
         ("size", ctypes.c_uint, 32),
-        ("data_offset", ctypes.c_ulong, 64),
+        ("retsize", ctypes.c_uint, 32),
+        ("data_offset", ctypes.c_ulonglong, 64),
+        ("retdata_offset", ctypes.c_ulonglong, 64),
+
         ("_data", ctypes.c_void_p),
-
-
     ]
 
-#    def __new__(cls, *args, **kwargs):
-#        msg = super().__new__(cls, args, kwargs)
-#        msg.size = len(kwargs.get("data", b''))
-
-#        msg._data = ctypes.cast(ctypes.create_string_buffer(msg.size), ctypes.c_void_p)
-#        msg.data_offset = msg._data - ctypes.addressof(msg) 
-
-#        return msg
-        
     def __str__(self):
         return "emi_addr:{{ msg: {0}, cmd: {1} }}".format(
             str(self.msg), str(self.cmd))
@@ -111,13 +103,17 @@ class emi_msg(ctypes.Structure):
         _emilib.emi_fill_msg(
             ctypes.byref(self), cipaddr, cdata, ccmd, cmsgnum, cflag)
 
-
-
     @property
     def data(self):
         addr = ctypes.addressof(self) + self.data_offset
         ccharp = ctypes.cast(addr, ctypes.c_char_p)
         return ccharp.value[:self.size]
+
+    @property
+    def retdata(self):
+        addr = ctypes.addressof(self) + self.retdata_offset
+        ccharp = ctypes.cast(addr, ctypes.c_char_p)
+        return ccharp.value[:self.retsize]
 
     @property
     def flag(self):
@@ -177,7 +173,7 @@ def emi_msg_register(msg_num, func):
 
 def emi_msg_send(emi_msg):
     ret = _emilib.emi_msg_send(ctypes.pointer(emi_msg))
-    retdata = bytes(emi_msg.data)
+    retdata = bytes(emi_msg.retdata)
     _emilib.emi_msg_free_data(emi_msg)
     return ret, retdata
 

@@ -32,7 +32,6 @@ char sentdata[1024]={0};
 void print_msg(struct emi_msg const *msg){
     printf("msg = %X, ",msg->msg);
     printf("cmd = %X, ",msg->cmd);
-//    printf("flag = %X, ",msg->flag);
     printf("msg.size = %d",msg->size);
     if(msg->size > 0){
         char *data = GET_ADDR(msg, msg->data_offset);
@@ -42,9 +41,12 @@ void print_msg(struct emi_msg const *msg){
     }
 }
 
-void print_retdata(unsigned int size, const char *data){
-    if(size > 0)
-        printf("retdata = %s\n", data);
+void print_data(unsigned int size, const char *data){
+    char tmp[1024];
+    if(size > 0){
+        strncpy(tmp, data, size);
+        printf("retdata = %s\n", tmp);
+    }
 }
 
 int func_noblock(struct emi_msg const *msg){
@@ -54,7 +56,7 @@ int func_noblock(struct emi_msg const *msg){
 
 int func_block(struct emi_msg const *msg){
     print_msg(msg);
-    print_retdata(retsize, retdata);
+    print_data(retsize, retdata);
     return emi_msg_prepare_return_data(msg, retdata, retsize); 
 }
 
@@ -172,8 +174,8 @@ int main(int argc,char **argv){
                 return -1;
             }
             
-            char *data = GET_ADDR(msg, msg->data_offset);
-            print_retdata(msg->size, data);
+            char *data = GET_ADDR(msg, msg->retdata_offset);
+            print_data(msg->retsize, data);
 
         }else{
 

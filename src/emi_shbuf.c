@@ -24,6 +24,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi_shbuf.h"
 #include "emi_semaphore.h"
 #include "emi.h"
+#include "emi_dbg.h"
 
 
 static void *emi_shmbuf_base_addr = NULL;
@@ -87,7 +88,7 @@ static int __init_emi_buf(struct emi_buf *top, int order){
         struct emi_buf *tmp = LEFT_MOST_OFFSPRING(i, top);
         for (j = 0; j < current_order; j++, tmp++)
         {
-            tmp->blk_offset = j * (order - i);
+            tmp->blk_offset = j * (1 << (order - i - 1));
             tmp->order = order - i - 1;
         }
     }
@@ -164,12 +165,16 @@ void update_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock){
 
 void *emi_alloc(size_t size){
     emi_spin_lock(emi_buf_lock);
+
     struct emi_buf *buf = alloc_emi_buf(size + ADDR_BUF_OFFSET);
+
     emi_spin_unlock(emi_buf_lock);
     
     void *addr = GET_ALLOC_ADDR(buf);
     
     GET_BUF_ADDR(addr) = buf - emi_buf_vector;
+
+    emilog(EMI_DEBUG, "size = %ld, buf->blk_offset = %d, buf->order = %d, addr = %p\n", size, buf->blk_offset, buf->order, addr);
 
     return addr;
 }
@@ -199,6 +204,12 @@ void free_shared_msg_data(struct emi_msg *msg){
         emi_free(data);
         msg->flag &= ~EMI_MSG_FLAG_ALLOCDATA;
     }
+
+    if(msg->retsize > 0){
+        void *data = GET_ADDR(msg, msg->retdata_offset);
+        emi_free(data);
+        msg->retsize = 0;
+    }
 }
 
 void free_shared_msg(struct emi_msg *msg){
@@ -213,7 +224,7 @@ struct emi_msg *realloc_shared_msg(struct emi_msg *msg){
     struct emi_buf *buf = GET_BUF_ADDR(msg) + emi_buf_vector;
     int order = -buf->order - 1;
 
-    int oldsize = (1<<order) << BUDDY_SHIFT;
+    int oldsize = ((1<<order) << BUDDY_SHIFT) - ADDR_BUF_OFFSET;
 
     if(oldsize >= newsize){
         return msg;
@@ -222,7 +233,7 @@ struct emi_msg *realloc_shared_msg(struct emi_msg *msg){
     void *data = emi_alloc(msg->size);
     if(data == NULL){
         msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
-        return msg;
+        return NULL;
     }
     
     msg->data_offset = GET_OFFSET(msg, data);

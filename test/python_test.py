@@ -218,7 +218,6 @@ class TestEmiLib(unittest.TestCase):
 
         self.assertEqual(received.value, 5)
 
-
     def test_emi_msg_send_block_retdata(self):
         received= Value('i', 0)
 
@@ -229,8 +228,9 @@ class TestEmiLib(unittest.TestCase):
                 nonlocal received
                 self.assertEqual(msg.msg, 5)
                 self.assertEqual(msg.cmd, 1)
-                self.assertEqual(msg.data, b"11112222")
-                emi_msg_prepare_return_data(msg, b'abcdef')
+                self.assertEqual(msg.data, b"11112222"*512)
+                ret = emi_msg_prepare_return_data(msg, b'abcdef'*1024)
+                self.assertEqual(msg.retsize, len(b'abcdef'*1024))
 
                 with received.get_lock():
                     received.value += 1
@@ -242,8 +242,11 @@ class TestEmiLib(unittest.TestCase):
 
             signal.pause()
 
-        p = Process(target = recvprocess_block_data)
-        p.start()
+        p1 = Process(target = recvprocess_block_data)
+        p2 = Process(target = recvprocess_block_data)
+
+        p1.start()
+        p2.start()
 
         time.sleep(1)
 
@@ -251,16 +254,19 @@ class TestEmiLib(unittest.TestCase):
             msgnum=5,
             cmd=1,
             ipaddr="127.0.0.1",
-            data=b'11112222',
+            data=b'11112222'*512,
             flag=emi_flag.EMI_MSG_MODE_BLOCK)
+
         ret = emi_msg_send(msg)
-        self.assertEqual(ret[0], 0)
-        self.assertEqual(ret[1], b'abcdef')
 
-        p.join()
+        self.assertEqual(ret[0], -1)
+        self.assertEqual(ret[1], b'abcdef'*1024)
 
-        self.assertEqual(received.value, 1)
+        p1.join()
+        p2.join()
 
+        self.assertEqual(received.value, 2)
+    
     def test_emi_msg_send_highlevel(self):
         emi_init()
 

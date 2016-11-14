@@ -25,6 +25,8 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <errno.h>
 #include "emi.h"
 #include "emi_sock.h"
+#include "emi_shbuf.h"
+#include "emi_dbg.h"
 
 
 struct sk_dpr *emi_open(int addr_family){
@@ -136,6 +138,14 @@ int emi_msg_write_data(struct sk_dpr *sd, struct emi_msg *msg){
     return 0;
 }
 
+int emi_msg_write_retdata(struct sk_dpr *sd, struct emi_msg *msg){
+    void *data = GET_ADDR(msg, msg->retdata_offset);
+    if (emi_write(sd, data, msg->retsize) < msg->retsize) {
+        return -1;
+    }
+    return 0;
+}
+
 int emi_msg_write(struct sk_dpr *sd, struct emi_msg *msg){
     if (emi_msg_write_payload(sd, msg)){
         return -1;
@@ -147,6 +157,17 @@ int emi_msg_write(struct sk_dpr *sd, struct emi_msg *msg){
     return 0;
 }
 
+int emi_msg_write_ret(struct sk_dpr *sd, struct emi_msg *msg){
+    if (emi_msg_write_payload(sd, msg)){
+        return -1;
+    }
+    emilog(EMI_DEBUG, "Write with retdata, retsize %d\n", msg->retsize);
+
+    if (msg->retsize > 0) {
+        return emi_msg_write_retdata(sd, msg);    
+    }
+    return 0;
+}
 
 int emi_msg_read_payload(struct sk_dpr *sd, struct emi_msg *msg){
     if (emi_read(sd, msg, EMI_MSG_PAYLOAD_SIZE) < EMI_MSG_PAYLOAD_SIZE) {
@@ -163,23 +184,50 @@ int emi_msg_read_data(struct sk_dpr *sd, struct emi_msg *msg){
     return 0;
 }
 
+int emi_msg_read_retdata(struct sk_dpr *sd, struct emi_msg *msg){
+    void *data = GET_ADDR(msg, msg->retdata_offset);
+    if(emi_read(sd, data, msg->retsize) < msg->retsize) {
+        return -1;
+    }
+    return 0;
+}
+
 int emi_msg_read(struct sk_dpr *sd, struct emi_msg *msg){
-    unsigned int oldsize = msg->size;
     if (emi_msg_read_payload(sd, msg)){
         return -1;
     }
 
     if (msg->size > 0) {
-        if(msg->size > oldsize){
-            void *data = (char *)malloc(msg->size);
-            if(data == NULL){
-                return -1;
-            }
-            msg->data_offset = GET_OFFSET(msg, data);
-            msg->flag |= EMI_MSG_FLAG_ALLOCDATA_USER;
+
+        if(realloc_shared_msg(msg) == NULL){
+            return -1;
         }
 
         if (emi_msg_read_data(sd, msg)) {
+            return -1;
+        }
+        emilog(EMI_DEBUG, "Read with data, size %d\n", msg->size);
+        
+    }
+
+    return 0;
+}
+
+int emi_msg_read_ret(struct sk_dpr *sd, struct emi_msg *msg){
+    if (emi_msg_read_payload(sd, msg)){
+        return -1;
+    }
+    emilog(EMI_DEBUG, "Read with retdata, retsize %d\n", msg->retsize);
+
+    if (msg->retsize > 0) {
+
+        void *data = (char *)malloc(msg->retsize);
+        if(data == NULL){
+            return -1;
+        }
+        msg->retdata_offset = GET_OFFSET(msg, data);
+
+        if (emi_msg_read_retdata(sd, msg)) {
             return -1;
         }
     }

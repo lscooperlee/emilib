@@ -91,6 +91,7 @@ static int int_global_shm_space(int pid_max){
     pididx_shm_base_addr = GET_PIDIDX_BASE(base);
     pidlock_shm_base_addr = GET_PIDLOCK_BASE(base, pid_max);
 
+
     return 0;
 }
 
@@ -213,7 +214,7 @@ static int emi_recieve_operation(void *args){
  * read the remote msg into this alloced memory, if this one got an error, probably emi_init has sent a guess message to emi_core, which
  * is a connection to emi_core without any data transfered.
  */
-    if((ret=emi_msg_read_payload(((struct clone_args *)args)->client_sd,msg_pos)) < 0){
+    if((ret=emi_msg_read(((struct clone_args *)args)->client_sd,msg_pos)) < 0){
         emilog(EMI_INFO, "emi_read from client error or emi_init is guessing port\n");
         goto e0;
     }
@@ -245,26 +246,12 @@ static int emi_recieve_operation(void *args){
         goto e0;
 
     }else{
+
         struct msg_map p;
         int nth;
         eu32 *pid_num_addr;
 
-        if(msg_pos->size > 0){
-            /*
-             * emi_core could receive arbitary data as long as emi_core has enough memory to hold it.
-             */
-            msg_pos = realloc_shared_msg(msg_pos);
-            if (msg_pos != NULL) {
-                if ((ret = emi_msg_read_data(((struct clone_args *) args)->client_sd, msg_pos)) < 0) {
-                    emilog(EMI_WARNING, "read data from client error\n");
-                    goto e0;
-                }
-            }else{
-                goto e0;
-            }
-        }
-
-        emilog(EMI_DEBUG, "Received a sending msg with num %d\n", msg_pos->msg);
+        emilog(EMI_DEBUG, "Received a sending msg with num %d, data size = %d\n", msg_pos->msg, msg_pos->size);
         debug_emi_msg(msg_pos);
 
         nth=get_shbuf_offset(msg_shm_base_addr, msg_pos);
@@ -312,22 +299,11 @@ static int emi_recieve_operation(void *args){
             sched_yield();
         }
 
-        //If the handler function does not have data to return, make size to be 0 to prevent sending received data back.
-        //Needs lock because EMI_MSG_FLAG_RETDATA bit might be changed when allocating shared area for return data.
-        if(!(msg_pos->flag & EMI_MSG_FLAG_RETDATA)){
-            msg_pos->size = 0;
-        }
-        
+        emilog(EMI_DEBUG, "msg_pos->flag = %d\n", msg_pos->flag);
         if(msg_pos->flag&EMI_MSG_MODE_BLOCK){
             emilog(EMI_DEBUG, "Return the state and possible data for block mode\n");
-            if (msg_pos->flag & EMI_MSG_RET_SUCCEEDED) {
-                emilog(EMI_DEBUG, "Emi handler succeeded\n");
-                if((ret = emi_msg_write(((struct clone_args *) args)->client_sd, msg_pos))< 0){
-                    goto e0;
-                }
 
-            } else {
-                emilog(EMI_INFO, "emi message handler returns a ~SUCCEEDED state\n");
+            if((ret = emi_msg_write_ret(((struct clone_args *) args)->client_sd, msg_pos))< 0){
                 goto e0;
             }
 

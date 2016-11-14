@@ -182,9 +182,14 @@ int emi_msg_register(eu32 defined_msg,emi_func func){
 }
 
 void *emi_retdata_alloc(struct emi_msg *msg, eu32 size){
-    void *addr = GET_ADDR(msg, msg->data_offset);
 
     emi_spin_lock(&msg->lock);
+
+    if(msg->flag & EMI_MSG_FLAG_RETDATA){
+        msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
+        emi_spin_unlock(&msg->lock);
+        return NULL;
+    }
 
     if (!(msg->flag & EMI_MSG_MODE_BLOCK)) {
         msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
@@ -192,19 +197,16 @@ void *emi_retdata_alloc(struct emi_msg *msg, eu32 size){
         return NULL;
     }
 
-    if(size > msg->size){
-        addr = emi_alloc(size);
-        if(addr == NULL){
-            msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
-            emi_spin_unlock(&msg->lock);
-            return NULL;
-        }
-
-        free_shared_msg_data(msg);
-        msg->data_offset = GET_OFFSET(msg, addr);
+    void *addr = emi_alloc(size);
+    if(addr == NULL){
+        msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
+        emi_spin_unlock(&msg->lock);
+        return NULL;
     }
 
-    msg->size = size;
+    msg->retdata_offset = GET_OFFSET(msg, addr);
+
+    msg->retsize = size;
     msg->flag |= EMI_MSG_FLAG_RETDATA;
 
     emi_spin_unlock(&msg->lock);

@@ -69,10 +69,10 @@ struct emi_msg *emi_msg_alloc(eu32 size) {
 }
 
 void emi_msg_free_data(struct emi_msg *msg) {
-    if(msg->flag & EMI_MSG_FLAG_ALLOCDATA_USER){
-        void *data = GET_ADDR(msg, msg->data_offset);
+    if(msg->retsize > 0){
+        void *data = GET_ADDR(msg, msg->retdata_offset);
         free(data);
-        msg->flag &= ~EMI_MSG_FLAG_ALLOCDATA_USER;
+        msg->retsize = 0;
     }
 }
 
@@ -145,19 +145,24 @@ int emi_msg_send(struct emi_msg *msg) {
         emilog(EMI_ERROR, "Error when writing msg, msg num %d\n", msg->msg);
         goto out;
     }
+
     emilog(EMI_DEBUG, "Msg sent succeeded, msg num %d\n", msg->msg);
-    debug_emi_msg(msg);
 
     if (msg->flag & EMI_MSG_MODE_BLOCK) {
-        if(emi_msg_read(sd, msg)){
+        if(emi_msg_read_ret(sd, msg)){
             emilog(EMI_ERROR, "Error when reading msg\n");
             goto out;
         }
 
-        emilog(EMI_DEBUG, "Ret data received, size %d\n", msg->size);
+        if(!(msg->flag&EMI_MSG_RET_SUCCEEDED)){
+            ret = -1;
+        }else{
+            ret = 0;
+        }
+
+        emilog(EMI_DEBUG, "Ret data received, size %d\n", msg->retsize);
         debug_emi_msg(msg);
 
-        ret = 0;
     } else {
         ret = 0;
     }
@@ -183,8 +188,8 @@ int emi_msg_send_highlevel(char *ipaddr, int msgnum, void *send_data,
         return -1;
     }
 
-    if (ret_data != NULL && msg->size > 0) {
-        void *data = GET_ADDR(msg, msg->data_offset);
+    if (ret_data != NULL && msg->retsize > 0) {
+        void *data = GET_ADDR(msg, msg->retdata_offset);
         memcpy(ret_data, data, ret_size);
     }
 

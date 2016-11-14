@@ -50,8 +50,10 @@ extern struct sk_dpr *emi_accept(struct sk_dpr *sd,union emi_sock_addr *addr);
 extern int emi_msg_write_payload(struct sk_dpr *sd, struct emi_msg *msg);
 extern int emi_msg_write_data(struct sk_dpr *sd, struct emi_msg *msg);
 extern int emi_msg_write(struct sk_dpr *sd, struct emi_msg *msg);
+extern int emi_msg_write_ret(struct sk_dpr *sd, struct emi_msg *msg);
 
 extern int emi_msg_read_payload(struct sk_dpr *sd, struct emi_msg *msg);
 extern int emi_msg_read_data(struct sk_dpr *sd, struct emi_msg *msg);
 extern int emi_msg_read(struct sk_dpr *sd, struct emi_msg *msg);
+extern int emi_msg_read_ret(struct sk_dpr *sd, struct emi_msg *msg);
 #endif

@@ -68,19 +68,21 @@ struct emi_msg{
 #define EMI_MSG_FLAG_RETDATA        0x00020000
 
 /*
- * Used for marking if msg->data is allocated, if so the data area should be freed when msg area is freed
- */
+* Used for marking if msg->data is allocated, if so the data area should be freed when msg area is freed
+*/
 #define EMI_MSG_FLAG_ALLOCDATA        0x00040000
-#define EMI_MSG_FLAG_ALLOCDATA_USER   0x00080000
 
     eu32 msg;
     eu32 cmd;
     eu32 size;
+    eu32 retsize;
 
 /** The members above this line are payload, meaning they will be sent in communication **/
 /** The members below will not be sent, they are for local use and may be initialized locally **/
 
     eu64 data_offset;
+    eu64 retdata_offset;
+
     eu32 count;
     espinlock_t lock;
 };
