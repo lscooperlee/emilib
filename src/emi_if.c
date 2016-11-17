@@ -155,6 +155,7 @@ int emi_msg_send(struct emi_msg *msg) {
         }
 
         if(!(msg->flag&EMI_MSG_RET_SUCCEEDED)){
+            emilog(EMI_DEBUG, "Block mode failed\n");
             ret = -1;
         }else{
             ret = 0;

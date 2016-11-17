@@ -106,14 +106,15 @@ class emi_msg(ctypes.Structure):
     @property
     def data(self):
         addr = ctypes.addressof(self) + self.data_offset
-        ccharp = ctypes.cast(addr, ctypes.c_char_p)
-        return ccharp.value[:self.size]
+        # ctypes.c_char is nul-terminated, thus may get bytes less then self.size
+        ccharp = ctypes.cast(addr, ctypes.POINTER(ctypes.c_byte * self.size))
+        return bytearray(ccharp.contents)
 
     @property
     def retdata(self):
         addr = ctypes.addressof(self) + self.retdata_offset
-        ccharp = ctypes.cast(addr, ctypes.c_char_p)
-        return ccharp.value[:self.retsize]
+        ccharp = ctypes.cast(addr, ctypes.POINTER(ctypes.c_byte * self.retsize))
+        return bytearray(ccharp.contents)
 
     @property
     def flag(self):

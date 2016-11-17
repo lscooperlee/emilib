@@ -262,7 +262,11 @@ static int emi_recieve_operation(void *args){
         emi_hsearch_lock(msg_table, &p, &msg_map_list);
 
         // msg handler succeeded by default
-        msg_pos->flag |= EMI_MSG_RET_SUCCEEDED;
+        if(!list_empty(&msg_map_list)){
+            msg_pos->flag |= EMI_MSG_RET_SUCCEEDED;
+        }else{
+            msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
+        }
         while(!list_empty(&msg_map_list)){
             struct msg_map *map;
             list_for_each_entry(map, &msg_map_list, same){
@@ -274,6 +278,9 @@ static int emi_recieve_operation(void *args){
 
                     *pid_num_addr = nth;
                     if(kill(map->pid, SIGUSR2)){ //Error when sending msg, meaning the registered process has exited.
+                        emi_spin_lock(&msg_pos->lock);
+                        msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
+                        emi_spin_unlock(&msg_pos->lock);
                         emi_hdelete_lock(msg_table,map);
                     }else{
 
@@ -299,7 +306,7 @@ static int emi_recieve_operation(void *args){
             sched_yield();
         }
 
-        emilog(EMI_DEBUG, "msg_pos->flag = %d\n", msg_pos->flag);
+        emilog(EMI_DEBUG, "msg_pos->flag = %x\n", msg_pos->flag);
         if(msg_pos->flag&EMI_MSG_MODE_BLOCK){
             emilog(EMI_DEBUG, "Return the state and possible data for block mode\n");
 

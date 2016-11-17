@@ -99,11 +99,21 @@ int emi_bind(struct sk_dpr *sd,int emi_port){
 }
 
 int emi_read(struct sk_dpr *sd,void *buf,eu32 size){
-    return read(sd->d,buf,size);
+    int ret = 0;
+    while((ret = read(sd->d,buf,size)) > 0){
+        buf = buf + ret;
+        size = size - ret;
+    }
+    return ret;
 }
 
 int emi_write(struct sk_dpr *sd,void *buf,eu32 size){
-    return write(sd->d,buf,size);
+    int ret = 0;
+    while((ret = write(sd->d,buf,size)) > 0){
+        buf = buf + ret;
+        size = size - ret;
+    }
+    return ret;
 }
 
 struct sk_dpr *emi_accept(struct sk_dpr *sd,union emi_sock_addr *addr){
@@ -124,7 +134,7 @@ struct sk_dpr *emi_accept(struct sk_dpr *sd,union emi_sock_addr *addr){
 }
 
 int emi_msg_write_payload(struct sk_dpr *sd, struct emi_msg *msg){
-    if (emi_write(sd, (void *) msg, EMI_MSG_PAYLOAD_SIZE) < EMI_MSG_PAYLOAD_SIZE) {
+    if (emi_write(sd, (void *) msg, EMI_MSG_PAYLOAD_SIZE)) {
         return -1;
     }
     return 0;
@@ -132,7 +142,7 @@ int emi_msg_write_payload(struct sk_dpr *sd, struct emi_msg *msg){
 
 int emi_msg_write_data(struct sk_dpr *sd, struct emi_msg *msg){
     void *data = GET_ADDR(msg, msg->data_offset);
-    if (emi_write(sd, data, msg->size) < msg->size) {
+    if (emi_write(sd, data, msg->size)) {
         return -1;
     }
     return 0;
@@ -140,7 +150,7 @@ int emi_msg_write_data(struct sk_dpr *sd, struct emi_msg *msg){
 
 int emi_msg_write_retdata(struct sk_dpr *sd, struct emi_msg *msg){
     void *data = GET_ADDR(msg, msg->retdata_offset);
-    if (emi_write(sd, data, msg->retsize) < msg->retsize) {
+    if (emi_write(sd, data, msg->retsize)) {
         return -1;
     }
     return 0;
@@ -170,7 +180,7 @@ int emi_msg_write_ret(struct sk_dpr *sd, struct emi_msg *msg){
 }
 
 int emi_msg_read_payload(struct sk_dpr *sd, struct emi_msg *msg){
-    if (emi_read(sd, msg, EMI_MSG_PAYLOAD_SIZE) < EMI_MSG_PAYLOAD_SIZE) {
+    if (emi_read(sd, msg, EMI_MSG_PAYLOAD_SIZE)) {
         return -1;
     }
     return 0;
@@ -178,7 +188,7 @@ int emi_msg_read_payload(struct sk_dpr *sd, struct emi_msg *msg){
 
 int emi_msg_read_data(struct sk_dpr *sd, struct emi_msg *msg){
     void *data = GET_ADDR(msg, msg->data_offset);
-    if(emi_read(sd, data, msg->size) < msg->size) {
+    if(emi_read(sd, data, msg->size)) {
         return -1;
     }
     return 0;
@@ -186,7 +196,7 @@ int emi_msg_read_data(struct sk_dpr *sd, struct emi_msg *msg){
 
 int emi_msg_read_retdata(struct sk_dpr *sd, struct emi_msg *msg){
     void *data = GET_ADDR(msg, msg->retdata_offset);
-    if(emi_read(sd, data, msg->retsize) < msg->retsize) {
+    if(emi_read(sd, data, msg->retsize)) {
         return -1;
     }
     return 0;
