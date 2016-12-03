@@ -96,7 +96,7 @@ class emi_msg(ctypes.Structure):
 
         self.size = len(data)
         self._data = ctypes.cast(ctypes.create_string_buffer(self.size), ctypes.c_void_p)
-        self.data_offset = self._data - ctypes.addressof(self) 
+        self.data_offset = self._data - ctypes.addressof(self)
 
         cdata = (ctypes.c_ubyte * self.size).from_buffer(bytearray(data))
 
@@ -120,6 +120,9 @@ class emi_msg(ctypes.Structure):
     def flag(self):
         flags = [ name for name, _ in emi_flag.__members__.items() if _ & self._flag ]
         return ",".join(flags)
+
+    def is_block(self):
+        return self._flag & emi_flag.EMI_MSG_MODE_BLOCK
 
 
 _emilib.emi_init.argtypes = (None)
@@ -158,7 +161,20 @@ def emi_msg_register(msg_num, func):
 
     def callback_decorator(func):
         def f(msg):
-            return func(msg.contents)
+            ret = func(msg.contents)
+            if ret is None:
+                return 0
+            elif type(ret) is bool:
+                return 0 if ret else -1
+            elif type(ret) is str:
+                ret = ret.encode('utf8')
+            elif type(ret) is int:
+                ret = ret.to_bytes((ret.bit_length() + 7) // 8 or 1, 'little', signed = True)
+            else:
+                ret = bytes(ret)
+
+            return emi_msg_prepare_return_data(msg.contents, ret)
+
         return f
 
     num = ctypes.c_uint(msg_num)
@@ -169,6 +185,8 @@ def emi_msg_register(msg_num, func):
     _registered_callback.append(callback)
 
     ret = _emilib.emi_msg_register(num, callback)
+    if ret < 0:
+        raise EMIError("emi_msg_register error")
     return ret
 
 
@@ -231,9 +249,7 @@ def emi_run(loop=True):
     emi_init()
 
     for num, func in recorded_func.items():
-        ret = emi_msg_register(num, func)
-        if ret < 0:
-            raise EMIError('emi msg register error')
+        emi_msg_register(num, func)
 
     if loop:
         emi_loop()

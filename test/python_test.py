@@ -36,22 +36,22 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(msg_data.cmd, 1)
         self.assertEqual(msg_data.size, len(b'1234'*1024))
         self.assertEqual(str(msg_data.addr.ipv4), "10.0.0.3:1361")
+        self.assertEqual(msg_data.is_block(), False)
 
     def test_emi_init(self):
         self.assertEqual(emi_init(), 0)
-    
+
     def test_emi_msg_register(self):
         ret = emi_init()
         self.assertEqual(ret, 0)
 
         def func(msg):
-            return 0
+            pass
 
         ret = emi_msg_register(1, func)
         self.assertEqual(ret, 0)
 
-        ret = emi_msg_register(1, func)
-        self.assertEqual(ret, -1)
+        self.assertRaises(EMIError, emi_msg_register, 1, func)
 
     def test_emi_msg_send_unblock_nosenddata(self):
         received = Value('i', 0)
@@ -67,11 +67,10 @@ class TestEmiLib(unittest.TestCase):
                 with received.get_lock():
                     received.value += 1
 
-                return 0
 
             ret = emi_msg_register(2, func)
             self.assertEqual(ret, 0)
-            
+
             signal.pause()
 
         p1 = Process(target = recvprocess_unblock)
@@ -79,7 +78,7 @@ class TestEmiLib(unittest.TestCase):
 
         p1.start()
         p2.start()
-        
+
         time.sleep(1)
 
         msg = emi_msg(msgnum=2, cmd=1, ipaddr="127.0.0.1")
@@ -106,11 +105,10 @@ class TestEmiLib(unittest.TestCase):
                 with received.get_lock():
                     received.value += 1
 
-                return 0
 
             ret = emi_msg_register(3, func)
             self.assertEqual(ret, 0)
-            
+
             signal.pause()
 
         p1 = Process(target = recvprocess_unblock_data)
@@ -145,7 +143,7 @@ class TestEmiLib(unittest.TestCase):
                 with received.get_lock():
                     received.value += 1
 
-                return 0
+                return True
 
             ret = emi_msg_register(4, func)
             self.assertEqual(ret, 0)
@@ -186,7 +184,7 @@ class TestEmiLib(unittest.TestCase):
                 with received.get_lock():
                     received.value += 1
 
-                return -1
+                return False
 
             ret = emi_msg_register(4, func)
             self.assertEqual(ret, 0)
@@ -229,13 +227,11 @@ class TestEmiLib(unittest.TestCase):
                 self.assertEqual(msg.msg, 5)
                 self.assertEqual(msg.cmd, 1)
                 self.assertEqual(msg.data, b"11112222"*512)
-                ret = emi_msg_prepare_return_data(msg, b'abcdef'*1024)
-                self.assertEqual(msg.retsize, len(b'abcdef'*1024))
 
                 with received.get_lock():
                     received.value += 1
 
-                return 0
+                return b'abcdef'*1024
 
             ret = emi_msg_register(5, func)
             self.assertEqual(ret, 0)
@@ -266,7 +262,7 @@ class TestEmiLib(unittest.TestCase):
         p2.join()
 
         self.assertEqual(received.value, 2)
-    
+
     def test_emi_msg_send_highlevel(self):
         emi_init()
 
@@ -278,8 +274,7 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(msg.cmd, 1)
             self.assertEqual(msg.data, b"11112222")
             received = received + 1
-            emi_msg_prepare_return_data(msg, b'abcdefghijkmln')
-            return 0
+            return 'abcdefghijkmln'
 
         ret = emi_msg_register(6, func)
         self.assertEqual(ret, 0)
@@ -309,8 +304,7 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(msg.cmd, 1)
             self.assertEqual(msg.data, b"11112222")
             received = received + 1
-            emi_msg_prepare_return_data(msg, b'abcdefghijkmln')
-            return 0
+            return 'abcdefghijkmln'
 
         emi_run(False)
 
@@ -335,13 +329,11 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(func1.__name__, "func1")
             self.assertEqual(msg.msg, 8)
             self.assertEqual(msg.cmd, 1)
-            return 0
 
         def func2(msg):
             self.assertEqual(func2.__name__, "func2")
             self.assertEqual(msg.msg, 9)
             self.assertEqual(msg.cmd, 1)
-            return 0
 
         ret = emi_msg_register(8, func1)
         self.assertEqual(ret, 0)
