@@ -166,14 +166,17 @@ def emi_msg_register(msg_num, func):
                 return 0
             elif type(ret) is bool:
                 return 0 if ret else -1
-            elif type(ret) is str:
-                ret = ret.encode('utf8')
-            elif type(ret) is int:
-                ret = ret.to_bytes((ret.bit_length() + 7) // 8 or 1, 'little', signed = True)
-            else:
-                ret = bytes(ret)
 
-            return emi_msg_prepare_return_data(msg.contents, ret)
+            if msg.contents.is_block():
+                if type(ret) is str:
+                    ret = ret.encode('utf8')
+                elif type(ret) is int:
+                    ret = ret.to_bytes((ret.bit_length() + 7) // 8 or 1, 'little', signed = True)
+                else:
+                    ret = bytes(ret)
+                return emi_msg_prepare_return_data(msg.contents, ret)
+
+            return 0
 
         return f
 
