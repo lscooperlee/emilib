@@ -174,7 +174,7 @@ def emi_msg_register(msg_num, func):
                     ret = ret.to_bytes((ret.bit_length() + 7) // 8 or 1, 'little', signed = True)
                 else:
                     ret = bytes(ret)
-                return emi_msg_prepare_return_data(msg.contents, ret)
+                return emi_msg_prepare_return_data(msg, ret)
 
             return 0
 

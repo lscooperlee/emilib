@@ -250,6 +250,8 @@ static int emi_recieve_operation(void *args){
         struct msg_map p;
         int nth;
         eu32 *pid_num_addr;
+        int num;
+        struct msg_map *map;
 
         emilog(EMI_DEBUG, "Received a sending msg with num %d, data size = %d\n", msg_pos->msg, msg_pos->size);
         debug_emi_msg(msg_pos);
@@ -257,48 +259,47 @@ static int emi_recieve_operation(void *args){
         nth=get_shbuf_offset(msg_shm_base_addr, msg_pos);
 
         msg_map_init(&p,msg_pos->msg,0);
-        struct list_head msg_map_list = LIST_HEAD_INIT(msg_map_list);
-        
-        emi_hsearch_lock(msg_table, &p, &msg_map_list);
 
-        // msg handler succeeded by default
-        if(!list_empty(&msg_map_list)){
-            msg_pos->flag |= EMI_MSG_RET_SUCCEEDED;
-        }else{
-            msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
-        }
-        while(!list_empty(&msg_map_list)){
-            struct msg_map *map;
-            list_for_each_entry(map, &msg_map_list, same){
-                pid_num_addr = &pididx_shm_base_addr[map->pid];
+        //msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
+        msg_pos->flag |= EMI_MSG_RET_SUCCEEDED;
 
-                if(emi_trylock(&pidlock_shm_base_addr[map->pid])){ //Other thread is using the pid index area
-                    continue;
-                }else{
+        for(num=0;;num+=1){
+            emi_spin_lock(&msg_table_lock);
+            if((map=__emi_hsearch(msg_table,&p,&num))==NULL){
+                emi_spin_unlock(&msg_table_lock);
 
-                    *pid_num_addr = nth;
-                    if(kill(map->pid, SIGUSR2)){ //Error when sending msg, meaning the registered process has exited.
-                        emi_spin_lock(&msg_pos->lock);
-                        msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
-                        emi_spin_unlock(&msg_pos->lock);
-                        emi_hdelete_lock(msg_table,map);
-                    }else{
-
-                        emi_spin_lock(&msg_pos->lock);
-                        msg_pos->count++;
-                        emi_spin_unlock(&msg_pos->lock);
-
-                        emilog(EMI_DEBUG, "Find msg_map for pid %d and msg %d in msg_table", map->pid, map->msg);
-                        while (*pid_num_addr) {
-                            sched_yield(); //Need discussion
-                        };
-                        list_del(&map->same);
-                    }
-
-                    emi_unlock(&pidlock_shm_base_addr[map->pid]);
-
-                }
+                //if no registered msg in msg_table, return failed
+                if(num == 0)
+                    msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
+                break;
             }
+            emi_spin_unlock(&msg_table_lock);
+
+            pid_num_addr = &pididx_shm_base_addr[map->pid];
+            emi_lock(&pidlock_shm_base_addr[map->pid]);
+            emilog(EMI_DEBUG, "pid %d found, for msg %d, cmd %d\n", map->pid, msg_pos->msg, msg_pos->cmd);
+
+            *pid_num_addr = nth;
+            int pid_ret=kill(map->pid,SIGUSR2);
+            if(pid_ret<0){
+                *pid_num_addr=0;
+                emi_spin_lock(&msg_pos->lock);
+                msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
+                emi_spin_unlock(&msg_pos->lock);
+                emi_hdelete_lock(msg_table,map);
+
+            }else{
+                emi_spin_lock(&msg_pos->lock);
+                msg_pos->count++;
+                emi_spin_unlock(&msg_pos->lock);
+            }
+            emilog(EMI_DEBUG, "kill return %d for pid %d\n", pid_ret, map->pid);
+
+            while (*pid_num_addr) {
+                sched_yield(); //Need discussion
+            };
+
+            emi_unlock(&pidlock_shm_base_addr[map->pid]);
         }
 
         emilog(EMI_DEBUG, "Signal all processes with msg num %d, waiting for sync\n", msg_pos->msg);
