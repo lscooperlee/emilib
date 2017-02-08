@@ -72,6 +72,7 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(ret, 0)
 
             signal.pause()
+            time.sleep(2);
 
         p1 = Process(target = recvprocess_unblock)
         p2 = Process(target = recvprocess_unblock)
@@ -110,6 +111,7 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(ret, 0)
 
             signal.pause()
+            time.sleep(2);
 
         p1 = Process(target = recvprocess_unblock_data)
         p2 = Process(target = recvprocess_unblock_data)
@@ -149,6 +151,7 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(ret, 0)
 
             signal.pause()
+            time.sleep(2);
 
         p1 = Process(target = recvprocess_block)
         p2 = Process(target = recvprocess_block)
@@ -172,6 +175,8 @@ class TestEmiLib(unittest.TestCase):
 
         self.assertEqual(received.value, 2)
 
+        return
+
         def recvprocess_block_fail():
             emi_init()
 
@@ -190,6 +195,7 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(ret, 0)
 
             signal.pause()
+            time.sleep(2);
 
         p1 = Process(target = recvprocess_block)
         p2 = Process(target = recvprocess_block)
@@ -237,6 +243,7 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(ret, 0)
 
             signal.pause()
+            time.sleep(2);
 
         p1 = Process(target = recvprocess_block_data)
         p2 = Process(target = recvprocess_block_data)
@@ -278,6 +285,7 @@ class TestEmiLib(unittest.TestCase):
 
         ret = emi_msg_register(6, func)
         self.assertEqual(ret, 0)
+        time.sleep(1)
 
         ret = emi_msg_send_highlevel(
             msgnum=6,
@@ -351,6 +359,42 @@ class TestEmiLib(unittest.TestCase):
 
         time.sleep(1)
 
+    def test_emi_msg_send_inside_msg_handler(self):
+        emi_init()
+
+        def func1(msg):
+            self.assertEqual(func1.__name__, "func1")
+            self.assertEqual(msg.msg, 10)
+            self.assertEqual(msg.cmd, 1)
+
+            msg = emi_msg(msgnum=11, cmd=1, ipaddr="127.0.0.1",
+                        flag=emi_flag.EMI_MSG_MODE_BLOCK)
+            ret = emi_msg_send(msg)
+
+            self.assertEqual(ret[0], 0)
+            self.assertEqual(ret[1], b'1234abcd')
+
+            return
+
+        def func2(msg):
+            self.assertEqual(func2.__name__, "func2")
+            self.assertEqual(msg.msg, 11)
+            self.assertEqual(msg.cmd, 1)
+            return '1234abcd'
+
+        ret = emi_msg_register(10, func1)
+        self.assertEqual(ret, 0)
+
+        ret = emi_msg_register(11, func2)
+        self.assertEqual(ret, 0)
+
+        msg = emi_msg(msgnum=10, cmd=1, ipaddr="127.0.0.1",
+                    flag=emi_flag.EMI_MSG_MODE_BLOCK)
+        ret = emi_msg_send(msg)
+        self.assertEqual(ret[0], 0)
+
+
+        time.sleep(1)
 
 
 if __name__ == "__main__":

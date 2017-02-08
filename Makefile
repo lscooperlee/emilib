@@ -49,7 +49,7 @@ endif
 LIBSENDERSRCS=src/emi_if.c src/emi_sock.c src/emi_dbg.c src/emi_config.c
 LIBSENDEROBJS=$(patsubst %,$(TMPDIR)/%,$(LIBSENDERSRCS:.c=.o))
 
-LIBRECEIVERSRCS=src/emi_ifr.c src/emi_config.c src/emi_dbg.c src/emi_shbuf.c src/emi_shmem.c src/emi_core.c
+LIBRECEIVERSRCS=src/emi_ifr.c src/emi_config.c src/emi_dbg.c src/emi_shbuf.c src/emi_shmem.c src/emi_core.c src/emi_thread.c
 LIBEMISRCS=$(sort $(LIBSENDERSRCS) $(LIBRECEIVERSRCS))
 LIBEMIOBJS=$(patsubst %,$(TMPDIR)/%,$(LIBEMISRCS:.c=.o))
 
@@ -66,7 +66,7 @@ export PYTHONPATH := ${PWD}/python/emilib
 
 .PHONY:all clean
 
-all:$(LIBSENDER) $(LIBEMI) $(CORE) $(SAR) TEST
+all:$(LIBSENDER) $(LIBEMI) $(CORE) $(SAR) PYTHON TEST
 
 $(LIBSENDER):$(LIBSENDEROBJS)
 	@echo LD		$(LIBSENDER)
@@ -103,6 +103,8 @@ $(LIBEMIOBJS):$(TMPDIR)/%.o:%.c
 	@$(MKDIR) `$(DIRNAME) $@`
 	@$(CC) $(LIBCFLAGS) -c -o $@ $<
 
+PYTHON:
+	@true
 
 TEST:
 	@make -C $(TEST)
@@ -115,9 +117,19 @@ emi_test:
 	@python3 test/emi_test.py
 
 python_test: 
-#   @python3 -W ignore test/python_test.py -v TestEmiLib.test_emi_msg_send_block_noretdata
+#	@python3 -W ignore test/python_test.py -v TestEmiLib.test_emi_msg_send_inside_msg_handler
 	@python3 -W ignore test/python_test.py -v
 
 unit_test:
-	./test/unit_test/test_buddy_algorithm
-	./test/unit_test/test_send_functions
+# 	./test/unit_test/test_buddy_algorithm
+# 	./test/unit_test/test_send_functions
+	./test/unit_test/test_thread_pool
+
+install:
+	install -Dm755 .out/bin/* /usr/bin/
+	install -Dm755 .out/lib/* /usr/lib/
+	install -Dm644 include/* /usr/include/emi/
+
+
+
+

@@ -1,23 +1,5 @@
-/*
-EMI:    embedded message interface
-Copyright (C) 2009  Cooper <davidontech@gmail.com>
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see http://www.gnu.org/licenses/.
-*/
-
-
-
+// see linux kernel list.h
+//
 #ifndef __LIST_H__
 #define __LIST_H__
 
@@ -123,14 +105,18 @@ static inline int list_is_singular(const struct list_head *head)
 
 #define list_entry(ptr, type, member)    container_of(ptr, type, member)
 
-#define list_first_entry(ptr, type, member) \
-    list_entry((ptr)->next, type, member)
+#define list_first_entry(head, type, member) \
+    list_entry((head)->next, type, member)
 
 #define list_for_each(pos, head) \
     for (pos = (head)->next; pos != (head); pos = pos->next)
 
 #define list_for_each_tail(pos, head) \
     for (pos = (head)->prev; pos != (head); pos = pos->prev)
+
+#define list_for_each_safe(pos, n, head) \
+    for (pos = (head)->next, n = pos->next; pos != (head); \
+        pos = n, n = pos->next)
 
 #define list_for_each_entry(pos, head, member)                        \
     for (pos = list_entry((head)->next, typeof(*pos), member);        \

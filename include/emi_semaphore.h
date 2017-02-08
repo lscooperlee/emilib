@@ -3,9 +3,29 @@
 
 #include <pthread.h>
 
-
+typedef pthread_cond_t econd_t;
 typedef pthread_mutex_t elock_t;
 typedef pthread_spinlock_t espinlock_t;
+
+static int inline emi_cond_init(econd_t *p){
+    return pthread_cond_init(p, NULL);
+}
+
+static int inline emi_cond_destroy(econd_t *p){
+    return pthread_cond_destroy(p);
+}
+
+static int inline emi_cond_wait(econd_t *p, elock_t *l){
+    return pthread_cond_wait(p, l);
+}
+
+static int inline emi_cond_signal(econd_t *p){
+    return pthread_cond_signal(p);
+}
+
+static int inline emi_cond_broadcast(econd_t *p){
+    return pthread_cond_broadcast(p);
+}
 
 static int inline emi_spin_init(espinlock_t *p){
     return pthread_spin_init(p,PTHREAD_PROCESS_SHARED);

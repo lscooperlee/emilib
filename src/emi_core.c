@@ -1,20 +1,3 @@
-/*
-EMI:    embedded message interface
-Copyright (C) 2009  Cooper <davidontech@gmail.com>
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see http://www.gnu.org/licenses/.
-*/
 
 #include <syslog.h>
 #include <string.h>
@@ -40,6 +23,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi_dbg.h"
 #include "emi_config.h"
 #include "emi_shmem.h"
+#include "emi_thread.h"
 
 
 struct clone_args{
@@ -47,20 +31,18 @@ struct clone_args{
     struct sk_dpr *client_sd;
 };
 
-static int emi_recieve_operation(void *args);
+static int emi_receive_operation(void *args);
 
 
 static int core_shmid=-1;
 static struct sk_dpr *sd=NULL;
 static struct sk_dpr *client_sd=NULL;
-static void *msg_shm_base_addr = NULL;
-static void *emibuf_shm_base_addr = NULL;
-static espinlock_t *emibuf_lock_shm = NULL;
-static eu32 *pididx_shm_base_addr = NULL;
-static elock_t *pidlock_shm_base_addr = NULL;
+
+static struct emi_shmem_mgr core_shmem_mgr;
 
 static struct msg_map *msg_table[EMI_MSG_TABLE_SIZE];
 
+static struct emi_thread_pool emi_core_pool;
 
 void emi_release(void){
     emi_close(sd);
@@ -85,12 +67,7 @@ static int int_global_shm_space(int pid_max){
         return -1;
     }
 
-    msg_shm_base_addr = GET_MSG_BASE(base);
-    emibuf_shm_base_addr = GET_EMIBUF_BASE(base);
-    emibuf_lock_shm = GET_EMIBUF_LOCK_BASE(base);
-    pididx_shm_base_addr = GET_PIDIDX_BASE(base);
-    pidlock_shm_base_addr = GET_PIDLOCK_BASE(base, pid_max);
-
+    emi_shmem_mgr_init(&core_shmem_mgr, base, pid_max);
 
     return 0;
 }
@@ -125,7 +102,6 @@ int emi_core(struct emi_config *config){
 static int __emi_core(void){
 
     eu32 pid_max;
-    int ret;
 
     if(init_msg_table_lock(msg_table)){
         emilog(EMI_ERROR, "init msg table error\n");
@@ -139,8 +115,13 @@ static int __emi_core(void){
         return -1;
     }
 
-    if(init_emi_buf_lock(msg_shm_base_addr, emibuf_shm_base_addr, emibuf_lock_shm)){
+    if(init_emi_buf_lock(core_shmem_mgr.base, core_shmem_mgr.msgbuf, core_shmem_mgr.msgbuf_lock)){
         emilog(EMI_ERROR, "init msg space error\n");
+        return -1;
+    }
+
+    if(emi_thread_pool_init(&emi_core_pool, 5)){
+        emilog(EMI_ERROR, "init emi thread pool error\n");
         return -1;
     }
 
@@ -168,7 +149,6 @@ static int __emi_core(void){
         return -1;
     }
 
-
     while(1){
         if((client_sd=emi_accept(sd,NULL))==NULL){
             emilog(EMI_WARNING, "emi_accept error\n");
@@ -176,7 +156,6 @@ static int __emi_core(void){
             continue;
         }
 
-        pthread_t tid;
         struct clone_args *arg;
 
         if((arg=(struct clone_args *)malloc(sizeof(struct clone_args)))==NULL){
@@ -186,20 +165,28 @@ static int __emi_core(void){
 
         arg->client_sd=client_sd;
 
-        if((ret=pthread_create(&tid,NULL,(void *)emi_recieve_operation,arg))){
+        emi_thread_pool_submit(&emi_core_pool, (void *)emi_receive_operation, arg);
+
+
+   /* 
+        pthread_t tid;
+
+        if(pthread_create(&tid,NULL,(void *)emi_receive_operation,arg)){
             emilog(EMI_WARNING, "pthread cancel error\n");
             continue;
         }
 
-        if((ret=pthread_detach(tid))){
+        if(pthread_detach(tid)){
             emilog(EMI_WARNING, "pthread_detach error\n");
             continue;
         }
+        */
+    
     }
 }
 
-static int emi_recieve_operation(void *args){
-    int ret;
+static int emi_receive_operation(void *args){
+    int ret = -1;
     struct emi_msg *msg_pos;
 
 /*
@@ -232,16 +219,18 @@ static int emi_recieve_operation(void *args){
          * this prevents one process register multiple functions to the same msg number.
          */
         if((ret = emi_hinsert_lock(msg_table,&p)) < 0){
-            msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
+            msg_pos->flag &= ~EMI_MSG_RET_SUCCEEDED;
         }else{
-            emi_lock_init(&pidlock_shm_base_addr[p.pid]);
-            msg_pos->flag|=EMI_MSG_RET_SUCCEEDED;
+            emi_lock_init(&core_shmem_mgr.pididx_lock[p.pid]);
+            msg_pos->flag |= EMI_MSG_RET_SUCCEEDED;
         }
-        
 
+        emilog(EMI_DEBUG, "Insert msg to msg_table done");
         if((ret=emi_msg_write_payload(((struct clone_args *)args)->client_sd,msg_pos)) < 0){
             emilog(EMI_WARNING, "emi read payload from client error\n");
         }
+
+        emilog(EMI_DEBUG, "Register msg finished");
 
         goto e0;
 
@@ -256,7 +245,7 @@ static int emi_recieve_operation(void *args){
         emilog(EMI_DEBUG, "Received a sending msg with num %d, data size = %d\n", msg_pos->msg, msg_pos->size);
         debug_emi_msg(msg_pos);
 
-        nth=get_shbuf_offset(msg_shm_base_addr, msg_pos);
+        nth=get_shbuf_offset(core_shmem_mgr.base, msg_pos);
 
         msg_map_init(&p,msg_pos->msg,0);
 
@@ -275,17 +264,17 @@ static int emi_recieve_operation(void *args){
             }
             emi_spin_unlock(&msg_table_lock);
 
-            pid_num_addr = &pididx_shm_base_addr[map->pid];
-            emi_lock(&pidlock_shm_base_addr[map->pid]);
+            pid_num_addr = &core_shmem_mgr.pididx[map->pid];
+            emi_lock(&core_shmem_mgr.pididx_lock[map->pid]);
             emilog(EMI_DEBUG, "pid %d found, for msg %d, cmd %d\n", map->pid, msg_pos->msg, msg_pos->cmd);
 
             *pid_num_addr = nth;
             int pid_ret=kill(map->pid,SIGUSR2);
             if(pid_ret<0){
                 *pid_num_addr=0;
-                emi_spin_lock(&msg_pos->lock);
-                msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
-                emi_spin_unlock(&msg_pos->lock);
+                //emi_spin_lock(&msg_pos->lock);
+                //msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
+                //emi_spin_unlock(&msg_pos->lock);
                 emi_hdelete_lock(msg_table,map);
 
             }else{
@@ -299,7 +288,7 @@ static int emi_recieve_operation(void *args){
                 sched_yield(); //Need discussion
             };
 
-            emi_unlock(&pidlock_shm_base_addr[map->pid]);
+            emi_unlock(&core_shmem_mgr.pididx_lock[map->pid]);
         }
 
         emilog(EMI_DEBUG, "Signal all processes with msg num %d, waiting for sync\n", msg_pos->msg);
@@ -326,7 +315,7 @@ e0:
 e1:
     emi_close(((struct clone_args *)args)->client_sd);
     free(args);
-    pthread_exit(NULL);
+    //pthread_exit(NULL);
     return ret;
 
 }

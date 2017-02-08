@@ -2,6 +2,7 @@ import ctypes
 import struct
 import signal
 import enum
+import time
 
 _emilib = ctypes.cdll.LoadLibrary("libemi.so")
 
@@ -151,6 +152,7 @@ def emi_init():
     ret = _emilib.emi_init()
     if ret < 0:
         raise EMIError("emi_core did not run")
+    time.sleep(0.1)
     return ret
 
 
