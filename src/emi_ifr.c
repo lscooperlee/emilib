@@ -84,6 +84,7 @@ void __func_sterotype(void *no_use){
     if(shmsg->flag&EMI_MSG_MODE_BLOCK){
 
         if(ret){
+            emilog(EMI_DEBUG, "msg handler running failed (not return zero)");
             shmsg->flag&=~EMI_MSG_RET_SUCCEEDED;
         }
         
@@ -91,6 +92,7 @@ void __func_sterotype(void *no_use){
     
     shmsg->count--;
     emi_spin_unlock(&shmsg->lock);
+    emilog(EMI_DEBUG, "lock released");
 
     return;
 }
@@ -152,7 +154,7 @@ int emi_msg_register(eu32 defined_msg,emi_func func){
     return __emi_msg_register(defined_msg,func, 0);
 }
 
-void *emi_retdata_alloc(struct emi_msg *msg, eu32 size){
+char *emi_retdata_alloc(struct emi_msg *msg, eu32 size){
 
     emi_spin_lock(&msg->lock);
 
@@ -246,6 +248,28 @@ int emi_init(){
         emi_shm_destroy("emilib", emi_global.shm_id);
         return -1;
     }
+
+    /*
+     *  One problem is sigaction take too long time to be ready.
+        The sigal register function had been moved to emi_init for longer wait,
+        but still not enough for signal handler to be ready
+    
+        eg: in test_emi_msg_send_inside_msg_hander, add sleep after emi_init
+        will work normally, if not, signal handler will fail to run sometimes
+        even if log shows emi_core has send the signal successfully.
+        
+        temp solution: add time.sleep(0.1) to emi_init for python (don't know if
+        it is also a problem for c)
+
+
+        the "sigaction take too long time to be ready" problem repeated in
+        cpp as well. meaning it may not be python's problem but a issue from
+        system. sleep after emi_init() has to be in C function, not just
+        python function
+
+     */
+
+    usleep(100000);
 
     return 0;
 }

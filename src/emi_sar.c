@@ -34,7 +34,7 @@ void print_msg(struct emi_msg const *msg){
     printf("cmd = %X, ",msg->cmd);
     printf("msg.size = %d",msg->size);
     if(msg->size > 0){
-        char *data = GET_ADDR(msg, msg->data_offset);
+        char *data = GET_DATA(msg);
         printf(", msg.data = %s\n", data);
     }else{
         printf("\n");

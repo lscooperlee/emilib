@@ -114,7 +114,7 @@ clean:
 	@make -C $(TEST) clean
 
 emi_test: 
-	@python3 test/emi_test.py
+	@./test/emi_test
 
 python_test: 
 #	@python3 -W ignore test/python_test.py -v TestEmiLib.test_emi_msg_send_inside_msg_handler

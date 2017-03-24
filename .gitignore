@@ -19,4 +19,5 @@ __pycache__
 
 
 /test/unit_test/*
+/test/emi_test
 !/test/unit_test/*.c

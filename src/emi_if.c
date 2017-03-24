@@ -81,7 +81,7 @@ void emi_msg_free(struct emi_msg *msg) {
     free(msg);
 }
 
-static int split_ipaddr(char *mixip, char *ip, int *port) {
+static int split_ipaddr(const char *mixip, char *ip, int *port) {
     int ret = 0;
     char sip[32] = { 0 }, *p;
     strcpy(sip, mixip);
@@ -97,7 +97,7 @@ static int split_ipaddr(char *mixip, char *ip, int *port) {
     return ret;
 }
 
-int emi_fill_addr(struct emi_addr *addr, char *ip, int port) {
+int emi_fill_addr(struct emi_addr *addr, const char *ip, int port) {
 
     if (((addr)->ipv4.sin_addr.s_addr = inet_addr(ip)) == -1)
         return -1;
@@ -108,7 +108,7 @@ int emi_fill_addr(struct emi_addr *addr, char *ip, int port) {
     return 0;
 }
 
-int emi_fill_msg(struct emi_msg *msg, char *dest_ip, void *data, eu32 cmd,
+int emi_fill_msg(struct emi_msg *msg, const char *dest_ip, const void *data, eu32 cmd,
         eu32 defined_msg, eu32 flag) {
     if (dest_ip != NULL) {
         char newip[16];

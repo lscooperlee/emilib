@@ -3,25 +3,25 @@
 import os
 import sys
 import time
-from multiprocessing import Process, Value
+import subprocess
 import signal
+from multiprocessing import Process, Value
 
 import unittest
-from emi_test import EmiTestor
 from emilib import *
 
 
 class TestEmiLib(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestEmiLib, self).__init__(*args, **kwargs)
-        self.emiTestor = EmiTestor()
+        self.emi_core = None
 
     def setUp(self):
-        self.emiTestor.runEmiCore()
+        self.emi_core = subprocess.Popen("emi_core", stdout = subprocess.PIPE, bufsize = 0)
         time.sleep(.5)
 
     def tearDown(self):
-        self.emiTestor.stopEmiCore()
+        self.emi_core.terminate()
         time.sleep(.5)
 
     def test_emi_addr(self):
@@ -174,8 +174,6 @@ class TestEmiLib(unittest.TestCase):
         p2.join()
 
         self.assertEqual(received.value, 2)
-
-        return
 
         def recvprocess_block_fail():
             emi_init()

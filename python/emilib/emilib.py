@@ -152,7 +152,7 @@ def emi_init():
     ret = _emilib.emi_init()
     if ret < 0:
         raise EMIError("emi_core did not run")
-    time.sleep(0.1)
+    #time.sleep(0.1)
     return ret
 
 
