@@ -1,7 +1,8 @@
 
 #ifndef __SOCKET_H__
 #define __SOCKET_H__
-#include "emi.h"
+
+#include "emi_msg.h"
 
 struct sk_dpr {
     int d;

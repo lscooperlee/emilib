@@ -12,7 +12,8 @@
 #include <errno.h>
 #include <sys/ipc.h>
 
-#include "emi.h"
+#include "emi_ifr.h"
+#include "emi_msg.h"
 #include "emi_sock.h"
 #include "emi_shbuf.h"
 #include "list.h"
@@ -154,7 +155,8 @@ int emi_msg_register(eu32 defined_msg,emi_func func){
     return __emi_msg_register(defined_msg,func, 0);
 }
 
-char *emi_retdata_alloc(struct emi_msg *msg, eu32 size){
+char *emi_retdata_alloc(const struct emi_msg *cmsg, eu32 size){
+    struct emi_msg *msg = (struct emi_msg *)cmsg;
 
     emi_spin_lock(&msg->lock);
 
@@ -187,7 +189,7 @@ char *emi_retdata_alloc(struct emi_msg *msg, eu32 size){
     return addr;
 }
 
-int emi_msg_prepare_return_data(struct emi_msg *msg, void *data, eu32 size) {
+int emi_msg_prepare_return_data(const struct emi_msg *msg, void *data, eu32 size) {
     
     void *retdata = emi_retdata_alloc(msg, size);
     if(retdata == NULL){

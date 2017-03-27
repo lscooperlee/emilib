@@ -20,7 +20,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <stdio.h>
 #include <string.h>
 
-#include "emi_if.h"
+#include "emi.h"
 #include "emi_dbg.h"
 
 char retdata[1024] = {0};

@@ -5,7 +5,7 @@
 #include "list.h"
 #include "emi_semaphore.h"
 #include "emi_types.h"
-#include "emi.h"
+#include "emi_msg.h"
 #include "emi_config.h"
 
 

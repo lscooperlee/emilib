@@ -23,7 +23,8 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
-#include "emi.h"
+
+#include "emi_msg.h"
 #include "emi_sock.h"
 #include "emi_shbuf.h"
 #include "emi_dbg.h"

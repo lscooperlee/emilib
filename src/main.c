@@ -32,7 +32,8 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <pthread.h>
-#include "emi.h"
+
+#include "emi_msg.h"
 #include "msg_table.h"
 #include "emi_shbuf.h"
 #include "emi_sock.h"

@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "emi_msg.h"
 #include "emi_shbuf.h"
-#include "emi.h"
 #include "emi_config.h"
 #include "emi_dbg.h"
 #include "emi_sock.h"

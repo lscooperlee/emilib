@@ -28,7 +28,9 @@
 #include <sys/ipc.h>
 #include <signal.h>
 #include <errno.h>
-#include "emi.h"
+
+#include "emi_if.h"
+#include "emi_msg.h"
 #include "emi_sock.h"
 #include "emi_config.h"
 #include "emi_dbg.h"
@@ -176,7 +178,7 @@ out:
     return ret;
 }
 
-int emi_msg_send_highlevel(char *ipaddr, int msgnum, void *send_data,
+int emi_msg_send_highlevel(const char *ipaddr, int msgnum, void *send_data,
         int send_size, void *ret_data, int ret_size, eu32 cmd, eu32 flag) {
 
     struct emi_msg *msg = emi_msg_alloc(send_size);
@@ -200,7 +202,7 @@ int emi_msg_send_highlevel(char *ipaddr, int msgnum, void *send_data,
     return 0;
 }
 
-int emi_msg_send_highlevel_block(char *ipaddr, int msgnum, void *send_data,
+int emi_msg_send_highlevel_block(const char *ipaddr, int msgnum, void *send_data,
         int send_size, void *ret_data, int ret_size, eu32 cmd) {
     eu32 flag = EMI_MSG_MODE_BLOCK;
 
@@ -208,7 +210,7 @@ int emi_msg_send_highlevel_block(char *ipaddr, int msgnum, void *send_data,
             ret_data, ret_size, cmd, flag);
 }
 
-int emi_msg_send_highlevel_nonblock(char *ipaddr, int msgnum, void *send_data,
+int emi_msg_send_highlevel_nonblock(const char *ipaddr, int msgnum, void *send_data,
         int send_size, eu32 cmd) {
     eu32 flag = 0;
 

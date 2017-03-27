@@ -21,9 +21,9 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <unistd.h>
 #include <sys/types.h>
 
+#include "emi_msg.h"
 #include "emi_shbuf.h"
 #include "emi_semaphore.h"
-#include "emi.h"
 #include "emi_dbg.h"
 
 

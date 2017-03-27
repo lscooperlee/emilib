@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "emi_if.h"
+#include "emi.h"
 
 
 #define TEST_MSG 0x1
