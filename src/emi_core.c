@@ -201,7 +201,7 @@ static int emi_receive_operation(void *args){
  * read the remote msg into this alloced memory, if this one got an error, probably emi_init has sent a guess message to emi_core, which
  * is a connection to emi_core without any data transfered.
  */
-    if((ret=emi_msg_read(((struct clone_args *)args)->client_sd,msg_pos)) < 0){
+    if((ret=emi_msg_read(((struct clone_args *)args)->client_sd, msg_pos)) < 0){
         emilog(EMI_INFO, "emi_read from client error or emi_init is guessing port\n");
         goto e0;
     }
@@ -279,6 +279,7 @@ static int emi_receive_operation(void *args){
 
             }else{
                 emi_spin_lock(&msg_pos->lock);
+                emilog(EMI_DEBUG, "msg_pos->count = %d", msg_pos->count);
                 msg_pos->count++;
                 emi_spin_unlock(&msg_pos->lock);
             }

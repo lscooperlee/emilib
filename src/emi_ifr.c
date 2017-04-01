@@ -91,6 +91,8 @@ void __func_sterotype(void *no_use){
         
     }
     
+    emilog(EMI_DEBUG, "shmsg->count = %d\n", shmsg->count);
+
     shmsg->count--;
     emi_spin_unlock(&shmsg->lock);
     emilog(EMI_DEBUG, "lock released");
@@ -156,17 +158,21 @@ int emi_msg_register(eu32 defined_msg,emi_func func){
 }
 
 char *emi_retdata_alloc(const struct emi_msg *cmsg, eu32 size){
+
     struct emi_msg *msg = (struct emi_msg *)cmsg;
 
     emi_spin_lock(&msg->lock);
 
     if(msg->flag & EMI_MSG_FLAG_RETDATA){
-        msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
+        emilog(EMI_DEBUG, "one msg triggered many handlers, other has returned data");
+    //    msg->flag &= ~EMI_MSG_RET_SUCCEEDED;  //do not take as a fail, 
+                                                //user can return -1 to indicate that's a fail 
         emi_spin_unlock(&msg->lock);
         return NULL;
     }
 
     if (!(msg->flag & EMI_MSG_MODE_BLOCK)) {
+        emilog(EMI_DEBUG, "the sended msg is not block message");
         msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
         emi_spin_unlock(&msg->lock);
         return NULL;
@@ -174,6 +180,7 @@ char *emi_retdata_alloc(const struct emi_msg *cmsg, eu32 size){
 
     void *addr = emi_alloc(size);
     if(addr == NULL){
+        emilog(EMI_DEBUG, "emi_alloc error");
         msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
         emi_spin_unlock(&msg->lock);
         return NULL;

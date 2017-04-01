@@ -189,6 +189,8 @@ void emi_free(void *addr){
 
 struct emi_msg *alloc_shared_msg(eu32 size){
     struct emi_msg *msg=emi_alloc(sizeof(struct emi_msg) + size);
+    memset(msg, 0, sizeof(struct emi_msg) + size);
+
     if(msg != NULL){
         void *data = (char *)(msg + 1);
         msg->data_offset = GET_OFFSET(msg, data);

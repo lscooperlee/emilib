@@ -49,15 +49,15 @@ int emi_thread_init(struct emi_thread *th, struct emi_thread_pool *pool){
         goto out_cond;
     }
 
+    INIT_LIST_HEAD(&th->list);
+    th->status = THREAD_IDLE;
+    th->pool = pool;
+
     if(pthread_create(&th->thread, NULL, thread_func, (void *)th)){
         goto out_lock;
     }
 
     pthread_detach(th->thread);
-
-    INIT_LIST_HEAD(&th->list);
-    th->status = THREAD_IDLE;
-    th->pool = pool;
     
     return 0;
 

@@ -255,7 +255,9 @@ void test_emi_msg_send_block_retdata(EmiTestCore &core){
             ASSERT(msg->cmd == 1);
             ASSERT(strncmp(GET_DATA(msg), "11112222", msg->size) == 0);
             char *retdata = emi_retdata_alloc(msg, 8);
-            strncpy(retdata, "aaaabbbb", 8);
+            if(retdata != NULL)
+                strncpy(retdata, "aaaabbbb", 8);
+
             return 0;
         };
 
@@ -275,7 +277,7 @@ void test_emi_msg_send_block_retdata(EmiTestCore &core){
 
     int ret;
     struct emi_msg *msg = emi_msg_alloc(strlen("11112222"));
-    emi_fill_msg(msg, ipaddr, "11112222", 1, 5, 0);
+    emi_fill_msg(msg, ipaddr, "11112222", 1, 5, EMI_MSG_MODE_BLOCK);
     ret = emi_msg_send(msg);
 
     ASSERT(ret == 0);
