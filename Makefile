@@ -3,8 +3,8 @@ include ./config.mk
 CC = $(CROSS)gcc
 CPP = $(CROSS)g++
 LD = $(CROSS)ld
-AR = $(CROSS)ar csr
 STRIP = $(CROSS)strip
+CHECK = cppcheck
 
 MKDIR = mkdir -p
 DIRNAME = dirname
@@ -36,7 +36,9 @@ else
 DEBUG = 
 endif
 
-CFLAGS = $(DEBUG) -O2 -Wall -I./include -D$(SHMEM) -DEMI_ORDER_NUM=$(EMI_ORDER_NUM)
+CHECKFLAGS = --enable=all -I include --suppress=missingIncludeSystem -q
+
+CFLAGS = $(DEBUG) -O2 -Wextra -Wall -I./include -D$(SHMEM) -DEMI_ORDER_NUM=$(EMI_ORDER_NUM)
 LIBCFLAGS = $(CFLAGS) -fpic
 
 LDFLAGS = -L$(LIBDIR) -lemi 
@@ -49,7 +51,9 @@ endif
 LIBSENDERSRCS=src/emi_if.c src/emi_sock.c src/emi_dbg.c src/emi_config.c
 LIBSENDEROBJS=$(patsubst %,$(TMPDIR)/%,$(LIBSENDERSRCS:.c=.o))
 
-LIBRECEIVERSRCS=src/emi_ifr.c src/emi_config.c src/emi_dbg.c src/emi_shbuf.c src/emi_shmem.c src/emi_core.c src/emi_thread.c
+LIBRECEIVERSRCS=src/emi_ifr.c src/emi_sockr.c src/emi_config.c src/emi_dbg.c  \
+				src/emi_shbuf.c src/emi_shmem.c src/emi_core.c src/emi_thread.c \
+				src/emi_hash.c 
 LIBEMISRCS=$(sort $(LIBSENDERSRCS) $(LIBRECEIVERSRCS))
 LIBEMIOBJS=$(patsubst %,$(TMPDIR)/%,$(LIBEMISRCS:.c=.o))
 
@@ -74,7 +78,7 @@ $(LIBSENDER):$(LIBSENDEROBJS)
 	@$(CC) -shared -o $(LIBDIR)/$@ $?
 
 $(LIBEMI):$(LIBEMIOBJS)
-	@echo AR		$(LIBEMI)
+	@echo LD		$(LIBEMI)
 	@$(MKDIR) $(LIBDIR)
 	@$(CC) -shared -o $(LIBDIR)/$@ $? $(LIBLDFLAGS)
 
@@ -109,6 +113,9 @@ PYTHON:
 TEST:
 	@make -C $(TEST)
 
+check:
+	@$(CHECK) $(CHECKFLAGS) .
+
 clean:
 	$(RM) $(TMPDIR)
 	@make -C $(TEST) clean
@@ -117,19 +124,12 @@ emi_test:
 	@./test/emi_test
 
 python_test: 
-#	@python3 -W ignore test/python_test.py -v TestEmiLib.test_emi_msg_send_inside_msg_handler
+#	@python3 -W ignore test/python_test.py -v TestEmiLib.test_emi_msg_send_block_noretdata
 	@python3 -W ignore test/python_test.py -v
 
-unit_test:
-# 	./test/unit_test/test_buddy_algorithm
-# 	./test/unit_test/test_send_functions
-	./test/unit_test/test_thread_pool
-
 install:
+	install -d /usr/include/emi/
 	install -Dm755 .out/bin/* /usr/bin/
 	install -Dm755 .out/lib/* /usr/lib/
 	install -Dm644 include/* /usr/include/emi/
-
-
-
-
+	cd python && python3 setup.py build -b ../.out/build install

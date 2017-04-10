@@ -7,19 +7,14 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include "emi_types.h"
-#include "emi_semaphore.h"
 
-#ifdef BLUETOOTH
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/l2cap.h>
+#ifndef SEND_ONLY
+#include "emi_lock.h"
 #endif
 
 
 struct emi_addr{
     struct sockaddr_in    ipv4;
-#ifdef BLUETOOTH
-    struct sockaddr_l2    l2cap;
-#endif
     pid_t    pid;
     eu32 id;
 };
@@ -66,8 +61,14 @@ struct emi_msg{
     eu64 data_offset;
     eu64 retdata_offset;
 
+#ifndef SEND_ONLY
     eu32 count;
     espinlock_t lock;
+#endif
+
+#ifdef __cplusplus
+    emi_msg() = delete;
+#endif
 };
 
 #define EMI_MSG_PAYLOAD_SIZE    ((unsigned long)&((struct emi_msg *)0)->data_offset)

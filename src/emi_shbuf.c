@@ -23,7 +23,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 
 #include "emi_msg.h"
 #include "emi_shbuf.h"
-#include "emi_semaphore.h"
+#include "emi_lock.h"
 #include "emi_dbg.h"
 
 
@@ -146,8 +146,8 @@ void free_emi_buf(struct emi_buf *buf){
 }
 
 #define ADDR_BUF_OFFSET  (sizeof(eu32))
-#define GET_ALLOC_ADDR(buf)    (((buf)->blk_offset << BUDDY_SHIFT) + emi_shmbuf_base_addr + ADDR_BUF_OFFSET)
-#define GET_BUF_ADDR(addr)    *(eu32 *)(((void *)addr) - ADDR_BUF_OFFSET)
+#define GET_ALLOC_ADDR(buf)    (((buf)->blk_offset << (BUDDY_SHIFT)) + (char *)(emi_shmbuf_base_addr) + (ADDR_BUF_OFFSET))
+#define GET_BUF_ADDR(addr)    *(eu32 *)(((char *)(addr)) - (ADDR_BUF_OFFSET))
 
 static espinlock_t *emi_buf_lock = NULL;
 
@@ -169,6 +169,9 @@ void *emi_alloc(size_t size){
     struct emi_buf *buf = alloc_emi_buf(size + ADDR_BUF_OFFSET);
 
     emi_spin_unlock(emi_buf_lock);
+
+    if(buf == NULL)
+        return NULL;
     
     void *addr = GET_ALLOC_ADDR(buf);
     
@@ -189,12 +192,14 @@ void emi_free(void *addr){
 
 struct emi_msg *alloc_shared_msg(eu32 size){
     struct emi_msg *msg=emi_alloc(sizeof(struct emi_msg) + size);
+    if(msg == NULL)
+        return NULL;
+
     memset(msg, 0, sizeof(struct emi_msg) + size);
 
-    if(msg != NULL){
-        void *data = (char *)(msg + 1);
-        msg->data_offset = GET_OFFSET(msg, data);
-    }
+    void *data = (char *)(msg + 1);
+    msg->data_offset = GET_OFFSET(msg, data);
+
     emi_spin_init(&msg->lock);
 
     return msg;
@@ -236,10 +241,12 @@ struct emi_msg *realloc_shared_msg(struct emi_msg *msg){
     if(data == NULL){
         msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
         return NULL;
+    }else{
+        void *olddata = GET_ADDR(msg, msg->data_offset);
+        emi_free(olddata);
+        msg->data_offset = GET_OFFSET(msg, data);
+        msg->flag |= EMI_MSG_FLAG_ALLOCDATA;
     }
-    
-    msg->data_offset = GET_OFFSET(msg, data);
-    msg->flag |= EMI_MSG_FLAG_ALLOCDATA;
 
     return msg;
 }

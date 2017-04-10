@@ -1,60 +1,16 @@
-/*
- EMI:    embedded message interface
- Copyright (C) 2009  Cooper <davidontech@gmail.com>
-
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see http://www.gnu.org/licenses/.
- */
-
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/ipc.h>
-#include <signal.h>
-#include <errno.h>
+#include <string.h>
 
 #include "emi_if.h"
 #include "emi_msg.h"
 #include "emi_sock.h"
-#include "emi_config.h"
 #include "emi_dbg.h"
-
-#ifdef BLUETOOTH
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/l2cap.h>
-#endif
-
-struct emi_addr *emi_addr_alloc() {
-    struct emi_addr *addr;
-    if ((addr = (struct emi_addr *) malloc(sizeof(struct emi_addr))) == NULL) {
-        goto error;
-    }
-    memset(addr, 0, sizeof(struct emi_addr));
-
-    return addr;
-error: 
-    return NULL;
-}
-
-void emi_addr_free(struct emi_addr *addr) {
-    free(addr);
-}
+#include "emi_config.h"
 
 struct emi_msg *emi_msg_alloc(eu32 size) {
 
@@ -72,8 +28,7 @@ struct emi_msg *emi_msg_alloc(eu32 size) {
 
 void emi_msg_free_data(struct emi_msg *msg) {
     if(msg->retsize > 0){
-        void *data = GET_ADDR(msg, msg->retdata_offset);
-        free(data);
+        free(GET_RETDATA(msg));
         msg->retsize = 0;
     }
 }
@@ -101,7 +56,7 @@ static int split_ipaddr(const char *mixip, char *ip, int *port) {
 
 int emi_fill_addr(struct emi_addr *addr, const char *ip, int port) {
 
-    if (((addr)->ipv4.sin_addr.s_addr = inet_addr(ip)) == -1)
+    if (((addr)->ipv4.sin_addr.s_addr = inet_addr(ip)) == INADDR_NONE)
         return -1;
 
     (addr)->ipv4.sin_port = htons(port);

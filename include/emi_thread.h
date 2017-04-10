@@ -3,7 +3,7 @@
 
 #include <pthread.h>
 
-#include "emi_semaphore.h"
+#include "emi_lock.h"
 #include "emi_types.h"
 #include "list.h"
 

@@ -3,7 +3,7 @@
 #define __SHBUF_H__
 
 #include "list.h"
-#include "emi_semaphore.h"
+#include "emi_lock.h"
 #include "emi_types.h"
 #include "emi_msg.h"
 #include "emi_config.h"
@@ -32,6 +32,7 @@ extern void emi_free(void *addr);
 
 extern struct emi_msg *alloc_shared_msg(eu32 size);
 extern struct emi_msg *realloc_shared_msg(struct emi_msg *msg);
+
 extern void free_shared_msg_data(struct emi_msg *msg);
 extern void free_shared_msg(struct emi_msg *msg);
 

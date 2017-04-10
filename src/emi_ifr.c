@@ -17,7 +17,7 @@
 #include "emi_sock.h"
 #include "emi_shbuf.h"
 #include "list.h"
-#include "emi_semaphore.h"
+#include "emi_lock.h"
 #include "emi_config.h"
 #include "emi_dbg.h"
 #include "emi_shmem.h"
@@ -40,25 +40,26 @@ static struct emi_thread_pool __recv_pool;
 static struct emi_shmem_mgr __recv_mgr;
 static eu32 __recv_pid;
 
-void __func_sterotype(void *no_use);
-void func_sterotype(int no_use){
-    emi_thread_pool_submit(&__recv_pool, __func_sterotype, NULL);
-}
-
-void __func_sterotype(void *no_use){
+void __func_sterotype(void *nth);
+void func_sterotype(){
     int nth;
-    struct emi_msg *shmsg;
-    struct list_head *lh;
-
     nth=__recv_mgr.pididx[__recv_pid];
+    struct emi_msg *shmsg;
 
     shmsg = (struct emi_msg *)get_shbuf_addr(__recv_mgr.base, nth);
 
     //this address is the pid_num in emi_core.it should be changed as soon as possable.emi_core will wait the zero to make sure the this process recieved the signal ,and send the same signal to other process that registered the same massage.
     __recv_mgr.pididx[__recv_pid] = 0;
 
+    emi_thread_pool_submit(&__recv_pool, __func_sterotype, (void *)shmsg);
+
+}
+
+void __func_sterotype(void *args){
+    struct emi_msg *shmsg = (struct emi_msg *)args;
+    struct list_head *lh;
+
     //For the possible user retdata allocation
-    //espinlock_t *lock = GET_MSGBUF_LOCK_BASE(base);
     update_emi_buf_lock(__recv_mgr.base, __recv_mgr.msgbuf, __recv_mgr.msgbuf_lock);
 
     int ret=-1;
@@ -86,9 +87,11 @@ void __func_sterotype(void *no_use){
 
         if(ret){
             emilog(EMI_DEBUG, "msg handler running failed (not return zero)");
-            shmsg->flag&=~EMI_MSG_RET_SUCCEEDED;
+            // shmsg->flag&=~EMI_MSG_RET_SUCCEEDED;
+        }else{
+            // For block mode with no retdata, one receiver's success with be taken as success
+            shmsg->flag|=EMI_MSG_RET_SUCCEEDED;
         }
-        
     }
     
     emilog(EMI_DEBUG, "shmsg->count = %d\n", shmsg->count);
@@ -165,8 +168,6 @@ char *emi_retdata_alloc(const struct emi_msg *cmsg, eu32 size){
 
     if(msg->flag & EMI_MSG_FLAG_RETDATA){
         emilog(EMI_DEBUG, "one msg triggered many handlers, other has returned data");
-    //    msg->flag &= ~EMI_MSG_RET_SUCCEEDED;  //do not take as a fail, 
-                                                //user can return -1 to indicate that's a fail 
         emi_spin_unlock(&msg->lock);
         return NULL;
     }
@@ -215,24 +216,11 @@ int emi_msg_prepare_return_data(const struct emi_msg *msg, void *data, eu32 size
 int emi_init(){
 
     struct sigaction act, old_act;
-    act.sa_handler=func_sterotype;
+    act.sa_handler=(void(*)(int))func_sterotype;
     sigfillset(&act.sa_mask);
-    sigdelset(&act.sa_mask,SIGUSR2);
-//    act.sa_flags=SA_INTERRUPT;
     act.sa_flags= SA_RESTART;    //this is important, RESTART system call during signal handler.
     if(sigaction(SIGUSR2,&act,&old_act)){
-    //    goto out;
         return -1;
-    }
-
-    struct emi_config *config=get_config();
-    if(config){
-        set_default_config(config);
-    }else{
-        config=guess_config();
-        if(config==NULL)
-            return -1;
-        set_default_config(config);
     }
 
     eu32 pid_max = get_pid_max();

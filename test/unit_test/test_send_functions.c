@@ -6,7 +6,7 @@
 #define TEST_MSG 0x1
 
 int func(struct emi_msg const *msg){
-    printf("cmd: %d\n",msg->cmd);
+    printf("cmd: %ud\n",msg->cmd);
     char *data = GET_ADDR(msg, msg->data_offset);
     printf("data: %s\n", data);
     return 0;

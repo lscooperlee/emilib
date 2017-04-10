@@ -32,7 +32,7 @@ char sentdata[1024]={0};
 void print_msg(struct emi_msg const *msg){
     printf("msg = %X, ",msg->msg);
     printf("cmd = %X, ",msg->cmd);
-    printf("msg.size = %d",msg->size);
+    printf("msg.size = %ud",msg->size);
     if(msg->size > 0){
         char *data = GET_DATA(msg);
         printf(", msg.data = %s\n", data);
@@ -42,10 +42,16 @@ void print_msg(struct emi_msg const *msg){
 }
 
 void print_data(unsigned int size, const char *data){
-    char tmp[1024];
     if(size > 0){
+        char *tmp = (char *)malloc(size + 1);
+        if(tmp == NULL)
+            return;
+
         strncpy(tmp, data, size);
+        *(tmp + size) = '\0';
         printf("retdata = %s\n", tmp);
+
+        free(tmp);
     }
 }
 

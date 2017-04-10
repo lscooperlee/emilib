@@ -34,10 +34,9 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <pthread.h>
 
 #include "emi_msg.h"
-#include "msg_table.h"
 #include "emi_shbuf.h"
 #include "emi_sock.h"
-#include "emi_semaphore.h"
+#include "emi_lock.h"
 #include "emi_dbg.h"
 #include "emi_config.h"
 
@@ -53,7 +52,7 @@ extern void emi_release(void);
 
 static int lock_fd=-1;
 
-void sig_release(pid_t pid){
+void sig_release(void){
     emi_release();
     if(lock_fd>=0)
         close(lock_fd);
@@ -66,14 +65,20 @@ void print_usage(void){
 }
 
 
-int main(int argc,char **argv){
+int main(int argc, char **argv){
     struct sigaction sa;
 
-    int option=0,opt;
+    int option=0;
 
     struct emi_config *config;
 
+    if(argc > 2){
+        print_usage();
+        exit(0);
+    }
+
     while(*++argv!=NULL&&**argv=='-'){
+        int opt;
         while((opt=*++*argv)!='\0'){
             switch(opt){
                 case 'd':
@@ -108,14 +113,14 @@ int main(int argc,char **argv){
 
     setsid();
 
-    sa.sa_handler=sig_release;
+    sa.sa_handler=(void(*)(int))sig_release;
     sa.sa_flags=0;
     sigfillset(&sa.sa_mask);
     if(sigaction(SIGTERM,&sa,NULL)<0){
         coreprt("sigaction error\n");
     }
 
-    sa.sa_handler=sig_release;
+    sa.sa_handler=(void(*)(int))sig_release;
     sa.sa_flags=0;
     sigfillset(&sa.sa_mask);
     if(sigaction(SIGINT,&sa,NULL)<0){

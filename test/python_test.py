@@ -212,7 +212,7 @@ class TestEmiLib(unittest.TestCase):
             data=b'11112222'*1024,
             flag=emi_flag.EMI_MSG_MODE_BLOCK)
         ret = emi_msg_send(msg)
-        self.assertEqual(ret[0], -1)
+        self.assertEqual(ret[0], 0)
 
         p1.join()
         p2.join()
@@ -260,7 +260,7 @@ class TestEmiLib(unittest.TestCase):
 
         ret = emi_msg_send(msg)
 
-        self.assertEqual(ret[0], -1)
+        self.assertEqual(ret[0], 0)
         self.assertEqual(ret[1], b'abcdef'*1024)
 
         p1.join()

@@ -8,21 +8,6 @@ struct emi_addr;
 struct emi_msg;
 typedef int (*emi_func)(struct emi_msg const *);
 
-/**
- * emi_addr_alloc - alloc a emi_addr structure.
- *
- * @return:NULL if allocation failed.
- */
-extern struct emi_addr *emi_addr_alloc(void);
-
-
-/**
- * emi_addr_free - free the emi_addr structure alloced.
- * @addr:    the alloced emi_addr structure.
- *
- */
-extern void emi_addr_free(struct emi_addr *addr);
-
 
 /**
  * emi_msg_alloc - alloc a emi_msg structure.

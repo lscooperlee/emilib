@@ -2,7 +2,8 @@
 #define __SHMEM_H__
 
 #include "emi_config.h"
-#include "emi_semaphore.h"
+#include "emi_shbuf.h"
+#include "emi_lock.h"
 
 #define EMI_SHM_CREATE 0x00000001
 
@@ -21,11 +22,11 @@ extern int emi_shm_destroy(const char *name, int id);
 #define PIDLOCK_SHM_SIZE(pid_max)    ((pid_max) * sizeof(elock_t))
 
 
-#define GET_MSG_BASE(addr)                  (addr)
-#define GET_MSGBUF_BASE(addr)               (GET_MSG_BASE(addr) + MSG_SHM_SIZE)
-#define GET_MSGBUF_LOCK_BASE(addr)          (GET_MSGBUF_BASE(addr) + MSGBUF_SHM_SIZE)
-#define GET_PIDIDX_BASE(addr)               (GET_MSGBUF_LOCK_BASE(addr)  + MSGBUF_LOCK_SHM_SIZE)
-#define GET_PIDLOCK_BASE(addr, pid_max)     (GET_PIDIDX_BASE(addr) + PIDIDX_SHM_SIZE(pid_max))
+#define GET_MSG_BASE(addr)                  (void *)(addr)
+#define GET_MSGBUF_BASE(addr)               (void *)((char *)GET_MSG_BASE(addr) + MSG_SHM_SIZE)
+#define GET_MSGBUF_LOCK_BASE(addr)          (espinlock_t *)((char *)GET_MSGBUF_BASE(addr) + MSGBUF_SHM_SIZE)
+#define GET_PIDIDX_BASE(addr)               (eu32 *)((char *)GET_MSGBUF_LOCK_BASE(addr)  + MSGBUF_LOCK_SHM_SIZE)
+#define GET_PIDLOCK_BASE(addr, pid_max)     (elock_t *)((char *)GET_PIDIDX_BASE(addr) + PIDIDX_SHM_SIZE(pid_max))
 
 #define GET_SHM_SIZE(pid_max)       (MSG_SHM_SIZE + MSGBUF_SHM_SIZE + MSGBUF_LOCK_SHM_SIZE + \
                                         PIDIDX_SHM_SIZE(pid_max) + PIDLOCK_SHM_SIZE(pid_max))

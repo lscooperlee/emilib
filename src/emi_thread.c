@@ -4,7 +4,7 @@
 #include <assert.h>
 
 #include "emi_thread.h"
-#include "emi_semaphore.h"
+#include "emi_lock.h"
 #include "emi_dbg.h"
 
 static void *thread_func(void *t){
@@ -173,7 +173,7 @@ int emi_thread_pool_submit(struct emi_thread_pool *pool, emi_thread_func func, v
         emi_spin_unlock(&pool->spinlock);
         
         pthread_t th;
-        if(pthread_create(&th, NULL, (void *(*)(void *))func, NULL)){
+        if(pthread_create(&th, NULL, (void *(*)(void *))func, args)){
             return -1;
         }
         pthread_detach(th);

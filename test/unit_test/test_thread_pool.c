@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include "emi_thread.h"
@@ -34,7 +35,7 @@ int main(){
     emi_printf("%d\n", ret);
 
     //sleep(3);
-    //atexit(ate);
+    atexit(ate);
     emi_thread_pool_destroy(&pool);
     //while(1);
 }

@@ -26,7 +26,7 @@ class Process
 {
 public:
     explicit Process(std::function<void(void)> target_)
-        :target(target_)
+        :target(std::move(target_))
         ,pid(-1)
     {
     }
@@ -36,13 +36,10 @@ public:
         if(pid == 0){
             target();
             exit(0);
-//        }else{
-//            std::cout<<"pid: "<<pid<<std::endl;
         }
     };
 
     void Join(){
-//        std::cout<<"waiting pid: "<<pid<<std::endl;
         waitpid(pid, NULL, 0);
     }
 
@@ -55,6 +52,7 @@ private:
 
 class EmiTestCore
 {
+    
     FILE *p = nullptr;
 
 public:
@@ -73,6 +71,7 @@ public:
         pclose(p);
         usleep(1000*500);
     }
+    
 };
 
 void test_emi_init(EmiTestCore &core){
@@ -81,8 +80,7 @@ void test_emi_init(EmiTestCore &core){
 
 void test_emi_msg_register(EmiTestCore &core){
     int ret = -1;
-    ret = emi_init();
-    ASSERT(ret == 0);
+    ASSERT(emi_init() == 0);
 
     auto func=[](const struct emi_msg *){return 0;};
 
@@ -167,6 +165,8 @@ void test_emi_msg_send_unblock_senddata(EmiTestCore &core){
     p1.Join();
     p2.Join();
 
+    emi_msg_free(msg);
+
 }
 
 void test_emi_msg_send_block_noretdata(EmiTestCore &core){
@@ -238,11 +238,13 @@ void test_emi_msg_send_block_noretdata(EmiTestCore &core){
     emi_fill_msg(msg, ipaddr, "11112222", 1, 4, EMI_MSG_MODE_BLOCK);
     ret = emi_msg_send(msg);
 
-    ASSERT(ret == -1);
+    ASSERT(ret == 0);
 
     p3.Join();
     p4.Join();
     p5.Join();
+
+    emi_msg_free(msg);
 }
 
 void test_emi_msg_send_block_retdata(EmiTestCore &core){
@@ -286,6 +288,79 @@ void test_emi_msg_send_block_retdata(EmiTestCore &core){
     p1.Join();
     p2.Join();
 
+    emi_msg_free(msg);
+}
+
+void test_emi_cpp(EmiTestCore &core){
+    emi_init();
+
+    auto func=[](const struct emi_msg *msg){
+        ASSERT(msg->msg == 6);
+        ASSERT(msg->cmd == 1);
+        ASSERT(strncmp(GET_RETDATA(msg), "helloworld", msg->retsize) == 0);
+        return 0;
+    };
+
+    int ret = emi_msg_register(6, func);
+    ASSERT(ret == 0);
+
+    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 6, 1, sizeof("helloworld"), "helloworld", 0);
+    if(msg_ptr){
+        ret = emi_msg_send(msg_ptr.get());
+        ASSERT(ret == 0);
+    }
+}
+
+void test_emi_exit_same(EmiTestCore &core){
+    emi_init();
+
+    auto func=[](const struct emi_msg *msg){
+        ASSERT(msg->msg == 6);
+        ASSERT(msg->cmd == 1);
+        ASSERT(strncmp(GET_RETDATA(msg), "helloworld", msg->retsize) == 0);
+        exit(0);
+        return 0;
+    };
+
+    int ret = emi_msg_register(6, func);
+    ASSERT(ret == 0);
+
+    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 6, 1, sizeof("helloworld"), "helloworld", 0);
+    if(msg_ptr){
+        ret = emi_msg_send(msg_ptr.get());
+        ASSERT(ret == 0);
+    }
+}
+void test_emi_exit(EmiTestCore &core){
+    auto recvprocess = [&core](){
+        emi_init();
+
+        auto func=[](const struct emi_msg *msg){
+            ASSERT(msg->msg == 6);
+            ASSERT(msg->cmd == 1);
+            ASSERT(strncmp(GET_RETDATA(msg), "helloworld", msg->retsize) == 0);
+            exit(0);
+            return 0;
+        };
+
+        int ret = emi_msg_register(6, func);
+        ASSERT(ret == 0);
+
+        pause();
+        sleep(1);
+    };
+
+    Process p1(recvprocess);
+    p1.Start();
+    sleep(1);
+
+    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 6, 1, sizeof("helloworld"), "helloworld", 0);
+    if(msg_ptr){
+        int ret = emi_msg_send(msg_ptr.get());
+        ASSERT(ret == 0);
+    }
+
+    p1.Join();
 }
 
 using testFuncType = void(*)(EmiTestCore &);
@@ -297,6 +372,9 @@ std::vector<std::pair<std::string, testFuncType>> testsVector = {
     {"emi_msg_send_unblock_senddata", test_emi_msg_send_unblock_senddata},
     {"emi_msg_send_block_noretdata", test_emi_msg_send_block_noretdata},
     {"emi_msg_send_block_retdata", test_emi_msg_send_block_retdata},
+    {"emi_cpp", test_emi_cpp},
+    {"emi_exit", test_emi_exit},
+    {"emi_exit_same", test_emi_exit_same},
 };
 
 void Run(void){
