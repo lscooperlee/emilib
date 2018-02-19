@@ -87,10 +87,9 @@ void __func_sterotype(void *args){
 
         if(ret){
             emilog(EMI_DEBUG, "msg handler running failed (not return zero)");
-            // shmsg->flag&=~EMI_MSG_RET_SUCCEEDED;
-        }else{
-            // For block mode with no retdata, one receiver's success with be taken as success
-            shmsg->flag|=EMI_MSG_RET_SUCCEEDED;
+            shmsg->flag&=~EMI_MSG_RET_SUCCEEDED;
+        //}else{
+            // shmsg->flag|=EMI_MSG_RET_SUCCEEDED;
         }
     }
     
@@ -197,7 +196,7 @@ char *emi_retdata_alloc(const struct emi_msg *cmsg, eu32 size){
     return addr;
 }
 
-int emi_msg_prepare_return_data(const struct emi_msg *msg, void *data, eu32 size) {
+int emi_load_retdata(const struct emi_msg *msg, void *data, eu32 size) {
     
     void *retdata = emi_retdata_alloc(msg, size);
     if(retdata == NULL){

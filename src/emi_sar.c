@@ -63,7 +63,7 @@ int func_noblock(struct emi_msg const *msg){
 int func_block(struct emi_msg const *msg){
     print_msg(msg);
     print_data(retsize, retdata);
-    return emi_msg_prepare_return_data(msg, retdata, retsize); 
+    return emi_load_retdata(msg, retdata, retsize); 
 }
 
 void usage(void){

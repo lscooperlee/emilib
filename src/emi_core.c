@@ -213,9 +213,6 @@ static int emi_receive_operation(void *client_sd){
 
         nth=get_shbuf_offset(core_shmem_mgr.base, msg_pos);
 
-        // set fail by default
-        msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
-
         struct hlist_node *tmp;
         struct msg_map *map;
 
@@ -225,44 +222,64 @@ static int emi_receive_operation(void *client_sd){
             }
         }
 
-        emi_hsearch(msg_table_head, map, node, msg_pos->msg){
-            if(map->msg == msg_pos->msg){
-                pid_num_addr = &core_shmem_mgr.pididx[map->pid];
-                emi_lock(&core_shmem_mgr.pididx_lock[map->pid]);
-                emilog(EMI_DEBUG, "pid %d found, for msg %d, cmd %d\n", map->pid, msg_pos->msg, msg_pos->cmd);
+        if(msg_pos->count > 0) {
+            msg_pos->flag |= EMI_MSG_RET_SUCCEEDED;
 
-                *pid_num_addr = nth;
-                int pid_ret=kill(map->pid,SIGUSR2);
+            emi_rwlock_rdlock(&msg_table_lock);
 
-                if(pid_ret<0){
-                    *pid_num_addr=0;
-                }
-
-                emilog(EMI_DEBUG, "kill return %d for pid %d\n", pid_ret, map->pid);
-               
-                while (*pid_num_addr) {
-                    sched_yield(); //Need discussion
-                };
-
-                emi_unlock(&core_shmem_mgr.pididx_lock[map->pid]);
-            }
-        }
-
-        emilog(EMI_DEBUG, "Signal all processes with msg num %d, waiting for sync\n", msg_pos->msg);
-
-        while(msg_pos->count){
-            emi_hsearch_safe(msg_table_head, map, tmp, node, msg_pos->msg){
+            emi_hsearch(msg_table_head, map, node, msg_pos->msg){
                 if(map->msg == msg_pos->msg){
-                    int pid_ret=kill(map->pid, 0);
-                    if(pid_ret<0){
-                        emi_spin_lock(&msg_pos->lock);
-                        msg_pos->count--;
-                        emi_spin_unlock(&msg_pos->lock);
+                    pid_num_addr = &core_shmem_mgr.pididx[map->pid];
+                    emi_lock(&core_shmem_mgr.pididx_lock[map->pid]);
+                    emilog(EMI_DEBUG, "pid %d found, for msg %d, cmd %d\n", map->pid, msg_pos->msg, msg_pos->cmd);
 
-                        free_msg_map(map);
+                    *pid_num_addr = nth;
+                    int pid_ret=kill(map->pid,SIGUSR2);
+
+                    if(pid_ret<0){
+                        *pid_num_addr=0;
+                    }
+
+                    emilog(EMI_DEBUG, "kill return %d for pid %d\n", pid_ret, map->pid);
+                   
+                    while (*pid_num_addr) {
+                        sched_yield(); //Need discussion
+                    };
+
+                    emi_unlock(&core_shmem_mgr.pididx_lock[map->pid]);
+                }
+            }
+
+            emi_rwlock_unlock(&msg_table_lock);
+
+            emilog(EMI_DEBUG, "Signal all processes with msg num %d, waiting for sync\n", msg_pos->msg);
+
+            while(msg_pos->count){
+
+                emi_rwlock_wrlock(&msg_table_lock);
+
+                emi_hsearch_safe(msg_table_head, map, tmp, node, msg_pos->msg){
+                    if(map->msg == msg_pos->msg){
+                        int pid_ret=kill(map->pid, 0);
+                        if(pid_ret<0){
+                            emi_spin_lock(&msg_pos->lock);
+                            msg_pos->count--;
+                            msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
+                            emilog(EMI_DEBUG, "receiver has gone, decrease msg count\n");
+                            emi_spin_unlock(&msg_pos->lock);
+
+                            free_msg_map(map);
+                        }
                     }
                 }
+
+                emi_rwlock_unlock(&msg_table_lock);
+
+                usleep(10);
             }
+
+        }else{
+            msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
         }
 
         emilog(EMI_DEBUG, "msg_pos->flag = %x\n", msg_pos->flag);

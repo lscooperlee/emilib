@@ -27,7 +27,7 @@ extern void emi_msg_unregister(eu32 defined_msg,emi_func func);
 
 extern char *emi_retdata_alloc(const struct emi_msg *msg, eu32 size);
 
-extern int emi_msg_prepare_return_data(const struct emi_msg *msg, void *data, eu32 size);
+extern int emi_load_retdata(const struct emi_msg *msg, void *data, eu32 size);
 
 extern int emi_init(void);
 

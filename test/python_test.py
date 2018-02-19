@@ -145,7 +145,7 @@ class TestEmiLib(unittest.TestCase):
                 with received.get_lock():
                     received.value += 1
 
-                return True
+                return 0
 
             ret = emi_msg_register(4, func)
             self.assertEqual(ret, 0)
@@ -187,7 +187,7 @@ class TestEmiLib(unittest.TestCase):
                 with received.get_lock():
                     received.value += 1
 
-                return False
+                return -1
 
             ret = emi_msg_register(4, func)
             self.assertEqual(ret, 0)
@@ -212,7 +212,7 @@ class TestEmiLib(unittest.TestCase):
             data=b'11112222'*1024,
             flag=emi_flag.EMI_MSG_MODE_BLOCK)
         ret = emi_msg_send(msg)
-        self.assertEqual(ret[0], 0)
+        self.assertEqual(ret[0], -1)
 
         p1.join()
         p2.join()
@@ -235,7 +235,7 @@ class TestEmiLib(unittest.TestCase):
                 with received.get_lock():
                     received.value += 1
 
-                return b'abcdef'*1024
+                return emi_load_retdata(msg, b'abcdef'*1024)
 
             ret = emi_msg_register(5, func)
             self.assertEqual(ret, 0)
@@ -260,7 +260,7 @@ class TestEmiLib(unittest.TestCase):
 
         ret = emi_msg_send(msg)
 
-        self.assertEqual(ret[0], 0)
+        self.assertEqual(ret[0], -1)
         self.assertEqual(ret[1], b'abcdef'*1024)
 
         p1.join()
@@ -279,7 +279,7 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(msg.cmd, 1)
             self.assertEqual(msg.data, b"11112222")
             received = received + 1
-            return 'abcdefghijkmln'
+            return emi_load_retdata(msg, 'abcdefghijkmln'.encode())
 
         ret = emi_msg_register(6, func)
         self.assertEqual(ret, 0)
@@ -310,7 +310,7 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(msg.cmd, 1)
             self.assertEqual(msg.data, b"11112222")
             received = received + 1
-            return 'abcdefghijkmln'
+            return emi_load_retdata(msg, 'abcdefghijkmln'.encode())
 
         emi_run(False)
 
@@ -372,13 +372,12 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(ret[0], 0)
             self.assertEqual(ret[1], b'1234abcd')
 
-            return
 
         def func2(msg):
             self.assertEqual(func2.__name__, "func2")
             self.assertEqual(msg.msg, 11)
             self.assertEqual(msg.cmd, 1)
-            return '1234abcd'
+            return emi_load_retdata(msg, '1234abcd'.encode())
 
         ret = emi_msg_register(10, func1)
         self.assertEqual(ret, 0)

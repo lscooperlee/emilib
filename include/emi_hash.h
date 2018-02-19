@@ -136,7 +136,7 @@ struct msg_map {
 			(bkt)++)\
 		hlist_for_each_entry_safe(obj, tmp, &name[bkt], member)
 
-extern espinlock_t msg_table_lock;
+extern erwlock_t msg_table_lock;
 extern struct hlist_head msg_table_head[EMI_MSG_TABLE_SIZE];
 
 int msg_map_init(struct msg_map *map, eu32 msg, pid_t pid);
@@ -148,11 +148,7 @@ void emi_hinsert(struct hlist_head *table, struct msg_map *map);
 
 void emi_hdelete(struct msg_map *map);
 
-int init_msg_table_lock(struct hlist_head *table, espinlock_t *msg_table_lock);
-
-void emi_hinsert_lock(struct hlist_head *table, struct msg_map *p);
-
-void emi_hdelete_lock(struct msg_map *p);
+int init_msg_table_lock(struct hlist_head *table, erwlock_t *msg_table_lock);
 
 int emi_hinsert_unique_lock(struct hlist_head *table, struct msg_map *p);
 

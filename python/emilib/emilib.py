@@ -143,9 +143,9 @@ _emilib.emi_msg_send_highlevel.argtypes = (
     ctypes.c_void_p, ctypes.c_size_t, ctypes.c_uint, ctypes.c_uint)
 _emilib.emi_msg_send_highlevel.restype = ctypes.c_int
 
-_emilib.emi_msg_prepare_return_data.argtypes = (ctypes.POINTER(emi_msg),
+_emilib.emi_load_retdata.argtypes = (ctypes.POINTER(emi_msg),
                                                 ctypes.c_void_p, ctypes.c_uint)
-_emilib.emi_msg_prepare_return_data.restype = ctypes.c_int
+_emilib.emi_load_retdata.restype = ctypes.c_int
 
 
 def emi_init():
@@ -164,21 +164,8 @@ def emi_msg_register(msg_num, func):
     def callback_decorator(func):
         def f(msg):
             ret = func(msg.contents)
-            if ret is None:
-                return 0
-            elif type(ret) is bool:
-                return 0 if ret else -1
-
-            if msg.contents.is_block():
-                if type(ret) is str:
-                    ret = ret.encode('utf8')
-                elif type(ret) is int:
-                    ret = ret.to_bytes((ret.bit_length() + 7) // 8 or 1, 'little', signed = True)
-                else:
-                    ret = bytes(ret)
-                return emi_msg_prepare_return_data(msg, ret)
-
-            return 0
+            ret = 0 if ret is None else ret
+            return ret
 
         return f
 
@@ -227,11 +214,13 @@ def emi_msg_send_highlevel(msgnum,
     return ret, bytes(crdata)
 
 
-def emi_msg_prepare_return_data(msg, retbytes):
+def emi_load_retdata(msg, retbytes):
     size = len(retbytes)
     rdata = (ctypes.c_ubyte * size).from_buffer(bytearray(retbytes))
     rsize = ctypes.c_uint(size)
-    return _emilib.emi_msg_prepare_return_data(msg, ctypes.byref(rdata), rsize)
+
+    msgaddr = ctypes.pointer(msg)
+    return _emilib.emi_load_retdata(msgaddr, ctypes.byref(rdata), rsize)
 
 
 def emi_loop():

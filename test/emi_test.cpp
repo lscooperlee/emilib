@@ -238,7 +238,7 @@ void test_emi_msg_send_block_noretdata(EmiTestCore &core){
     emi_fill_msg(msg, ipaddr, "11112222", 1, 4, EMI_MSG_MODE_BLOCK);
     ret = emi_msg_send(msg);
 
-    ASSERT(ret == 0);
+    ASSERT(ret == -1);
 
     p3.Join();
     p4.Join();

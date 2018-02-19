@@ -6,6 +6,7 @@
 typedef pthread_cond_t econd_t;
 typedef pthread_mutex_t elock_t;
 typedef pthread_spinlock_t espinlock_t;
+typedef pthread_rwlock_t erwlock_t;
 
 inline static int emi_cond_init(econd_t *p){
     return pthread_cond_init(p, NULL);
@@ -63,6 +64,26 @@ inline static int emi_unlock(elock_t *p){
 }
 inline static int emi_lock_destroy(elock_t *p){
     return pthread_mutex_destroy(p);
+}
+
+inline static int emi_rwlock_init(erwlock_t *p){
+    return pthread_rwlock_init(p, NULL);
+}
+
+inline static int emi_rwlock_rdlock(erwlock_t *p){
+    return pthread_rwlock_rdlock(p);
+}
+
+inline static int emi_rwlock_wrlock(erwlock_t *p){
+    return pthread_rwlock_wrlock(p);
+}
+
+inline static int emi_rwlock_unlock(erwlock_t *p){
+    return pthread_rwlock_unlock(p);
+}
+
+inline static int emi_rwlock_destroy(erwlock_t *p){
+    return pthread_rwlock_destroy(p);
 }
 
 #endif
