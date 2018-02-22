@@ -22,11 +22,11 @@ struct emi_buf{
     int order;
 };
 
-extern int init_emi_buf(void *base, void *emi_buf_top);
+extern int init_emi_buf(void *base, struct emi_buf *emi_buf_top);
 extern struct emi_buf *alloc_emi_buf(size_t size);
 extern void free_emi_buf(struct emi_buf *buf);
 
-extern int init_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock);
+extern int init_emi_buf_lock(void *base, struct emi_buf *emi_buf_top, espinlock_t *lock);
 extern void *emi_alloc(size_t size);
 extern void emi_free(void *addr);
 
@@ -37,9 +37,6 @@ extern void free_shared_msg_data(struct emi_msg *msg);
 extern void free_shared_msg(struct emi_msg *msg);
 
 extern void update_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock);
-
-//#define get_shbuf_offset(base, addr) ((char *)(addr)-(char *)(base))
-//#define get_shbuf_addr(base, offset) ((void*)base + offset)
 
 #define get_shbuf_offset(base, addr) GET_OFFSET(base, addr)
 #define get_shbuf_addr(base, offset) GET_ADDR(base, offset)

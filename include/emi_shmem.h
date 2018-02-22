@@ -23,7 +23,7 @@ extern int emi_shm_destroy(const char *name, int id);
 
 
 #define GET_MSG_BASE(addr)                  (void *)(addr)
-#define GET_MSGBUF_BASE(addr)               (void *)((char *)GET_MSG_BASE(addr) + MSG_SHM_SIZE)
+#define GET_MSGBUF_BASE(addr)               (struct emi_buf *)((char *)GET_MSG_BASE(addr) + MSG_SHM_SIZE)
 #define GET_MSGBUF_LOCK_BASE(addr)          (espinlock_t *)((char *)GET_MSGBUF_BASE(addr) + MSGBUF_SHM_SIZE)
 #define GET_PIDIDX_BASE(addr)               (eu32 *)((char *)GET_MSGBUF_LOCK_BASE(addr)  + MSGBUF_LOCK_SHM_SIZE)
 #define GET_PIDLOCK_BASE(addr, pid_max)     (elock_t *)((char *)GET_PIDIDX_BASE(addr) + PIDIDX_SHM_SIZE(pid_max))
@@ -34,7 +34,7 @@ extern int emi_shm_destroy(const char *name, int id);
 
 struct emi_shmem_mgr {
     void *base;
-    void *msgbuf;
+    struct emi_buf *msgbuf;
     espinlock_t *msgbuf_lock;
     eu32 *pididx;
     elock_t *pididx_lock;

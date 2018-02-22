@@ -144,7 +144,7 @@ static int __emi_core(void){
             continue;
         }
 
-        emi_thread_pool_submit(&emi_core_pool, (void *)emi_receive_operation, (void *)client_sd);
+        emi_thread_pool_submit(&emi_core_pool, (emi_thread_func)emi_receive_operation, (void *)client_sd);
 
     }
 }

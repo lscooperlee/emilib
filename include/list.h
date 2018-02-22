@@ -100,7 +100,7 @@ static inline int list_is_singular(const struct list_head *head)
 #endif
 
 #define container_of(ptr, type, member) ({            \
-    const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
+    const __typeof__( ((type *)0)->member ) *__mptr = (ptr);    \
         (type *)( (char *)__mptr - _offsetof(type,member) );})
 
 #define list_entry(ptr, type, member)    container_of(ptr, type, member)
@@ -119,13 +119,13 @@ static inline int list_is_singular(const struct list_head *head)
         pos = n, n = pos->next)
 
 #define list_for_each_entry(pos, head, member)                        \
-    for (pos = list_entry((head)->next, typeof(*pos), member);        \
+    for (pos = list_entry((head)->next, __typeof__(*pos), member);        \
          &pos->member != (head);                                     \
-         pos = list_entry(pos->member.next, typeof(*pos), member))
+         pos = list_entry(pos->member.next, __typeof__(*pos), member))
 
 #define list_for_each_entry_tail(pos, head, member)                        \
-    for (pos = list_entry((head)->prev, typeof(*pos), member);        \
+    for (pos = list_entry((head)->prev, __typeof__(*pos), member);        \
          &pos->member != (head);                                     \
-         pos = list_entry(pos->member.prev, typeof(*pos), member))
+         pos = list_entry(pos->member.prev, __typeof__(*pos), member))
 
 #endif

@@ -40,10 +40,10 @@ struct emi_config *get_config(void){
     struct stat sb;
     char *addr;
 
-    char *terms[]={"EMI_PORT",
+    const char *terms[]={"EMI_PORT",
                     "EMI_DATA_SIZE_PER_MSG",
                     "EMI_KEY"};
-    char *name[]={"emi.conf","$HOME/.emi.conf","$HOME/emi.conf","/etc/emi.conf"};
+    const char *name[]={"emi.conf","$HOME/.emi.conf","$HOME/emi.conf","/etc/emi.conf"};
 
 
     for(i=0; i<sizeof(name)/sizeof(char *); i++){
@@ -55,7 +55,7 @@ struct emi_config *get_config(void){
         return NULL;
     }
 
-    if((addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0))==NULL){
+    if((addr = (char *)mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0))==NULL){
         return NULL;
     }
 

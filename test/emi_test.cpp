@@ -256,7 +256,7 @@ void test_emi_msg_send_block_retdata(EmiTestCore &core){
             ASSERT(msg->msg == 5);
             ASSERT(msg->cmd == 1);
             ASSERT(strncmp(GET_DATA(msg), "11112222", msg->size) == 0);
-            char *retdata = emi_retdata_alloc(msg, 8);
+            char *retdata = (char *)emi_retdata_alloc(msg, 8);
             if(retdata != NULL)
                 strncpy(retdata, "aaaabbbb", 8);
 

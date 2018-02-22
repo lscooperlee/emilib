@@ -159,7 +159,7 @@ int emi_msg_register(eu32 defined_msg,emi_func func){
     return __emi_msg_register(defined_msg,func, 0);
 }
 
-char *emi_retdata_alloc(const struct emi_msg *cmsg, eu32 size){
+void *emi_retdata_alloc(const struct emi_msg *cmsg, eu32 size){
 
     struct emi_msg *msg = (struct emi_msg *)cmsg;
 

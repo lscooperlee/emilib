@@ -65,10 +65,6 @@ struct emi_msg{
     eu32 count;
     espinlock_t lock;
 #endif
-
-#ifdef __cplusplus
-    emi_msg() = delete;
-#endif
 };
 
 #define EMI_MSG_PAYLOAD_SIZE    ((unsigned long)&((struct emi_msg *)0)->data_offset)

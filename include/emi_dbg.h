@@ -22,8 +22,9 @@ extern void debug_emi_msg(struct emi_msg *msg);
 
 #define emilog(priority, format, arg...)                                            \
     do {                                                            \
-        syslog(priority, "%s: %s: %d: "format, __FILE__, __func__, __LINE__, ## arg);         \
+        syslog(priority, "%s: %s: %d: "#format, __FILE__, __func__, __LINE__, ## arg);         \
     } while (0)
+
 
 #else
 
@@ -31,7 +32,7 @@ extern void debug_emi_msg(struct emi_msg *msg);
 
 #define emilog_init()
 
-#define emilog(priority, format, arg...)                                            \
+#define emilog(priority, format, arg...)                                            
 
 #endif
 

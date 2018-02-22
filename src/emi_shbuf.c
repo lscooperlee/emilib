@@ -116,7 +116,7 @@ static void __free_emi_buddy(struct emi_buf *buddy, struct emi_buf *top, int ord
     update_buf_order(buddy, top, order, order_num);
 }
 
-int init_emi_buf(void *base, void *emi_buf_top){
+int init_emi_buf(void *base, struct emi_buf *emi_buf_top){
 
     emi_shmbuf_base_addr = base;
     emi_buf_vector = emi_buf_top;
@@ -151,7 +151,7 @@ void free_emi_buf(struct emi_buf *buf){
 
 static espinlock_t *emi_buf_lock = NULL;
 
-int init_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock){
+int init_emi_buf_lock(void *base, struct emi_buf *emi_buf_top, espinlock_t *lock){
     init_emi_buf(base, emi_buf_top);
     emi_buf_lock = lock;
     return emi_spin_init(emi_buf_lock);
@@ -159,7 +159,7 @@ int init_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock){
 
 void update_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock){
     emi_shmbuf_base_addr = base;
-    emi_buf_vector = emi_buf_top;
+    emi_buf_vector = (struct emi_buf *)emi_buf_top;
     emi_buf_lock = lock;
 }
 
@@ -191,7 +191,7 @@ void emi_free(void *addr){
 }
 
 struct emi_msg *alloc_shared_msg(eu32 size){
-    struct emi_msg *msg=emi_alloc(sizeof(struct emi_msg) + size);
+    struct emi_msg *msg=(struct emi_msg *)emi_alloc(sizeof(struct emi_msg) + size);
     if(msg == NULL)
         return NULL;
 
