@@ -1,10 +1,12 @@
 #include <emi.h>
 
-#include <cstdio>
 #include <memory>
 #include <vector>
 #include <iostream>
 #include <functional>
+#include <algorithm>
+
+#include <cstdio>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -291,6 +293,59 @@ void test_emi_msg_send_block_retdata(EmiTestCore &core){
     emi_msg_free(msg);
 }
 
+template <int N>
+std::array<char, N> get_compbuf(){ 
+    std::array<char, N> compbuf;
+    std::generate(compbuf.begin(), compbuf.end(), [](){return 'c';});
+    return compbuf;
+}
+
+void test_emi_msg_send_block_retdata_large_data(EmiTestCore &core){
+
+    auto recvprocess_block_data = [&core](){
+        emi_init();
+
+        auto func=[](const struct emi_msg *msg){
+            ASSERT(msg->msg == 5);
+            ASSERT(msg->cmd == 1);
+            auto d = get_compbuf<1024>().data();
+            ASSERT(strncmp(GET_DATA(msg), d, msg->size) == 0);
+            char *retdata = (char *)emi_retdata_alloc(msg, 8);
+            if(retdata != NULL)
+                strncpy(retdata, "aaaabbbb", 8);
+
+            return 0;
+        };
+
+        int ret = emi_msg_register(5, func);
+        ASSERT(ret == 0);
+
+        pause();
+        sleep(1);
+    };
+
+    Process p1(recvprocess_block_data);
+    Process p2(recvprocess_block_data);
+    p1.Start();
+    p2.Start();
+
+    sleep(1);
+
+    int ret;
+    struct emi_msg *msg = emi_msg_alloc(1024);
+    auto d = get_compbuf<1024>().data();
+    emi_fill_msg(msg, ipaddr, d, 1, 5, EMI_MSG_MODE_BLOCK);
+    ret = emi_msg_send(msg);
+
+    ASSERT(ret == 0);
+    ASSERT(strncmp(GET_RETDATA(msg), "aaaabbbb", msg->retsize) == 0);
+
+    p1.Join();
+    p2.Join();
+
+    emi_msg_free(msg);
+}
+
 void test_emi_cpp(EmiTestCore &core){
     emi_init();
 
@@ -311,26 +366,6 @@ void test_emi_cpp(EmiTestCore &core){
     }
 }
 
-void test_emi_exit_same(EmiTestCore &core){
-    emi_init();
-
-    auto func=[](const struct emi_msg *msg){
-        ASSERT(msg->msg == 6);
-        ASSERT(msg->cmd == 1);
-        ASSERT(strncmp(GET_RETDATA(msg), "helloworld", msg->retsize) == 0);
-        exit(0);
-        return 0;
-    };
-
-    int ret = emi_msg_register(6, func);
-    ASSERT(ret == 0);
-
-    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 6, 1, sizeof("helloworld"), "helloworld", 0);
-    if(msg_ptr){
-        ret = emi_msg_send(msg_ptr.get());
-        ASSERT(ret == 0);
-    }
-}
 void test_emi_exit(EmiTestCore &core){
     auto recvprocess = [&core](){
         emi_init();
@@ -374,7 +409,7 @@ std::vector<std::pair<std::string, testFuncType>> testsVector = {
     {"emi_msg_send_block_retdata", test_emi_msg_send_block_retdata},
     {"emi_cpp", test_emi_cpp},
     {"emi_exit", test_emi_exit},
-    {"emi_exit_same", test_emi_exit_same},
+    {"emi_msg_send_block_retdata_large_data", test_emi_msg_send_block_retdata_large_data},
 };
 
 void Run(void){

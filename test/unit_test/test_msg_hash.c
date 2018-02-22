@@ -92,4 +92,5 @@ void test_hash(){
 
 int main(){
     test_hash();
+    return 0;
 }

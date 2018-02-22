@@ -41,5 +41,4 @@ extern void update_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock
 #define get_shbuf_offset(base, addr) GET_OFFSET(base, addr)
 #define get_shbuf_addr(base, offset) GET_ADDR(base, offset)
 
-
 #endif

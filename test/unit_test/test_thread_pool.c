@@ -3,8 +3,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "emi_thread.h"
 #include "emi_dbg.h"
+#include "emi_lock.h"
+#include "emi_thread.c"
 
 void func(void *param){
     emi_printf("func \n");
@@ -38,4 +39,6 @@ int main(){
     atexit(ate);
     emi_thread_pool_destroy(&pool);
     //while(1);
+    //
+    return 0;
 }

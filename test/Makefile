@@ -3,42 +3,41 @@ include ../config.mk
 CC=$(CROSS)gcc
 CPP=$(CROSS)g++
 
-ifeq ($(strip $(STATIC)),y)
-STATIC = -static
-else
-STATIC = 
-endif
-
 ifeq ($(strip $(DEBUG)),y)
 DEBUG = -g -DDEBUG
 else
 DEBUG =
 endif
 
-CFLAGS = -O2 -Wall $(DEBUG) -I../include/ -I./include -DEMI_ORDER_NUM=$(EMI_ORDER_NUM)
+CFLAGS = -O2 -Wall $(DEBUG) -I../include/ -I../src/
 CPPFLAGS = -std=c++14 $(CFLAGS)
 
 LDFLAGS = -L../.out/lib/ -lemi -pthread
 
-CSRCS=$(shell find . -name "*.c")
+CSRCS=$(shell find unit_test/ -name "*.c")
 COBJS=$(patsubst %.c, $(BUILDPATH)%.o, $(CSRCS))
 CEXES=$(patsubst %.o, $(BUILDPATH)%, $(COBJS))
 
-CPPSRCS=$(shell find . -name "*.cpp")
+CPPSRCS=$(shell find unit_test/ -name "*.cpp")
 CPPOBJS=$(patsubst %.cpp, $(BUILDPATH)%.o, $(CPPSRCS))
 CPPEXES=$(patsubst %.o, $(BUILDPATH)%, $(CPPOBJS))
 
-all: $(CEXES) $(CPPEXES)
+EMITESTSRC=emi_test.cpp
+EMITESTOBJ=$(EMITESTSRC:.cpp=.o)
+EMITESTEXEC=$(EMITESTSRC:.cpp=)
+
+all: $(CPPEXES) $(CEXES) $(EMITESTEXEC)
+
+$(EMITESTEXEC): $(EMITESTSRC)
+	$(CPP) $(CPPFLAGS) $? -o $@ $(LDFLAGS)
 
 $(CEXES):%: %.c
 	@mkdir -p $(dir $@)
-	@$(CC) $(STATIC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
 $(CPPEXES):%: %.cpp
 	@mkdir -p $(dir $@)
-	@$(CPP) $(STATIC) $(CPPFLAGS) $< -o $@ $(LDFLAGS)
+	$(CPP) $(CPPFLAGS) $< -o $@ $(LDFLAGS)
 
 clean:
-	rm -rf $(COBJS) $(CPPOBJS) $(CEXES) $(CPPEXES)
-
-	
+	rm -rf $(COBJS) $(CPPOBJS) $(CEXES) $(CPPEXES) $(EMITESTEXEC)

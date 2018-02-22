@@ -1,10 +1,18 @@
 
-/* Change the emilib EMI_ORDER_NUM to 4 before testing */
-
-
 #include <stdlib.h>
 #include <stdio.h>
+
+#undef DEBUG
+
+#define EMI_ORDER_NUM 4
+
 #include "emi_shbuf.h"
+
+#include "emi_shbuf.c"
+#include "emi_dbg.c"
+
+#define CATCH_CONFIG_MAIN
+#include "../catch.hpp"
 
 int get_order(int s){
     int size = s+1;
@@ -32,7 +40,7 @@ void print_emi_buf(struct emi_buf *mgr){
     printf("\n\n");
 }
 
-int main(){
+void test_example(){
 
     void *base_addr = malloc(BUDDY_SIZE << EMI_ORDER_NUM);
     struct emi_buf array[(1<<EMI_ORDER_NUM) - 1] = {0};
