@@ -242,8 +242,10 @@ struct emi_msg *realloc_shared_msg(struct emi_msg *msg){
         msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
         return NULL;
     }else{
-        void *olddata = GET_ADDR(msg, msg->data_offset);
-        emi_free(olddata);
+        if(msg->flag & EMI_MSG_FLAG_ALLOCDATA){ // The old msg may or may not have data alloced
+            void *olddata = GET_ADDR(msg, msg->data_offset);
+            emi_free(olddata);
+        }
         msg->data_offset = GET_OFFSET(msg, data);
         msg->flag |= EMI_MSG_FLAG_ALLOCDATA;
     }

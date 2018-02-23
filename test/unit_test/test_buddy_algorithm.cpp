@@ -11,8 +11,8 @@
 #include "emi_shbuf.c"
 #include "emi_dbg.c"
 
-#define CATCH_CONFIG_MAIN
-#include "../catch.hpp"
+//#define CATCH_CONFIG_MAIN
+//#include "../catch.hpp"
 
 int get_order(int s){
     int size = s+1;
@@ -73,4 +73,7 @@ void test_example(){
     free_emi_buf(c);
     print_emi_buf(array);
 
+}
+
+int main(){
 }
