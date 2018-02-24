@@ -1,20 +1,3 @@
-/*
-EMI:    embedded message interface
-Copyright (C) 2009  Cooper <davidontech@gmail.com>
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see http://www.gnu.org/licenses/.
-*/
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,12 +13,14 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 static void *emi_shmbuf_base_addr = NULL;
 static struct emi_buf *emi_buf_vector = NULL;
 
-#define BUDDY_IDX(buf, top)   ((buf) - (top))
-#define PARENT(buf, top)    (((BUDDY_IDX(buf, top) + 1) >> 1) + top - 1)
-#define SON(buf, top)    ((BUDDY_IDX(buf, top) << 1) + top + 1)
-#define DAUGHTER(buf, top)    ((BUDDY_IDX(buf, top) << 1) + top + 2)
-#define SIBLING(buf, top)   (PARENT(buf, top) == PARENT(buf + 1, top) ? buf + 1 : buf - 1)
-#define LEFT_MOST_OFFSPRING(level, top)    ((1<<level) + top - 1)
+#define BUDDY_IDX(buf, top)                     ((buf) - (top))
+#define PARENT(buf, top)                        (((BUDDY_IDX(buf, top) + 1) >> 1) + (top) - 1)
+#define SON(buf, top)                           ((BUDDY_IDX(buf, top) << 1) + (top) + 1)
+#define DAUGHTER(buf, top)                      ((BUDDY_IDX(buf, top) << 1) + (top) + 2)
+#define SIBLING(buf, top)                       (PARENT(buf, top) == PARENT(buf + 1, top) ? (buf) + 1 : (buf) - 1)
+#define LEFT_MOST_OFFSPRING(order, top)         ((order) + (top) - 1)
+
+#define MARK_AS_USED(order)                     (-(order)  - 1)
 
 static inline struct emi_buf *get_emi_buf(struct emi_buf *top, int order, int order_num){
     struct emi_buf *tmp = top;
@@ -64,12 +49,12 @@ static inline struct emi_buf *get_emi_buf(struct emi_buf *top, int order, int or
 
 static void update_buf_order(struct emi_buf *buf, struct emi_buf *top, int order, int order_num){
 
-    while(order++ < order_num - 1){
+    while(++order < order_num){
         struct emi_buf *sibling = SIBLING(buf, top);
         struct emi_buf *parent = PARENT(buf, top);
 
         if(sibling->order < 0 && buf->order < 0){
-            parent->order = -order-1;
+            parent->order = MARK_AS_USED(order);
         }else if(sibling->order == buf->order){
             parent->order++;
         }else{
@@ -79,17 +64,16 @@ static void update_buf_order(struct emi_buf *buf, struct emi_buf *top, int order
     }
 }
 
-static int __init_emi_buf(struct emi_buf *top, int order){
+static int __init_emi_buf(struct emi_buf *top, int maximum_order){
     int i;
-    for (i = 0; i < order; i++)
-    {
+    for (i = 0; i < maximum_order; i++){
         int j;
         int current_order = 1<<i;
-        struct emi_buf *tmp = LEFT_MOST_OFFSPRING(i, top);
+        struct emi_buf *tmp = LEFT_MOST_OFFSPRING(current_order, top);
         for (j = 0; j < current_order; j++, tmp++)
         {
-            tmp->blk_offset = j * (1 << (order - i - 1));
-            tmp->order = order - i - 1;
+            tmp->blk_offset = j * (1 << (maximum_order - i - 1));
+            tmp->order = maximum_order - i - 1;
         }
     }
 
@@ -102,18 +86,31 @@ static struct emi_buf *__alloc_emi_buf(struct emi_buf *top, int order, int order
     if(tmp == NULL)
         return NULL;
 
-    tmp->order = -order - 1;
+    tmp->order = MARK_AS_USED(order);
 
     update_buf_order(tmp, top, order, order_num);
 
     return tmp;
 }
 
-static void __free_emi_buddy(struct emi_buf *buddy, struct emi_buf *top, int order, int order_num){
+static void __free_emi_buf(struct emi_buf *buf, struct emi_buf *top, int order, int order_num){
 
-    buddy->order = order;
+    buf->order = order;
 
-    update_buf_order(buddy, top, order, order_num);
+    update_buf_order(buf, top, order, order_num);
+}
+
+static int size_to_order(int size){
+
+    int order = 0;
+    size = (size-1) >> BUDDY_SHIFT;
+
+    while(size > 0){
+        size >>= 1;
+        order++;
+    }
+    
+    return order;
 }
 
 int init_emi_buf(void *base, struct emi_buf *emi_buf_top){
@@ -128,21 +125,13 @@ struct emi_buf *alloc_emi_buf(size_t size){
     if(size == 0)
         return NULL;
 
-    int order = 0;
-    size = (size-1) >> BUDDY_SHIFT;
-
-    while(size > 0){
-        size >>= 1;
-        order++;
-    }
-
-    return __alloc_emi_buf(emi_buf_vector, order, EMI_ORDER_NUM);
+    return __alloc_emi_buf(emi_buf_vector, size_to_order(size), EMI_ORDER_NUM);
 }
 
 void free_emi_buf(struct emi_buf *buf){
     int order = -buf->order - 1;
 
-    __free_emi_buddy(buf, emi_buf_vector, order, EMI_ORDER_NUM);
+    __free_emi_buf(buf, emi_buf_vector, order, EMI_ORDER_NUM);
 }
 
 #define ADDR_BUF_OFFSET  (sizeof(eu32))
@@ -158,12 +147,18 @@ int init_emi_buf_lock(void *base, struct emi_buf *emi_buf_top, espinlock_t *lock
 }
 
 void update_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock){
+    // emi_buf is designed for multiprocess,
+    // base, top and lock has to stored in a shared memory, can be get by addresses
+    // every process has to update these addresses to its own context to use emi_buf
     emi_shmbuf_base_addr = base;
     emi_buf_vector = (struct emi_buf *)emi_buf_top;
     emi_buf_lock = lock;
 }
 
 void *emi_alloc(size_t size){
+    if (size <= 0)
+        return NULL;
+
     emi_spin_lock(emi_buf_lock);
 
     struct emi_buf *buf = alloc_emi_buf(size + ADDR_BUF_OFFSET);

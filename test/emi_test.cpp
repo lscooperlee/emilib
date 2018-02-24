@@ -407,9 +407,9 @@ std::vector<std::pair<std::string, testFuncType>> testsVector = {
     {"emi_msg_send_unblock_senddata", test_emi_msg_send_unblock_senddata},
     {"emi_msg_send_block_noretdata", test_emi_msg_send_block_noretdata},
     {"emi_msg_send_block_retdata", test_emi_msg_send_block_retdata},
+    {"emi_msg_send_block_retdata_large_data", test_emi_msg_send_block_retdata_large_data},
     {"emi_cpp", test_emi_cpp},
     {"emi_exit", test_emi_exit},
-    {"emi_msg_send_block_retdata_large_data", test_emi_msg_send_block_retdata_large_data},
 };
 
 void Run(void){

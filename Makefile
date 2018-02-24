@@ -124,8 +124,10 @@ emi_test:
 	@./test/emi_test
 
 python_test: 
-#	@python3 -W ignore test/python_test.py -v TestEmiLib.test_emi_msg_send_block_noretdata
 	@python3 -W ignore test/python_test.py -v
+
+unit_test:
+	@./test/emi_unit_test
 
 install:
 	install -d /usr/include/emi/

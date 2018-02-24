@@ -9,7 +9,7 @@
 #include "emi_config.h"
 
 
-#ifndef EMI_ORDER_NUM
+#ifndef EMI_ORDER_NUM // maximum order = EMI_ORDER_NUM - 1
 #define EMI_ORDER_NUM 10
 #endif
 

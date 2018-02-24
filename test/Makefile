@@ -10,7 +10,7 @@ DEBUG =
 endif
 
 CFLAGS = -O2 -Wall $(DEBUG) -I../include/ -I../src/
-CPPFLAGS = -std=c++14 $(CFLAGS)
+CPPFLAGS = -std=c++17 $(CFLAGS)
 
 LDFLAGS = -L../.out/lib/ -lemi -pthread
 
@@ -26,18 +26,25 @@ EMITESTSRC=emi_test.cpp
 EMITESTOBJ=$(EMITESTSRC:.cpp=.o)
 EMITESTEXEC=$(EMITESTSRC:.cpp=)
 
-all: $(CPPEXES) $(CEXES) $(EMITESTEXEC)
+EMIUNITTESTSRC=emi_unit_test.cpp
+EMIUNITTESTOBJ=$(EMIUNITTESTSRC:.cpp=.o)
+EMIUNITTESTEXEC=$(EMIUNITTESTSRC:.cpp=)
+
+all: $(EMIUNITTESTEXEC) $(EMITESTEXEC)
 
 $(EMITESTEXEC): $(EMITESTSRC)
 	$(CPP) $(CPPFLAGS) $? -o $@ $(LDFLAGS)
+
+$(EMIUNITTESTEXEC): $(EMIUNITTESTOBJ) $(CPPOBJS)
+	$(CPP) $(CPPFLAGS) $(EMIUNITTESTOBJ) $(CPPOBJS) -o $@ $(LDFLAGS)
 
 $(CEXES):%: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
-$(CPPEXES):%: %.cpp
+$(CPPOBJS) $(EMIUNITTESTOBJ):%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CPP) $(CPPFLAGS) $< -o $@ $(LDFLAGS)
+	$(CPP) $(CPPFLAGS) -c $< -o $@ $(LDFLAGS)
 
 clean:
-	rm -rf $(COBJS) $(CPPOBJS) $(CEXES) $(CPPEXES) $(EMITESTEXEC)
+	rm -rf $(COBJS) $(CPPOBJS) $(CEXES) $(CPPEXES) $(EMITESTEXEC) $(EMIUNITTESTEXEC) $(EMIUNITTESTOBJ)

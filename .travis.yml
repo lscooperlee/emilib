@@ -1,0 +1,25 @@
+language: cpp
+dist: trusty
+sudo: required
+
+compiler:
+    - clang
+    - gcc
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-6
+      - g++-6
+      - clang
+
+install: 
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
+
+script:
+    - make
+    - make emi_test
+    - make python_test
+    - make unit_test
