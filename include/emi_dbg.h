@@ -14,9 +14,24 @@
 
 struct emi_msg;
 
+extern void debug_emi_msg(struct emi_msg *msg);
+
 #ifdef DEBUG
 
-extern void debug_emi_msg(struct emi_msg *msg);
+#if defined DBG_STDOUT
+
+#define DEDAULT_LOGLEVEL LOG_DEBUG
+
+#define emilog_init()
+
+#define emilog(priority, format, arg...)                                                       \
+    do {                                                                                       \
+        if(priority <= DEDAULT_LOGLEVEL) {                                                     \
+            fprintf(stderr, "%s: %s: %d: "#format, __FILE__, __func__, __LINE__, ## arg);      \
+        } \
+    } while (0)
+
+#else //syslog by default
 
 #define emilog_init()  openlog(NULL, 0, LOG_LOCAL0)
 
@@ -25,10 +40,9 @@ extern void debug_emi_msg(struct emi_msg *msg);
         syslog(priority, "%s: %s: %d: "#format, __FILE__, __func__, __LINE__, ## arg);         \
     } while (0)
 
+#endif
 
-#else
-
-extern void debug_emi_msg(struct emi_msg *msg);
+#else //no debug
 
 #define emilog_init()
 

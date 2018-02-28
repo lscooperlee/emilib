@@ -76,11 +76,11 @@ public:
     
 };
 
-void test_emi_init(EmiTestCore &core){
+void test_emi_init(){
     ASSERT(emi_init() == 0);
 }
 
-void test_emi_msg_register(EmiTestCore &core){
+void test_emi_msg_register(){
     int ret = -1;
     ASSERT(emi_init() == 0);
 
@@ -94,9 +94,9 @@ void test_emi_msg_register(EmiTestCore &core){
 
 }
 
-void test_emi_msg_send_unblock_nosenddata(EmiTestCore &core){
+void test_emi_msg_send_unblock_nosenddata(){
 
-    auto recvprocess_unblock = [&core](){
+    auto recvprocess_unblock = [](){
         emi_init();
 
         auto func=[](const struct emi_msg *msg){
@@ -131,15 +131,15 @@ void test_emi_msg_send_unblock_nosenddata(EmiTestCore &core){
 
 }
 
-void test_emi_msg_send_unblock_senddata(EmiTestCore &core){
+void test_emi_msg_send_unblock_senddata(){
 
-    auto recvprocess_unblock_data = [&core](){
+    auto recvprocess_unblock_data = [](){
         emi_init();
 
         auto func=[](const struct emi_msg *msg){
             ASSERT(msg->msg == 3);
             ASSERT(msg->cmd == 1);
-            ASSERT(strncmp(GET_DATA(msg), "11112222", msg->size) == 0);
+            ASSERT(strncmp((char *)GET_DATA(msg), "11112222", msg->size) == 0);
             return 0;
         };
 
@@ -171,16 +171,16 @@ void test_emi_msg_send_unblock_senddata(EmiTestCore &core){
 
 }
 
-void test_emi_msg_send_block_noretdata(EmiTestCore &core){
+void test_emi_msg_send_block_noretdata(){
 
-    auto recvprocess_block= [&core](){
+    auto recvprocess_block= [](){
         emi_init();
         usleep(10000);
 
         auto func=[](const struct emi_msg *msg){
             ASSERT(msg->msg == 4);
             ASSERT(msg->cmd == 1);
-            ASSERT(strncmp(GET_DATA(msg), "11112222", msg->size) == 0);
+            ASSERT(strncmp((char *)GET_DATA(msg), "11112222", msg->size) == 0);
             return 0;
         };
 
@@ -210,14 +210,14 @@ void test_emi_msg_send_block_noretdata(EmiTestCore &core){
 
     sleep(1);
 
-    auto recvprocess_block_fail = [&core](){
+    auto recvprocess_block_fail = [](){
         emi_init();
         usleep(10000);
 
         auto func=[](const struct emi_msg *msg){
             ASSERT(msg->msg == 4);
             ASSERT(msg->cmd == 1);
-            ASSERT(strncmp(GET_DATA(msg), "11112222", msg->size) == 0);
+            ASSERT(strncmp((char *)GET_DATA(msg), "11112222", msg->size) == 0);
             return -1;
         };
 
@@ -249,15 +249,15 @@ void test_emi_msg_send_block_noretdata(EmiTestCore &core){
     emi_msg_free(msg);
 }
 
-void test_emi_msg_send_block_retdata(EmiTestCore &core){
+void test_emi_msg_send_block_retdata(){
 
-    auto recvprocess_block_data = [&core](){
+    auto recvprocess_block_data = [](){
         emi_init();
 
         auto func=[](const struct emi_msg *msg){
             ASSERT(msg->msg == 5);
             ASSERT(msg->cmd == 1);
-            ASSERT(strncmp(GET_DATA(msg), "11112222", msg->size) == 0);
+            ASSERT(strncmp((char *)GET_DATA(msg), "11112222", msg->size) == 0);
             char *retdata = (char *)emi_retdata_alloc(msg, 8);
             if(retdata != NULL)
                 strncpy(retdata, "aaaabbbb", 8);
@@ -285,7 +285,7 @@ void test_emi_msg_send_block_retdata(EmiTestCore &core){
     ret = emi_msg_send(msg);
 
     ASSERT(ret == 0);
-    ASSERT(strncmp(GET_RETDATA(msg), "aaaabbbb", msg->retsize) == 0);
+    ASSERT(strncmp((char *)GET_RETDATA(msg), "aaaabbbb", msg->retsize) == 0);
 
     p1.Join();
     p2.Join();
@@ -300,16 +300,16 @@ std::array<char, N> get_compbuf(){
     return compbuf;
 }
 
-void test_emi_msg_send_block_retdata_large_data(EmiTestCore &core){
+void test_emi_msg_send_block_retdata_large_data(){
 
-    auto recvprocess_block_data = [&core](){
+    auto recvprocess_block_data = [](){
         emi_init();
 
         auto func=[](const struct emi_msg *msg){
             ASSERT(msg->msg == 5);
             ASSERT(msg->cmd == 1);
             auto d = get_compbuf<1024>().data();
-            ASSERT(strncmp(GET_DATA(msg), d, msg->size) == 0);
+            ASSERT(strncmp((char *)GET_DATA(msg), d, msg->size) == 0);
             char *retdata = (char *)emi_retdata_alloc(msg, 8);
             if(retdata != NULL)
                 strncpy(retdata, "aaaabbbb", 8);
@@ -338,7 +338,7 @@ void test_emi_msg_send_block_retdata_large_data(EmiTestCore &core){
     ret = emi_msg_send(msg);
 
     ASSERT(ret == 0);
-    ASSERT(strncmp(GET_RETDATA(msg), "aaaabbbb", msg->retsize) == 0);
+    ASSERT(strncmp((char *)GET_RETDATA(msg), "aaaabbbb", msg->retsize) == 0);
 
     p1.Join();
     p2.Join();
@@ -346,34 +346,123 @@ void test_emi_msg_send_block_retdata_large_data(EmiTestCore &core){
     emi_msg_free(msg);
 }
 
-void test_emi_cpp(EmiTestCore &core){
+void test_emi_cpp(){
+    using namespace std::string_literals;
     emi_init();
 
     auto func=[](const struct emi_msg *msg){
         ASSERT(msg->msg == 6);
         ASSERT(msg->cmd == 1);
-        ASSERT(strncmp(GET_RETDATA(msg), "helloworld", msg->retsize) == 0);
-        return 0;
+        ASSERT(strncmp((char *)GET_DATA(msg), "helloworld", msg->size) == 0);
+        return emi_load_retdata(msg, "12345678", 8);
     };
 
     int ret = emi_msg_register(6, func);
     ASSERT(ret == 0);
 
-    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 6, 1, sizeof("helloworld"), "helloworld", 0);
-    if(msg_ptr){
-        ret = emi_msg_send(msg_ptr.get());
+    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 6, 1, "helloworld"s, EMI_MSG_MODE_BLOCK);
+
+    ret = emi_msg_send(msg_ptr);
+    ASSERT(ret == 0);
+    ASSERT(strncmp((char *)GET_RETDATA(msg_ptr), "12345678", msg_ptr->retsize) == 0);
+}
+
+void test_emi_some_receiver_exit(){
+
+    auto recvprocess1 = [](){
+        emi_init();
+
+        auto func=[](const struct emi_msg *msg){
+            ASSERT(msg->msg == 7);
+            ASSERT(msg->cmd == 1);
+            ASSERT(strncmp((char *)GET_DATA(msg), "helloworld", msg->size) == 0);
+            return 0;
+        };
+
+        int ret = emi_msg_register(7, func);
         ASSERT(ret == 0);
+    };
+
+    auto recvprocess2 = [](){
+        emi_init();
+
+        auto func=[](const struct emi_msg *msg){
+            ASSERT(msg->msg == 7);
+            ASSERT(msg->cmd == 1);
+            ASSERT(strncmp((char *)GET_DATA(msg), "helloworld", msg->size) == 0);
+            return 0;
+        };
+
+        int ret = emi_msg_register(7, func);
+        ASSERT(ret == 0);
+
+        pause();
+        sleep(1);
+    };
+
+    Process p1(recvprocess1);
+    p1.Start();  //keep a invalid record of msg_map in emi_core
+    p1.Join();
+
+    Process p2(recvprocess2);
+    p2.Start();
+
+    sleep(1);
+
+    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 7, 1, "helloworld", 
+            sizeof("helloworld"), EMI_MSG_MODE_BLOCK);
+
+    if(msg_ptr){
+        int ret = emi_msg_send(msg_ptr);
+        ASSERT(ret == 0);
+    }
+
+    p2.Join();
+}
+
+void test_emi_all_receiver_exit(){
+
+    auto recvprocess = [](){
+        emi_init();
+
+        auto func=[](const struct emi_msg *msg){
+            ASSERT(msg->msg == 8);
+            ASSERT(msg->cmd == 1);
+            ASSERT(strncmp((char *)GET_DATA(msg), "helloworld", msg->size) == 0);
+            return 0;
+        };
+
+        int ret = emi_msg_register(8, func);
+        ASSERT(ret == 0);
+    };
+
+    Process p1(recvprocess);
+    p1.Start();  //keep a invalid record of msg_map in emi_core
+    p1.Join();
+
+    Process p2(recvprocess);
+    p2.Start();
+    p2.Join();
+
+    sleep(1);
+
+    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 7, 1, "helloworld", 
+            sizeof("helloworld"), EMI_MSG_MODE_BLOCK);
+
+    if(msg_ptr){
+        int ret = emi_msg_send(msg_ptr);
+        ASSERT(ret == -1);
     }
 }
 
-void test_emi_exit(EmiTestCore &core){
-    auto recvprocess = [&core](){
+void test_emi_exit(){
+    auto recvprocess = [](){
         emi_init();
 
         auto func=[](const struct emi_msg *msg){
             ASSERT(msg->msg == 6);
             ASSERT(msg->cmd == 1);
-            ASSERT(strncmp(GET_RETDATA(msg), "helloworld", msg->retsize) == 0);
+            ASSERT(strncmp((char *)GET_DATA(msg), "helloworld", msg->size) == 0);
             exit(0);
             return 0;
         };
@@ -389,16 +478,16 @@ void test_emi_exit(EmiTestCore &core){
     p1.Start();
     sleep(1);
 
-    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 6, 1, sizeof("helloworld"), "helloworld", 0);
+    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 6, 1, "helloworld", sizeof("helloworld"), 0);
     if(msg_ptr){
-        int ret = emi_msg_send(msg_ptr.get());
+        int ret = emi_msg_send(msg_ptr);
         ASSERT(ret == 0);
     }
 
     p1.Join();
 }
 
-using testFuncType = void(*)(EmiTestCore &);
+using testFuncType = void(*)();
 
 std::vector<std::pair<std::string, testFuncType>> testsVector = {
     {"emi_init", test_emi_init},
@@ -409,6 +498,8 @@ std::vector<std::pair<std::string, testFuncType>> testsVector = {
     {"emi_msg_send_block_retdata", test_emi_msg_send_block_retdata},
     {"emi_msg_send_block_retdata_large_data", test_emi_msg_send_block_retdata_large_data},
     {"emi_cpp", test_emi_cpp},
+    {"emi_some_receiver_exit", test_emi_some_receiver_exit},
+    {"emi_all_receiver_exit", test_emi_all_receiver_exit},
     {"emi_exit", test_emi_exit},
 };
 
@@ -418,7 +509,7 @@ void Run(void){
         EmiTestCore core;
         auto prompt = std::get<0>(f);
         std::cout<<"testing "<<prompt<<std::endl;
-        std::get<1>(f)(core);
+        std::get<1>(f)();
     }
 }
 

@@ -138,11 +138,6 @@ _emilib.emi_msg_free_data.argtypes = (ctypes.POINTER(emi_msg),)
 _emilib.emi_msg_send.argtypes = (ctypes.POINTER(emi_msg), )
 _emilib.emi_msg_send.restype = ctypes.c_int
 
-_emilib.emi_msg_send_highlevel.argtypes = (
-    ctypes.c_char_p, ctypes.c_uint, ctypes.c_void_p, ctypes.c_size_t,
-    ctypes.c_void_p, ctypes.c_size_t, ctypes.c_uint, ctypes.c_uint)
-_emilib.emi_msg_send_highlevel.restype = ctypes.c_int
-
 _emilib.emi_load_retdata.argtypes = (ctypes.POINTER(emi_msg),
                                                 ctypes.c_void_p, ctypes.c_uint)
 _emilib.emi_load_retdata.restype = ctypes.c_int
@@ -189,31 +184,6 @@ def emi_msg_send(emi_msg):
     return ret, retdata
 
 
-def emi_msg_send_highlevel(msgnum,
-                           ipaddr="127.0.0.1",
-                           cmd=0,
-                           data=b'',
-                           retsize=0,
-                           block=False):
-    cipaddr = ctypes.c_char_p(ipaddr.encode())
-    cmsgnum = ctypes.c_uint(msgnum)
-    ccmd = ctypes.c_uint(cmd)
-
-    size = len(data)
-    cssize = ctypes.c_size_t(size)
-    csdata = (ctypes.c_ubyte * size).from_buffer(bytearray(data))
-
-    crsize = ctypes.c_size_t(retsize)
-    crdata = (ctypes.c_ubyte * retsize).from_buffer(bytearray(retsize))
-
-    cflag = emi_flag.EMI_MSG_MODE_BLOCK if block else 0
-
-    ret = _emilib.emi_msg_send_highlevel(
-        cipaddr, cmsgnum, ctypes.pointer(csdata), cssize,
-        ctypes.pointer(crdata), crsize, ccmd, ctypes.c_uint(cflag))
-    return ret, bytes(crdata)
-
-
 def emi_load_retdata(msg, retbytes):
     size = len(retbytes)
     rdata = (ctypes.c_ubyte * size).from_buffer(bytearray(retbytes))
@@ -243,7 +213,8 @@ def emi_run(loop=True):
     emi_init()
 
     for num, func in recorded_func.items():
-        emi_msg_register(num, func)
+        if emi_msg_register(num, func) < 0:
+            raise EMIError("register failed")
 
     if loop:
         emi_loop()

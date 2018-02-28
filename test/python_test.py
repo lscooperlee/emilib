@@ -268,37 +268,6 @@ class TestEmiLib(unittest.TestCase):
 
         self.assertEqual(received.value, 2)
 
-    def test_emi_msg_send_highlevel(self):
-        emi_init()
-
-        received = 0
-
-        def func(msg):
-            nonlocal received
-            self.assertEqual(msg.msg, 6)
-            self.assertEqual(msg.cmd, 1)
-            self.assertEqual(msg.data, b"11112222")
-            received = received + 1
-            return emi_load_retdata(msg, 'abcdefghijkmln'.encode())
-
-        ret = emi_msg_register(6, func)
-        self.assertEqual(ret, 0)
-        time.sleep(1)
-
-        ret = emi_msg_send_highlevel(
-            msgnum=6,
-            cmd=1,
-            ipaddr="127.0.0.1",
-            data=b'11112222',
-            retsize=len(b'abcdefghijkmln'),
-            block=True)
-        self.assertEqual(ret[0], 0)
-        self.assertEqual(ret[1], b'abcdefghijkmln')
-
-        time.sleep(1)
-
-        self.assertEqual(received, 1)
-
     def test_register_decorator(self):
 
         received = 0
@@ -314,13 +283,15 @@ class TestEmiLib(unittest.TestCase):
 
         emi_run(False)
 
-        ret = emi_msg_send_highlevel(
+        msg = emi_msg(
             msgnum=7,
             cmd=1,
             ipaddr="127.0.0.1",
             data=b'11112222',
-            retsize=len(b'abcdefghijkmln'),
-            block=True)
+            flag=emi_flag.EMI_MSG_MODE_BLOCK)
+
+        ret = emi_msg_send(msg);
+
         self.assertEqual(ret[0], 0)
         self.assertEqual(ret[1], b'abcdefghijkmln')
 
@@ -392,6 +363,98 @@ class TestEmiLib(unittest.TestCase):
 
 
         time.sleep(1)
+
+    def test_emi_msg_some_receiver_exit(self):
+        received= Value('i', 0)
+
+        def recvprocess_exit():
+            emi_init()
+
+            def func(msg):
+                return 0
+
+            ret = emi_msg_register(12, func)
+            self.assertEqual(ret, 0)
+
+        p1 = Process(target = recvprocess_exit)
+        p1.start()
+        p1.join();
+
+        def recvprocess_block_data():
+            emi_init()
+
+            def func(msg):
+                nonlocal received
+                self.assertEqual(msg.msg, 12)
+                self.assertEqual(msg.cmd, 1)
+                self.assertEqual(msg.data, b"11112222"*512)
+
+                with received.get_lock():
+                    received.value += 1
+
+                return emi_load_retdata(msg, b'abcdef'*1024)
+
+            ret = emi_msg_register(12, func)
+            self.assertEqual(ret, 0)
+
+            signal.pause()
+            time.sleep(2);
+
+        p2 = Process(target = recvprocess_block_data)
+        p2.start()
+
+        time.sleep(1)
+
+        msg = emi_msg(
+            msgnum=12,
+            cmd=1,
+            ipaddr="127.0.0.1",
+            data=b'11112222'*512,
+            flag=emi_flag.EMI_MSG_MODE_BLOCK)
+
+        ret = emi_msg_send(msg)
+
+        self.assertEqual(ret[0], 0)
+        self.assertEqual(ret[1], b'abcdef'*1024)
+
+        p2.join()
+        self.assertEqual(received.value, 1)
+
+
+    def test_emi_msg_all_receiver_exit(self):
+        received= Value('i', 0)
+
+        def recvprocess_exit():
+            emi_init()
+
+            def func(msg):
+                return 0
+
+            ret = emi_msg_register(13, func)
+            self.assertEqual(ret, 0)
+
+        p1 = Process(target = recvprocess_exit)
+        p1.start()
+        p1.join();
+
+        p2 = Process(target = recvprocess_exit)
+        p2.start()
+        p2.join();
+
+        time.sleep(1)
+
+        msg = emi_msg(
+            msgnum=13,
+            cmd=1,
+            ipaddr="127.0.0.1",
+            data=b'11112222'*512,
+            flag=emi_flag.EMI_MSG_MODE_BLOCK)
+
+        ret = emi_msg_send(msg)
+
+        self.assertEqual(ret[0], -1)
+        self.assertEqual(ret[1], b'')
+        self.assertEqual(received.value, 0)
 
 
 if __name__ == "__main__":

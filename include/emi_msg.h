@@ -75,7 +75,14 @@ typedef int (*emi_func)(struct emi_msg const *);
 
 #define GET_OFFSET(base, addr) ((char *)(addr)-(char *)(base))
 #define GET_ADDR(base, offset) ((char *)(base) + (offset))
-#define GET_DATA(msg) GET_ADDR((msg), ((struct emi_msg *)(msg))->data_offset)
-#define GET_RETDATA(msg) GET_ADDR((msg), ((struct emi_msg *)(msg))->retdata_offset)
+
+//#define GET_DATA(msg) GET_ADDR((msg), ((struct emi_msg *)(msg))->data_offset)
+//#define GET_RETDATA(msg) GET_ADDR((msg), ((struct emi_msg *)(msg))->retdata_offset)
+inline static void *GET_DATA(struct emi_msg const *msg) {
+    return (void *)GET_ADDR(msg, ((struct emi_msg *)msg)->data_offset);
+}
+inline static void *GET_RETDATA(struct emi_msg const *msg) {
+    return (void *)GET_ADDR(msg, ((struct emi_msg *)msg)->retdata_offset);
+}
 
 #endif

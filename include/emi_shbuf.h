@@ -15,7 +15,6 @@
 
 #define BUDDY_SHIFT 8
 #define BUDDY_SIZE  (1<<BUDDY_SHIFT)
-//#define BUDDY_SIZE  ((sizeof(struct emi_msg) + EMI_MAX_MSG_SIZE) & ~EMI_MAX_MSG_SIZE)
 
 struct emi_buf{
     int blk_offset;

@@ -1,9 +1,5 @@
 include ./config.mk
 
-CC = $(CROSS)gcc
-CPP = $(CROSS)g++
-LD = $(CROSS)ld
-STRIP = $(CROSS)strip
 CHECK = cppcheck
 
 MKDIR = mkdir -p
@@ -15,7 +11,6 @@ RM = rm -rf
 TMPDIR = ./.out
 LIBDIR = $(TMPDIR)/lib
 BINDIR = $(TMPDIR)/bin
-TEST = test
 
 CORE = emi_core
 SAR = emi_sar
@@ -70,7 +65,7 @@ export PYTHONPATH := ${PWD}/python/emilib
 
 .PHONY:all clean
 
-all:$(LIBSENDER) $(LIBEMI) $(CORE) $(SAR) PYTHON TEST
+all:$(LIBSENDER) $(LIBEMI) $(CORE) $(SAR) PYTHON TEST EXAMPLE
 
 $(LIBSENDER):$(LIBSENDEROBJS)
 	@echo LD		$(LIBSENDER)
@@ -111,14 +106,18 @@ PYTHON:
 	@true
 
 TEST:
-	@make -C $(TEST)
+	@make -C test/
+
+EXAMPLE:
+	@make -C examples/simple/
 
 check:
 	@$(CHECK) $(CHECKFLAGS) .
 
 clean:
 	$(RM) $(TMPDIR)
-	@make -C $(TEST) clean
+	@make -C test clean
+	@make -C examples/simple clean
 
 emi_test: 
 	@./test/emi_test

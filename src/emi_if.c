@@ -56,12 +56,12 @@ static int split_ipaddr(const char *mixip, char *ip, int *port) {
 
 int emi_fill_addr(struct emi_addr *addr, const char *ip, int port) {
 
-    if (((addr)->ipv4.sin_addr.s_addr = inet_addr(ip)) == INADDR_NONE)
+    if ((addr->ipv4.sin_addr.s_addr = inet_addr(ip)) == INADDR_NONE)
         return -1;
 
-    (addr)->ipv4.sin_port = htons(port);
-    (addr)->ipv4.sin_family = AF_INET;
-    (addr)->pid = getpid();
+    addr->ipv4.sin_port = htons(port);
+    addr->ipv4.sin_family = AF_INET;
+    addr->pid = getpid();
     return 0;
 }
 
@@ -131,44 +131,4 @@ int emi_msg_send(struct emi_msg *msg) {
 out: 
     emi_close(sd);
     return ret;
-}
-
-int emi_msg_send_highlevel(const char *ipaddr, int msgnum, void *send_data,
-        int send_size, void *ret_data, int ret_size, eu32 cmd, eu32 flag) {
-
-    struct emi_msg *msg = emi_msg_alloc(send_size);
-    if (msg == NULL) {
-        return -1;
-    }
-
-    emi_fill_msg(msg, ipaddr, send_data, cmd, msgnum, flag);
-
-    if (emi_msg_send(msg)) {
-        emi_msg_free(msg);
-        return -1;
-    }
-
-    if (ret_data != NULL && msg->retsize > 0) {
-        void *data = GET_ADDR(msg, msg->retdata_offset);
-        memcpy(ret_data, data, ret_size);
-    }
-
-    emi_msg_free(msg);
-    return 0;
-}
-
-int emi_msg_send_highlevel_block(const char *ipaddr, int msgnum, void *send_data,
-        int send_size, void *ret_data, int ret_size, eu32 cmd) {
-    eu32 flag = EMI_MSG_MODE_BLOCK;
-
-    return emi_msg_send_highlevel(ipaddr, msgnum, send_data, send_size,
-            ret_data, ret_size, cmd, flag);
-}
-
-int emi_msg_send_highlevel_nonblock(const char *ipaddr, int msgnum, void *send_data,
-        int send_size, eu32 cmd) {
-    eu32 flag = 0;
-
-    return emi_msg_send_highlevel(ipaddr, msgnum, send_data, send_size, NULL, 0,
-            cmd, flag);
 }

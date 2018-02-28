@@ -23,3 +23,6 @@ __pycache__
 /test/unit_test/*
 !/test/unit_test/*.c
 !/test/unit_test/*.cpp
+
+examples/simple/cppreceiver
+examples/simple/cppsender

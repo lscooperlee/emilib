@@ -222,6 +222,7 @@ static int emi_receive_operation(void *client_sd){
             }
         }
 
+        int max_exit_receiver = msg_pos->count;
         if(msg_pos->count > 0) {
             msg_pos->flag |= EMI_MSG_RET_SUCCEEDED;
 
@@ -253,7 +254,7 @@ static int emi_receive_operation(void *client_sd){
             emi_rwlock_unlock(&msg_table_lock);
 
             emilog(EMI_DEBUG, "Signal all processes with msg num %d, waiting for sync\n", msg_pos->msg);
-
+            
             while(msg_pos->count){
 
                 emi_rwlock_wrlock(&msg_table_lock);
@@ -264,10 +265,11 @@ static int emi_receive_operation(void *client_sd){
                         if(pid_ret<0){
                             emi_spin_lock(&msg_pos->lock);
                             msg_pos->count--;
-                            msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
-                            emilog(EMI_DEBUG, "receiver has gone, decrease msg count\n");
                             emi_spin_unlock(&msg_pos->lock);
 
+                            emilog(EMI_DEBUG, "receiver has gone, decrease msg count\n");
+
+                            max_exit_receiver--;
                             free_msg_map(map);
                         }
                     }
@@ -276,6 +278,10 @@ static int emi_receive_operation(void *client_sd){
                 emi_rwlock_unlock(&msg_table_lock);
 
                 usleep(10);
+            }
+
+            if(max_exit_receiver == 0){ //all receivers are exit receiver, return false
+                msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
             }
 
         }else{

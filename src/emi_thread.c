@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <signal.h>
 #include <list.h>
 #include <assert.h>
 
@@ -57,8 +58,6 @@ int emi_thread_init(struct emi_thread *th, struct emi_thread_pool *pool){
         goto out_lock;
     }
 
-    pthread_detach(th->thread);
-    
     return 0;
 
 out_lock:
@@ -71,9 +70,12 @@ out:
 
 void emi_thread_destroy(struct emi_thread *th){
     list_del(&th->list);
+
+    pthread_cancel(th->thread);
+
+    emi_unlock(&th->lock);
     emi_lock_destroy(&th->lock);
     emi_cond_destroy(&th->cond);
-    pthread_cancel(th->thread);
 }
 
 struct emi_thread *emi_thread_create(struct emi_thread_pool *pool){
@@ -93,19 +95,22 @@ struct emi_thread *emi_thread_create(struct emi_thread_pool *pool){
 
 void emi_thread_free(struct emi_thread *th){
     emi_thread_destroy(th);
-    //pthread_join(th->thread, NULL);
+    pthread_join(th->thread, NULL);
     free(th);
 }
 
 void emi_thread_pool_destroy(struct emi_thread_pool *pool){
-
+    
+    emi_spin_lock(&pool->spinlock);
     struct list_head *pos, *n;    
     list_for_each_safe(pos, n, &pool->head){
         struct emi_thread *t = list_entry(pos, struct emi_thread, list);
         emi_thread_free(t); 
     }
+    emi_spin_unlock(&pool->spinlock);
 
-    //emi_spin_unlock(&pool->spinlock);
+    emilog(EMI_DEBUG, "thread pool destroy\n");
+
     emi_spin_destroy(&pool->spinlock);
 }
 
@@ -126,6 +131,8 @@ int emi_thread_pool_init(struct emi_thread_pool *pool, size_t size){
 
         list_add(&t->list, &pool->head);
     }
+
+    emilog(EMI_DEBUG, "thread pool init with size %u\n", pool->pool_size);
     
     return 0;
 
@@ -169,6 +176,8 @@ int emi_thread_pool_submit(struct emi_thread_pool *pool, emi_thread_func func, v
 
         emi_cond_signal(&t->cond);
 
+        emilog(EMI_DEBUG, "thread pool submit \n");
+
     }else{
         emi_spin_unlock(&pool->spinlock);
         
@@ -178,6 +187,7 @@ int emi_thread_pool_submit(struct emi_thread_pool *pool, emi_thread_func func, v
         }
         pthread_detach(th);
         
+        emilog(EMI_DEBUG, "new thread create \n");
     }
 
 

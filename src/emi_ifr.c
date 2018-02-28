@@ -196,7 +196,7 @@ void *emi_retdata_alloc(const struct emi_msg *cmsg, eu32 size){
     return addr;
 }
 
-int emi_load_retdata(const struct emi_msg *msg, void *data, eu32 size) {
+int emi_load_retdata(const struct emi_msg *msg, const void *data, eu32 size) {
     
     void *retdata = emi_retdata_alloc(msg, size);
     if(retdata == NULL){

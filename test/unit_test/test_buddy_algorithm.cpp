@@ -79,7 +79,7 @@ bool check_emi_buf(struct emi_buf *mgr, const std::unordered_map<int, int>& map 
 void test_example(){
 
     void *base_addr = malloc(BUDDY_SIZE << EMI_ORDER_NUM);
-    struct emi_buf array[(1<<EMI_ORDER_NUM) - 1] = {0};
+    struct emi_buf array[(1<<EMI_ORDER_NUM) - 1] = {};
     struct emi_buf *a,*b,*c,*d;
 
     init_emi_buf(base_addr, array);
@@ -112,14 +112,14 @@ void test_example(){
 }
 
 TEST_CASE("__init_emi_buf") {
-    struct emi_buf emi_buf_top[get_buf_size()] = {0};
+    struct emi_buf emi_buf_top[get_buf_size()] = {};
 
     __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
     CHECK(check_emi_buf(emi_buf_top));
 }
 
 TEST_CASE("get_emi_buf") {
-    struct emi_buf emi_buf_top[get_buf_size()] = {0};
+    struct emi_buf emi_buf_top[get_buf_size()] = {};
 
     __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
@@ -150,10 +150,10 @@ TEST_CASE("get_emi_buf") {
 }
 
 TEST_CASE("update_buf_order") {
-    struct emi_buf emi_buf_top[get_buf_size()] = {0};
+    struct emi_buf emi_buf_top[get_buf_size()] = {};
+    __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
     SECTION("update emi buf top") {
-        __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
         struct emi_buf *buf = emi_buf_top;
         buf->order = -4;
@@ -162,7 +162,6 @@ TEST_CASE("update_buf_order") {
     }
 
     SECTION("update emi buf 1") {
-        __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
         struct emi_buf *buf = emi_buf_top + 1;
         buf->order = -3;
@@ -171,7 +170,6 @@ TEST_CASE("update_buf_order") {
     }
 
     SECTION("update emi buf 6") {
-        __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
         struct emi_buf *buf = emi_buf_top + 6;
         buf->order = -2;
@@ -181,10 +179,10 @@ TEST_CASE("update_buf_order") {
 }
 
 TEST_CASE("__alloc_emi_buf") {
-    struct emi_buf emi_buf_top[get_buf_size()] = {0};
+    struct emi_buf emi_buf_top[get_buf_size()] = {};
+    __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
     SECTION("alloc order 3") {
-        __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
         auto buf = __alloc_emi_buf(emi_buf_top, 3, EMI_ORDER_NUM);
         CHECK(check_emi_buf(emi_buf_top, {{0, -4}}));
@@ -192,7 +190,6 @@ TEST_CASE("__alloc_emi_buf") {
     }
 
     SECTION("alloc order 2") {
-        __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
         auto buf = __alloc_emi_buf(emi_buf_top, 2, EMI_ORDER_NUM);
         CHECK(check_emi_buf(emi_buf_top, {{0, 2}, {1, -3}}));
@@ -200,7 +197,6 @@ TEST_CASE("__alloc_emi_buf") {
     }
 
     SECTION("alloc order 1") {
-        __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
         auto buf = __alloc_emi_buf(emi_buf_top, 1, EMI_ORDER_NUM);
         CHECK(check_emi_buf(emi_buf_top, {{0, 2}, {1, 1}, {3, -2}}));
@@ -209,10 +205,10 @@ TEST_CASE("__alloc_emi_buf") {
 }
 
 TEST_CASE("__free_emi_buf") {
-    struct emi_buf emi_buf_top[get_buf_size()] = {0};
+    struct emi_buf emi_buf_top[get_buf_size()] = {};
+    __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
     SECTION("free order 3") {
-        __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
         auto buf = __alloc_emi_buf(emi_buf_top, 3, EMI_ORDER_NUM);
         __free_emi_buf(buf, emi_buf_top, 3, EMI_ORDER_NUM);
@@ -220,7 +216,6 @@ TEST_CASE("__free_emi_buf") {
     }
 
     SECTION("free order 2") {
-        __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
         auto buf = __alloc_emi_buf(emi_buf_top, 2, EMI_ORDER_NUM);
         __free_emi_buf(buf, emi_buf_top, 2, EMI_ORDER_NUM);
@@ -228,7 +223,6 @@ TEST_CASE("__free_emi_buf") {
     }
 
     SECTION("free order 1") {
-        __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
         auto buf = __alloc_emi_buf(emi_buf_top, 1, EMI_ORDER_NUM);
         __free_emi_buf(buf, emi_buf_top, 1, EMI_ORDER_NUM);
@@ -236,7 +230,6 @@ TEST_CASE("__free_emi_buf") {
     }
 
     SECTION("free order random") {
-        __init_emi_buf(emi_buf_top, EMI_ORDER_NUM);
 
         std::vector<int> orders = {0, 0, 0, 1, 1, 1, 2, 2};
         std::random_device rd;
@@ -269,7 +262,7 @@ TEST_CASE("size_to_order") {
 }
 
 TEST_CASE("emi_alloc") {
-    struct emi_buf emi_buf_top[get_buf_size()] = {0};
+    struct emi_buf emi_buf_top[get_buf_size()] = {};
     void *base = malloc(BUDDY_SIZE * 1<<(BUDDY_SHIFT - 1));
     espinlock_t buf_lock;
 
@@ -309,7 +302,7 @@ TEST_CASE("emi_alloc") {
 }
 
 TEST_CASE("emi_free") {
-    struct emi_buf emi_buf_top[get_buf_size()] = {0};
+    struct emi_buf emi_buf_top[get_buf_size()] = {};
     void *base = malloc(BUDDY_SIZE * 1<<(BUDDY_SHIFT - 1));
     espinlock_t buf_lock;
 

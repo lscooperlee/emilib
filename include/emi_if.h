@@ -65,21 +65,12 @@ extern void emi_msg_unregister(eu32 defined_msg,emi_func func);
  */
 extern int emi_fill_msg(struct emi_msg *msg,const char *dest_ip,const void *data,eu32 cmd,eu32 defined_msg,eu32 flag);
 
+
 /**
  * emi_fill_addr -fill a emi_addr structure
  * @addr:            the addr pointer which needed to be filled.
  * @ip:                the target ip address
  */
 extern int emi_fill_addr(struct emi_addr *addr,const char *ip,int port);
-
-extern int emi_msg_send_highlevel(const char *ipaddr, int msgnum, void *send_data, 
-        int send_size, void *ret_data, int ret_size, eu32 cmd, eu32 flag);
-
-extern int emi_msg_send_highlevel_block(const char *ipaddr, int msgnum,void *send_data,
-        int send_size,void *ret_data, int ret_size, eu32 cmd);
-
-extern int emi_msg_send_highlevel_nonblock(const char *ipaddr, int msgnum,void *send_data,
-        int send_size, eu32 cmd);
-
 
 #endif

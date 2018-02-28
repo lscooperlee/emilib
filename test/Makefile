@@ -1,8 +1,5 @@
 include ../config.mk
 
-CC=$(CROSS)gcc
-CPP=$(CROSS)g++
-
 ifeq ($(strip $(DEBUG)),y)
 DEBUG = -g -DDEBUG
 else
@@ -33,18 +30,22 @@ EMIUNITTESTEXEC=$(EMIUNITTESTSRC:.cpp=)
 all: $(EMIUNITTESTEXEC) $(EMITESTEXEC)
 
 $(EMITESTEXEC): $(EMITESTSRC)
-	$(CPP) $(CPPFLAGS) $? -o $@ $(LDFLAGS)
+	@echo LD 	$@
+	@$(CXX) $(CPPFLAGS) $? -o $@ $(LDFLAGS)
 
 $(EMIUNITTESTEXEC): $(EMIUNITTESTOBJ) $(CPPOBJS)
-	$(CPP) $(CPPFLAGS) $(EMIUNITTESTOBJ) $(CPPOBJS) -o $@ $(LDFLAGS)
+	@echo LD 	$@
+	@$(CXX) $(CPPFLAGS) $(EMIUNITTESTOBJ) $(CPPOBJS) -o $@ $(LDFLAGS)
 
 $(CEXES):%: %.c
+	@echo CC 	$@
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+	@$(CC) $(CFLAGS) $< -o $@
 
 $(CPPOBJS) $(EMIUNITTESTOBJ):%.o: %.cpp
+	@echo CXX 	$@
 	@mkdir -p $(dir $@)
-	$(CPP) $(CPPFLAGS) -c $< -o $@ $(LDFLAGS)
+	@$(CXX) $(CPPFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(COBJS) $(CPPOBJS) $(CEXES) $(CPPEXES) $(EMITESTEXEC) $(EMIUNITTESTEXEC) $(EMIUNITTESTOBJ)
