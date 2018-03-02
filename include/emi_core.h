@@ -3,6 +3,6 @@
 
 #include "emi_types.h"
 
-extern eu32 get_pid_max(void);
+extern int emi_core(struct emi_config *config);
 
 #endif

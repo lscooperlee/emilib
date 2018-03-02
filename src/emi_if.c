@@ -28,7 +28,7 @@ struct emi_msg *emi_msg_alloc(eu32 size) {
 
 void emi_msg_free_data(struct emi_msg *msg) {
     if(msg->retsize > 0){
-        free(GET_RETDATA(msg));
+        free(get_next_retdata(msg, NULL));
         msg->retsize = 0;
     }
 }
@@ -54,7 +54,7 @@ static int split_ipaddr(const char *mixip, char *ip, int *port) {
     return ret;
 }
 
-int emi_fill_addr(struct emi_addr *addr, const char *ip, int port) {
+static int emi_fill_addr(struct emi_addr *addr, const char *ip, int port) {
 
     if ((addr->ipv4.sin_addr.s_addr = inet_addr(ip)) == INADDR_NONE)
         return -1;
@@ -121,7 +121,6 @@ int emi_msg_send(struct emi_msg *msg) {
         }
 
         emilog(EMI_DEBUG, "Ret data received, size %d\n", msg->retsize);
-        debug_emi_msg(msg);
 
     } else {
         ret = 0;

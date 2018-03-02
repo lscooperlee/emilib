@@ -17,16 +17,13 @@ class TestEmiLib(unittest.TestCase):
         self.emi_core = None
 
     def setUp(self):
-        self.emi_core = subprocess.Popen("emi_core", stdout = subprocess.PIPE, bufsize = 0)
+        self.emi_core = subprocess.Popen("emi_core",
+                                         stdout = subprocess.PIPE, bufsize = 0)
         time.sleep(.5)
 
     def tearDown(self):
         self.emi_core.terminate()
         time.sleep(.5)
-
-    def test_emi_addr(self):
-        addr = emi_addr("127.1.1.2", 256)
-        self.assertEqual(str(addr.ipv4), "127.1.1.2:256")
 
     def test_emi_msg(self):
         msg_data = emi_msg(
@@ -84,7 +81,7 @@ class TestEmiLib(unittest.TestCase):
 
         msg = emi_msg(msgnum=2, cmd=1, ipaddr="127.0.0.1")
         ret = emi_msg_send(msg)
-        self.assertEqual(ret[0], 0)
+        self.assertEqual(ret, 0)
 
         p1.join()
         p2.join()
@@ -123,7 +120,7 @@ class TestEmiLib(unittest.TestCase):
 
         msg = emi_msg(msgnum=3, cmd=1, ipaddr="127.0.0.1", data=b'11112222'*1024)
         ret = emi_msg_send(msg)
-        self.assertEqual(ret[0], 0)
+        self.assertEqual(ret, 0)
 
         p1.join()
         p2.join()
@@ -168,7 +165,7 @@ class TestEmiLib(unittest.TestCase):
             data=b'11112222'*1024,
             flag=emi_flag.EMI_MSG_MODE_BLOCK)
         ret = emi_msg_send(msg)
-        self.assertEqual(ret[0], 0)
+        self.assertEqual(ret, 0)
 
         p1.join()
         p2.join()
@@ -212,7 +209,7 @@ class TestEmiLib(unittest.TestCase):
             data=b'11112222'*1024,
             flag=emi_flag.EMI_MSG_MODE_BLOCK)
         ret = emi_msg_send(msg)
-        self.assertEqual(ret[0], -1)
+        self.assertEqual(ret, -1)
 
         p1.join()
         p2.join()
@@ -260,8 +257,10 @@ class TestEmiLib(unittest.TestCase):
 
         ret = emi_msg_send(msg)
 
-        self.assertEqual(ret[0], -1)
-        self.assertEqual(ret[1], b'abcdef'*1024)
+        self.assertEqual(ret, 0)
+
+        for data in msg.retdata:
+            self.assertEqual(data, b'abcdef'*1024)
 
         p1.join()
         p2.join()
@@ -269,6 +268,7 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(received.value, 2)
 
     def test_register_decorator(self):
+        time.sleep(1)
 
         received = 0
 
@@ -282,6 +282,7 @@ class TestEmiLib(unittest.TestCase):
             return emi_load_retdata(msg, 'abcdefghijkmln'.encode())
 
         emi_run(False)
+        time.sleep(1)
 
         msg = emi_msg(
             msgnum=7,
@@ -292,14 +293,17 @@ class TestEmiLib(unittest.TestCase):
 
         ret = emi_msg_send(msg);
 
-        self.assertEqual(ret[0], 0)
-        self.assertEqual(ret[1], b'abcdefghijkmln')
+        self.assertEqual(ret, 0)
+
+        for data in msg.retdata:
+            self.assertEqual(data, b'abcdefghijkmln')
 
         time.sleep(1)
 
         self.assertEqual(received, 1)
 
     def test_emi_msg_send_multiple_func(self):
+
         emi_init()
 
         def func1(msg):
@@ -320,15 +324,16 @@ class TestEmiLib(unittest.TestCase):
 
         msg = emi_msg(msgnum=8, cmd=1, ipaddr="127.0.0.1")
         ret = emi_msg_send(msg)
-        self.assertEqual(ret[0], 0)
+        self.assertEqual(ret, 0)
 
         msg = emi_msg(msgnum=9, cmd=1, ipaddr="127.0.0.1")
         ret = emi_msg_send(msg)
-        self.assertEqual(ret[0], 0)
+        self.assertEqual(ret, 0)
 
         time.sleep(1)
 
     def test_emi_msg_send_inside_msg_handler(self):
+
         emi_init()
 
         def func1(msg):
@@ -340,8 +345,10 @@ class TestEmiLib(unittest.TestCase):
                         flag=emi_flag.EMI_MSG_MODE_BLOCK)
             ret = emi_msg_send(msg)
 
-            self.assertEqual(ret[0], 0)
-            self.assertEqual(ret[1], b'1234abcd')
+            self.assertEqual(ret, 0)
+
+            for data in msg.retdata:
+                self.assertEqual(data, b'1234abcd')
 
 
         def func2(msg):
@@ -359,8 +366,7 @@ class TestEmiLib(unittest.TestCase):
         msg = emi_msg(msgnum=10, cmd=1, ipaddr="127.0.0.1",
                     flag=emi_flag.EMI_MSG_MODE_BLOCK)
         ret = emi_msg_send(msg)
-        self.assertEqual(ret[0], 0)
-
+        self.assertEqual(ret, 0)
 
         time.sleep(1)
 
@@ -414,8 +420,9 @@ class TestEmiLib(unittest.TestCase):
 
         ret = emi_msg_send(msg)
 
-        self.assertEqual(ret[0], 0)
-        self.assertEqual(ret[1], b'abcdef'*1024)
+        self.assertEqual(ret, 0)
+        for data in msg.retdata:
+            self.assertEqual(data, b'abcdef'*1024)
 
         p2.join()
         self.assertEqual(received.value, 1)
@@ -452,8 +459,9 @@ class TestEmiLib(unittest.TestCase):
 
         ret = emi_msg_send(msg)
 
-        self.assertEqual(ret[0], -1)
-        self.assertEqual(ret[1], b'')
+        self.assertEqual(ret, -1)
+        for data in msg.retdata:
+            self.assertEqual(data, b'')
         self.assertEqual(received.value, 0)
 
 

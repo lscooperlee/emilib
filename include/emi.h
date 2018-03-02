@@ -51,16 +51,96 @@ inline static int emi_msg_send(emi_msg_ptr& msg){
     return emi_msg_send(msg.get());
 }
 
-inline static void *GET_RETDATA(emi_msg_ptr& msg){
-    return GET_RETDATA(msg.get());
-}
-
 template <typename C>
 int emi_load_retdata(struct emi_msg const *msg, const C& container){
     return emi_load_retdata(msg, (void *)container.data(), container.size());
 }
 
-#endif
+#include <iostream>
+struct emi_retdata_iter {
+    emi_retdata_iter(struct emi_msg *msg_)
+        : msg(msg_)
+        , data(get_next_retdata(msg, nullptr))
+    {
+    }
 
+    emi_retdata_iter()
+        : msg(nullptr)
+        , data(nullptr)
+    {
+    }
+
+    void operator++(){
+        data = get_next_retdata(msg, data);
+    }
+
+    const struct emi_retdata* operator*(){
+        return data;
+    }
+
+    bool operator!=(const emi_retdata_iter&){
+        return data != nullptr;
+    }
+
+    emi_retdata_iter(const emi_retdata_iter& other) = delete;
+    emi_retdata_iter(emi_retdata_iter&& other) = default;
+
+private:
+    struct emi_msg *msg;
+    struct emi_retdata *data;
+};
+
+struct emi_retdata_container {
+    emi_retdata_container(emi_msg_ptr& msg_ptr)
+        : msg(msg_ptr.get())
+    {
+    }
+
+    struct emi_retdata_iter begin(){
+        return emi_retdata_iter(msg);
+    }
+
+    struct emi_retdata_iter end(){
+        return emi_retdata_iter();
+    }
+
+private:
+    struct emi_msg *msg;
+};
+
+/*
+struct emi_retdata_iter {
+    emi_retdata_iter(emi_msg_ptr& msg_)
+        : msg(msg_.get())
+        , data(get_next_retdata(msg, nullptr))
+    {
+        std::cerr<<"constructor: "<<data<<" " <<data->next_offset<<" "<<data->size<<std::endl;
+    }
+
+    struct emi_retdata *begin(){
+        std::cerr<<"begin: "<<data<<" "<<data->next_offset<<" "<<data->size<<std::endl;
+        return data;
+    }
+
+    void operator++(){
+        std::cerr<<"++ "<<data<<" "<<data->next_offset<<" "<<data->size<<std::endl;
+        data = get_next_retdata(msg, data);
+    }
+
+    struct emi_retdata *end(){
+        std::cerr<<"end: "<<data<<" "<<data->next_offset<<" "<<data->size<<std::endl;
+        return nullptr;
+    }
+
+    emi_retdata_iter(const emi_retdata_iter& other) = delete;
+    emi_retdata_iter(emi_retdata_iter&& other) = default;
+
+private:
+    struct emi_msg *msg;
+    struct emi_retdata *data;
+};
+*/
+
+#endif
 
 #endif

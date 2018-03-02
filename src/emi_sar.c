@@ -176,18 +176,22 @@ int main(int argc,char **argv){
             print_msg(msg);            
 
             if (emi_msg_send(msg)) {
+                printf("block msg send failed\n");
                 emi_msg_free(msg);
                 return -1;
             }
             
-            char *data = GET_ADDR(msg, msg->retdata_offset);
-            print_data(msg->retsize, data);
+            struct emi_retdata *retdata;
+            for_each_retdata(msg, retdata){
+                print_data(retdata->size, retdata->data);
+            }
 
         }else{
 
             print_msg(msg);            
 
             if (emi_msg_send(msg)) {
+                printf("nonblock msg send failed\n");
                 emi_msg_free(msg);
                 return -1;
             }

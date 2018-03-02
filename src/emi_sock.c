@@ -110,10 +110,32 @@ int emi_msg_read_payload(struct sk_dpr *sd, struct emi_msg *msg){
 }
 
 static int emi_msg_read_retdata(struct sk_dpr *sd, struct emi_msg *msg){
-    void *data = GET_ADDR(msg, msg->retdata_offset);
-    if(emi_read(sd, data, msg->retsize)) {
+    void *total_data = GET_ADDR(msg, msg->retdata_offset);
+
+    if(emi_read(sd, total_data, msg->retsize)) {
         return -1;
     }
+
+    //update offset
+    struct emi_retdata *data = (struct emi_retdata *)total_data;
+
+
+    es64 left_size = msg->retsize;
+
+    while(1){
+        data->next_offset = msg->retdata_offset + data->size + sizeof(struct emi_retdata);
+        
+        left_size -= data->size + sizeof(struct emi_retdata);
+        
+        if(left_size > 0){
+            data = (struct emi_retdata *)GET_ADDR(msg, data->next_offset);
+        }else{
+            break;
+        }
+    };
+
+    data->next_offset = 0;
+
     return 0;
 }
 

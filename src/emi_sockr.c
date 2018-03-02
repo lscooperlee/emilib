@@ -55,9 +55,12 @@ struct sk_dpr *emi_accept(struct sk_dpr *sd,union emi_sock_addr *addr){
 }
 
 int emi_msg_write_retdata(struct sk_dpr *sd, struct emi_msg *msg){
-    void *data = GET_ADDR(msg, msg->retdata_offset);
-    if (emi_write(sd, data, msg->retsize)) {
-        return -1;
+    struct emi_retdata *data;
+    for_each_retdata(msg, data){
+        if (emi_write(sd, data, data->size + sizeof(struct emi_retdata))) { 
+            // send whole struct emi_retdata back
+            return -1;
+        }
     }
     return 0;
 }

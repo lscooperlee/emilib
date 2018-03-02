@@ -84,3 +84,24 @@ struct emi_config *get_config(void){
 
     return config;
 }
+
+
+eu32 get_pid_max(void){
+    int fd,i;
+    char buf[8]={0};
+    if((fd=open("/proc/sys/kernel/pid_max",O_RDONLY))<0){
+        goto error;
+    }
+    if(read(fd,buf,sizeof(buf))<0){
+        close(fd);
+        goto error;
+    }
+    close(fd);
+    i=atoi(buf);
+    return i;
+
+error:
+    perror("dangerous!it seems your system does not mount the proc filesystem yet,so can not get your pid_max number.emi_core would use default ,but this may be different with the value in your system,as a result,may cause incorrect transmission");
+    return 32768;
+}
+

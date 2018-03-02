@@ -17,5 +17,8 @@ int main(int argc, char **argv){
 
     std::cout<<ret<<std::endl;
     std::cout<<msg->retsize<<std::endl;
-    std::cout<<std::string((char *)GET_RETDATA(msg), msg->retsize)<<std::endl;
+    
+    for(auto retdata: emi_retdata_container(msg)){
+        std::cout<<std::string((char *)retdata->data, msg->size)<<std::endl;
+    }
 }

@@ -4,7 +4,6 @@
 #include <fcntl.h>
 
 #include "emi_shmem.h"
-#include "emi_core.h"
 #include "emi_config.h"
 
 #if defined(SYSV_SHMEM)
@@ -56,6 +55,7 @@ int emi_shm_destroy(const char *name, int id){
 #else //!SYSV_SHMEM
 
 #include <sys/mman.h>
+#include <string.h>
 
 static size_t shmem_size = 0;
 
@@ -64,7 +64,6 @@ static size_t shmem_size = 0;
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <string.h>
 
 int emi_shm_init(const char *name, size_t size, int mode){
     int shm_id;
@@ -142,7 +141,7 @@ int emi_shm_destroy(const char *name, int id){
     return 0;
 }
 
-#elif defined(FILE_SHMEM)
+#else
 
 int emi_shm_init(const char *name, size_t size, int mode){
     int fd;

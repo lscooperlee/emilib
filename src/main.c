@@ -39,6 +39,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include "emi_lock.h"
 #include "emi_dbg.h"
 #include "emi_config.h"
+#include "emi_core.h"
 
 
 #define coreprt(a) printf(a)
@@ -47,7 +48,6 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #define SINGLIZE    0x00000002
 
 
-extern int emi_core(struct emi_config *config);
 extern void emi_release(void);
 
 static int lock_fd=-1;

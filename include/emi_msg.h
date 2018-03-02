@@ -41,11 +41,6 @@ struct emi_msg{
 #define EMI_MSG_RET_SUCCEEDED       0x00010000
 
 /*
- * This flag is used indicate the emi message has extra data with it internally
- */
-#define EMI_MSG_FLAG_RETDATA        0x00020000
-
-/*
 * Used for marking if msg->data is allocated, if so the data area should be freed when msg area is freed
 */
 #define EMI_MSG_FLAG_ALLOCDATA        0x00040000
@@ -58,8 +53,8 @@ struct emi_msg{
 /** The members above this line are payload, meaning they will be sent in communication **/
 /** The members below will not be sent, they are for local use and may be initialized locally **/
 
-    eu64 data_offset;
-    eu64 retdata_offset;
+    es64 data_offset;
+    es64 retdata_offset;
 
 #ifndef SEND_ONLY
     eu32 count;
@@ -70,19 +65,46 @@ struct emi_msg{
 #define EMI_MSG_PAYLOAD_SIZE    ((unsigned long)&((struct emi_msg *)0)->data_offset)
 
 
+struct emi_retdata {
+    es64 next_offset;
+    eu32 size;
+    eu32 pad;
+    char data[];
+}; //FIXME: packed
+
+
 typedef int (*emi_func)(struct emi_msg const *);
 
 
 #define GET_OFFSET(base, addr) ((char *)(addr)-(char *)(base))
 #define GET_ADDR(base, offset) ((char *)(base) + (offset))
 
-//#define GET_DATA(msg) GET_ADDR((msg), ((struct emi_msg *)(msg))->data_offset)
-//#define GET_RETDATA(msg) GET_ADDR((msg), ((struct emi_msg *)(msg))->retdata_offset)
 inline static void *GET_DATA(struct emi_msg const *msg) {
     return (void *)GET_ADDR(msg, ((struct emi_msg *)msg)->data_offset);
 }
-inline static void *GET_RETDATA(struct emi_msg const *msg) {
-    return (void *)GET_ADDR(msg, ((struct emi_msg *)msg)->retdata_offset);
+
+inline static struct emi_retdata *get_next_retdata(struct emi_msg const *msg, struct emi_retdata *data) {
+
+    if(msg->retsize == 0){
+        return NULL;
+    }
+
+    struct emi_retdata *newdata;
+    
+    if(data == NULL)
+        newdata = (struct emi_retdata *)GET_ADDR(msg, ((struct emi_msg *)msg)->retdata_offset);
+    else {
+        newdata = (struct emi_retdata *)GET_ADDR(msg, data->next_offset);
+    }
+
+    if(newdata == (struct emi_retdata *)msg){
+        return NULL;
+    }else{
+        return newdata;
+    }
 }
+
+#define for_each_retdata(msg, data)  \
+            for(data = get_next_retdata((msg), NULL); (data) !=NULL; data = get_next_retdata((msg), (data)))
 
 #endif

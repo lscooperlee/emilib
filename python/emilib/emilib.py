@@ -2,9 +2,9 @@ import ctypes
 import struct
 import signal
 import enum
-import time
 
 _emilib = ctypes.cdll.LoadLibrary("libemi.so")
+
 
 class emi_flag(enum.IntEnum):
     EMI_MSG_MODE_BLOCK = 0x00000100
@@ -51,17 +51,27 @@ class emi_addr(ctypes.Structure):
         ("id", ctypes.c_uint),
     ]
 
-    def __init__(self, ipaddr="0.0.0.0", port=1361):
-        cipaddr = ctypes.c_char_p(ipaddr.encode())
-        cport = ctypes.c_uint(port)
-        _emilib.emi_fill_addr(ctypes.byref(self), cipaddr, cport)
-
     def __str__(self):
         return "emi_addr:{{ addr: {0}, pid: {1} }}".format(
             str(self.ipv4), str(self.pid_t), str(self.id))
 
-#_emilib.get_offset.argtypes = (ctypes.c_void_p, ctypes.c_void_p)
-#_emilib.get_offset.restype = ctypes.c_long
+
+class emi_retdata(ctypes.Structure):
+
+    _fields_ = [
+        ("next_offset", ctypes.c_longlong, 64),
+        ("size", ctypes.c_uint, 32),
+        ("pad", ctypes.c_uint, 32),
+    ]
+
+    @property
+    def data(self):
+        addr = ctypes.addressof(self) + ctypes.sizeof(emi_retdata)
+        # ctypes.c_char is nul-terminated,
+        # thus may get bytes less then self.size
+        ccharp = ctypes.cast(addr, ctypes.POINTER(ctypes.c_byte * self.size))
+        return bytearray(ccharp.contents)
+
 
 class emi_msg(ctypes.Structure):
 
@@ -72,8 +82,8 @@ class emi_msg(ctypes.Structure):
         ("cmd", ctypes.c_uint, 32),
         ("size", ctypes.c_uint, 32),
         ("retsize", ctypes.c_uint, 32),
-        ("data_offset", ctypes.c_ulonglong, 64),
-        ("retdata_offset", ctypes.c_ulonglong, 64),
+        ("data_offset", ctypes.c_longlong, 64),
+        ("retdata_offset", ctypes.c_longlong, 64),
 
         ("_data", ctypes.c_void_p),
     ]
@@ -96,7 +106,8 @@ class emi_msg(ctypes.Structure):
         cmsgnum = ctypes.c_uint(msgnum)
 
         self.size = len(data)
-        self._data = ctypes.cast(ctypes.create_string_buffer(self.size), ctypes.c_void_p)
+        self._data = ctypes.cast(ctypes.create_string_buffer(self.size),
+                                 ctypes.c_void_p)
         self.data_offset = self._data - ctypes.addressof(self)
 
         cdata = (ctypes.c_ubyte * self.size).from_buffer(bytearray(data))
@@ -107,19 +118,23 @@ class emi_msg(ctypes.Structure):
     @property
     def data(self):
         addr = ctypes.addressof(self) + self.data_offset
-        # ctypes.c_char is nul-terminated, thus may get bytes less then self.size
+        # ctypes.c_char is nul-terminated,
+        # thus may get bytes less then self.size
         ccharp = ctypes.cast(addr, ctypes.POINTER(ctypes.c_byte * self.size))
         return bytearray(ccharp.contents)
 
-    @property
-    def retdata(self):
-        addr = ctypes.addressof(self) + self.retdata_offset
-        ccharp = ctypes.cast(addr, ctypes.POINTER(ctypes.c_byte * self.retsize))
-        return bytearray(ccharp.contents)
+    def get_retdata_iter(self):
+
+        while len(self._retdata) > 0:
+            retdata = emi_retdata.from_buffer(self._retdata)
+            self._retdata = self._retdata[ctypes.sizeof(emi_retdata)
+                                          + retdata.size:]
+            yield retdata.data
 
     @property
     def flag(self):
-        flags = [ name for name, _ in emi_flag.__members__.items() if _ & self._flag ]
+        flags = [name for name, _ in emi_flag.__members__.items()
+                 if _ & self._flag]
         return ",".join(flags)
 
     def is_block(self):
@@ -147,7 +162,6 @@ def emi_init():
     ret = _emilib.emi_init()
     if ret < 0:
         raise EMIError("emi_core did not run")
-    #time.sleep(0.1)
     return ret
 
 
@@ -179,9 +193,15 @@ def emi_msg_register(msg_num, func):
 
 def emi_msg_send(emi_msg):
     ret = _emilib.emi_msg_send(ctypes.pointer(emi_msg))
-    retdata = bytes(emi_msg.retdata)
+
+    #
+    addr = ctypes.addressof(emi_msg) + emi_msg.retdata_offset
+    ccharp = ctypes.cast(addr, ctypes.POINTER(ctypes.c_byte * emi_msg.retsize))
+    emi_msg._retdata = bytearray(ccharp.contents)
     _emilib.emi_msg_free_data(emi_msg)
-    return ret, retdata
+
+    emi_msg.retdata = emi_msg.get_retdata_iter()
+    return ret
 
 
 def emi_load_retdata(msg, retbytes):

@@ -21,4 +21,6 @@ extern struct emi_config *emi_config;
 extern struct emi_config *get_config(void);
 extern void set_default_config(struct emi_config *config);
 
+extern eu32 get_pid_max(void);
+
 #endif

@@ -8,10 +8,12 @@ try:
 except IndexError:
     outdata = b''
 
-m = emilib.emi_msg(msgnum = 1,
-                   data = outdata,
-                   flag = emilib.emi_flag.EMI_MSG_MODE_BLOCK)
+m = emilib.emi_msg(msgnum=1,
+                   data=outdata,
+                   flag=emilib.emi_flag.EMI_MSG_MODE_BLOCK)
 
 ret = emilib.emi_msg_send(m)
 
 print(ret)
+for data in m.retdata:
+    print(data)

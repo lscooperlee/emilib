@@ -163,13 +163,11 @@ void *emi_retdata_alloc(const struct emi_msg *cmsg, eu32 size){
 
     struct emi_msg *msg = (struct emi_msg *)cmsg;
 
-    emi_spin_lock(&msg->lock);
-
-    if(msg->flag & EMI_MSG_FLAG_RETDATA){
-        emilog(EMI_DEBUG, "one msg triggered many handlers, other has returned data");
-        emi_spin_unlock(&msg->lock);
+    if(size == 0){
         return NULL;
     }
+
+    emi_spin_lock(&msg->lock);
 
     if (!(msg->flag & EMI_MSG_MODE_BLOCK)) {
         emilog(EMI_DEBUG, "the sended msg is not block message");
@@ -178,7 +176,7 @@ void *emi_retdata_alloc(const struct emi_msg *cmsg, eu32 size){
         return NULL;
     }
 
-    void *addr = emi_alloc(size);
+    struct emi_retdata *addr = (struct emi_retdata *)emi_alloc(size + sizeof(struct emi_retdata));
     if(addr == NULL){
         emilog(EMI_DEBUG, "emi_alloc error");
         msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
@@ -186,27 +184,31 @@ void *emi_retdata_alloc(const struct emi_msg *cmsg, eu32 size){
         return NULL;
     }
 
+    eu32 old_retdata_offset = msg->retdata_offset;
+
+    msg->retsize += size + sizeof(struct emi_retdata);
     msg->retdata_offset = GET_OFFSET(msg, addr);
 
-    msg->retsize = size;
-    msg->flag |= EMI_MSG_FLAG_RETDATA;
+    addr->next_offset = old_retdata_offset;
+    addr->size = size;
 
     emi_spin_unlock(&msg->lock);
     
-    return addr;
+    return addr->data;
 }
 
 int emi_load_retdata(const struct emi_msg *msg, const void *data, eu32 size) {
     
-    void *retdata = emi_retdata_alloc(msg, size);
-    if(retdata == NULL){
+    void *ret = (void *)emi_retdata_alloc(msg, size);
+    if(ret == NULL){
         return -1;
     }
 
-    memcpy(retdata, data, size);
+    memcpy(ret, data, size);
 
     return 0;
 }
+
 
 /*
  *emi_init must be used before recieving process.it uses the emi_config struct, which may requre emi config file.

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "emi_msg.h"
 #include "emi_dbg.h"
@@ -51,3 +52,15 @@ void debug_emi_msg(struct emi_msg *msg){
     syslog(EMI_DEBUG, "%s", buf);
 }
 
+void _emilog(int priority, char *buf, const char *format, ...){
+    if(priority <= DEDAULT_LOGLEVEL) {
+        va_list list; 
+        va_start(list, format); 
+        vsprintf(buf+strlen(buf), format, list);
+        va_end(list);
+        if(buf[strlen(buf) - 1] != '\n')
+            fprintf(stderr, "%s\n", buf);
+        else
+            fprintf(stderr, "%s", buf);
+    }
+}

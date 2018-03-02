@@ -12,7 +12,6 @@
 #include "emi_shbuf.h"
 
 #include "emi_shbuf.c"
-#include "emi_dbg.c"
 
 #include "../catch.hpp"
 
