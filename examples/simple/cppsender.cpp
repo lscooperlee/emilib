@@ -12,13 +12,15 @@ int main(int argc, char **argv){
         data.assign(argv[1]);
     }
 
-    auto msg = make_emi_msg_ptr("127.0.0.1", 1, 2, data, EMI_MSG_MODE_BLOCK);
+    auto msg = make_emi_msg("127.0.0.1", 1, 2, data, EMI_MSG_MODE_BLOCK);
     auto ret = emi_msg_send(msg);
 
     std::cout<<ret<<std::endl;
     std::cout<<msg->retsize<<std::endl;
     
-    for(auto retdata: emi_retdata_container(msg)){
+    struct emi_retdata *retdata;
+    for_each_retdata(msg, retdata){
+//    for(auto retdata: msg->retdata()){
         std::cout<<std::string((char *)retdata->data, msg->size)<<std::endl;
     }
 }

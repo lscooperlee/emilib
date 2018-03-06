@@ -121,7 +121,7 @@ void test_emi_msg_send_unblock_nosenddata(){
 
     int ret;
     struct emi_msg *msg = emi_msg_alloc(0);
-    emi_fill_msg(msg, ipaddr, NULL, 1, 2, 0);
+    emi_msg_init(msg, ipaddr, NULL, 1, 2, 0);
     ret = emi_msg_send(msg);
 
     ASSERT(ret == 0);
@@ -159,7 +159,7 @@ void test_emi_msg_send_unblock_senddata(){
 
     int ret;
     struct emi_msg *msg = emi_msg_alloc(strlen("11112222"));
-    emi_fill_msg(msg, ipaddr, "11112222", 1, 3, 0);
+    emi_msg_init(msg, ipaddr, "11112222", 1, 3, 0);
     ret = emi_msg_send(msg);
 
     ASSERT(ret == 0);
@@ -206,7 +206,7 @@ void test_emi_msg_send_block_noretdata(){
     char buf[4096];
     memset(buf, 't', sizeof(buf));
     struct emi_msg *msg = emi_msg_alloc(sizeof(buf));
-    emi_fill_msg(msg, ipaddr, buf, 1, 4, EMI_MSG_MODE_BLOCK);
+    emi_msg_init(msg, ipaddr, buf, 1, 4, EMI_MSG_MODE_BLOCK);
     ret = emi_msg_send(msg);
 
     ASSERT(ret == 0);
@@ -246,7 +246,7 @@ void test_emi_msg_send_block_noretdata(){
 
     sleep(1);
 
-    emi_fill_msg(msg, ipaddr, buf, 1, 4, EMI_MSG_MODE_BLOCK);
+    emi_msg_init(msg, ipaddr, buf, 1, 4, EMI_MSG_MODE_BLOCK);
     ret = emi_msg_send(msg);
 
     ASSERT(ret == -1);
@@ -296,7 +296,7 @@ void test_emi_msg_send_block_retdata(){
     char buf[4096];
     memset(buf, 't', sizeof(buf));
     struct emi_msg *msg = emi_msg_alloc(sizeof(buf));
-    emi_fill_msg(msg, ipaddr, buf, 1, 5, EMI_MSG_MODE_BLOCK);
+    emi_msg_init(msg, ipaddr, buf, 1, 5, EMI_MSG_MODE_BLOCK);
     ret = emi_msg_send(msg);
 
     ASSERT(ret == 0);
@@ -323,19 +323,19 @@ void test_emi_cpp(){
         ASSERT(msg->msg == 6);
         ASSERT(msg->cmd == 1);
 
-        ASSERT(strncmp((char *)GET_DATA(msg), "helloworld", msg->size) == 0);
+        ASSERT(strncmp((char *)msg->data(), "helloworld", msg->size) == 0);
         return emi_load_retdata(msg, "12345678", 8);
     };
 
     int ret = emi_msg_register(6, func);
     ASSERT(ret == 0);
 
-    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 6, 1, "helloworld"s, EMI_MSG_MODE_BLOCK);
+    auto msg_ptr = make_emi_msg("127.0.0.1", 6, 1, "helloworld"s, EMI_MSG_MODE_BLOCK);
 
     ret = emi_msg_send(msg_ptr);
     ASSERT(ret == 0);
 
-    for(auto retdata: emi_retdata_container(msg_ptr)){
+    for(auto retdata: msg_ptr->retdata()){
         ASSERT(strncmp((char *)retdata->data, "12345678", retdata->size) == 0);
     }
 }
@@ -382,7 +382,7 @@ void test_emi_some_receiver_exit(){
 
     sleep(1);
 
-    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 7, 1, "helloworld", 
+    auto msg_ptr = make_emi_msg("127.0.0.1", 7, 1, "helloworld", 
             sizeof("helloworld"), EMI_MSG_MODE_BLOCK);
 
     if(msg_ptr){
@@ -419,7 +419,7 @@ void test_emi_all_receiver_exit(){
 
     sleep(1);
 
-    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 7, 1, "helloworld", 
+    auto msg_ptr = make_emi_msg("127.0.0.1", 7, 1, "helloworld", 
             sizeof("helloworld"), EMI_MSG_MODE_BLOCK);
 
     if(msg_ptr){
@@ -437,16 +437,16 @@ void test_emi_msg_send_inside(){
         ASSERT(msg->cmd == 1);
 
         std::vector<char> send(1024, 'e');
-        std::vector<char> get((char *)GET_DATA(msg), (char *)GET_DATA(msg) + msg->size);
+        std::vector<char> get((char *)msg->data(), (char *)msg->data() + msg->size);
         ASSERT(send == get);
 
-        auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 11, 1, get, EMI_MSG_MODE_BLOCK);
+        auto msg_ptr = make_emi_msg("127.0.0.1", 11, 1, get, EMI_MSG_MODE_BLOCK);
 
         if(msg_ptr){
             int ret = emi_msg_send(msg_ptr);
             ASSERT(ret == 0);
 
-            for(auto data: emi_retdata_container(msg_ptr)){
+            for(auto data: msg_ptr->retdata()){
                 std::vector<char> send(1024, 'e');
                 std::vector<char> get((char *)data->data, (char *)data->data + data->size);
                 ASSERT(send == get);
@@ -476,7 +476,7 @@ void test_emi_msg_send_inside(){
     ASSERT(ret == 0);
 
     std::vector<char> sendto10(1024, 'e');
-    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 7, 1, sendto10, EMI_MSG_MODE_BLOCK);
+    auto msg_ptr = make_emi_msg("127.0.0.1", 7, 1, sendto10, EMI_MSG_MODE_BLOCK);
 
     if(msg_ptr){
         ret = emi_msg_send(msg_ptr);
@@ -509,7 +509,7 @@ void test_emi_exit(){
     p1.Start();
     sleep(1);
 
-    auto msg_ptr = make_emi_msg_ptr("127.0.0.1", 6, 1, "helloworld", sizeof("helloworld"), 0);
+    auto msg_ptr = make_emi_msg("127.0.0.1", 6, 1, "helloworld", sizeof("helloworld"), 0);
     if(msg_ptr){
         int ret = emi_msg_send(msg_ptr);
         ASSERT(ret == 0);

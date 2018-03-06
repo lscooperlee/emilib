@@ -190,7 +190,6 @@ static int emi_receive_operation(void *client_sd){
         eu32 *pid_num_addr;
 
         emilog(EMI_DEBUG, "Received a sending msg with num %d, data size = %d\n", msg_pos->msg, msg_pos->size);
-        debug_emi_msg(msg_pos);
 
         nth=get_shbuf_offset(core_shmem_mgr.base, msg_pos);
 

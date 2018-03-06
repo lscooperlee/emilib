@@ -13,10 +13,6 @@
 
 #define emi_printf      printf
 
-struct emi_msg;
-
-extern void debug_emi_msg(struct emi_msg *msg);
-
 #ifdef DEBUG
 
 #if defined DBG_STDOUT

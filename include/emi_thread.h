@@ -32,13 +32,9 @@ struct emi_thread_pool {
     struct list_head head;
 };
 
-extern struct emi_thread *emi_thread_create();
-
 extern int emi_thread_pool_init(struct emi_thread_pool *pool, size_t size);
 
 extern void emi_thread_pool_destroy(struct emi_thread_pool *pool);
-
-extern struct emi_thread_pool *emi_thread_pool_create(size_t size);
 
 extern int emi_thread_pool_submit(struct emi_thread_pool *pool, emi_thread_func func, void *args);
 

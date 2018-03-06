@@ -34,6 +34,7 @@ struct func_list{
     eu32 msg;
 };
 
+espinlock_t __func_list_lock;
 LIST_HEAD(__func_list);
 
 static struct emi_thread_pool __recv_pool;
@@ -63,24 +64,30 @@ void __func_sterotype(void *args){
     update_emi_buf_lock(__recv_mgr.base, __recv_mgr.msgbuf, __recv_mgr.msgbuf_lock);
 
     int ret=-1;
+    emi_func func_ptr=NULL;
+    
+    emi_spin_lock(&__func_list_lock); 
     list_for_each(lh,&__func_list){
         struct func_list *fl;
         fl=container_of(lh,struct func_list,list);
         if(fl->msg==shmsg->msg){
             emilog(EMI_DEBUG, "Registerd function with msg num %d founded\n", shmsg->msg);
-
-            ret=(fl->func)(shmsg);
-
-            emilog(EMI_DEBUG, "Registerd function with msg num %d done \n", shmsg->msg);
+            func_ptr = fl->func;
 
             //One function for one message in one process
             break;
         }
     }
+    emi_spin_unlock(&__func_list_lock);
 
-    emilog(EMI_DEBUG, "Handler for msg %d done, %d returned\n", shmsg->msg, ret);
+    if(func_ptr != NULL){
+        ret=func_ptr(shmsg);
+        emilog(EMI_DEBUG, "Handler for msg %d done, %d returned\n", shmsg->msg, ret);
+    }else{
+        emilog(EMI_DEBUG, "Registerd function with msg num %d not found\n", shmsg->msg);
+    }
+
     emi_spin_lock(&shmsg->lock);
-    emilog(EMI_DEBUG, "lock aquired");
 
     //Don't need lock here, no one changes this bit.
     if(shmsg->flag&EMI_MSG_MODE_BLOCK){
@@ -97,7 +104,6 @@ void __func_sterotype(void *args){
 
     shmsg->count--;
     emi_spin_unlock(&shmsg->lock);
-    emilog(EMI_DEBUG, "lock released");
 
     return;
 }
@@ -144,7 +150,15 @@ static int __emi_msg_register(eu32 defined_msg,emi_func func, eu32 flag){
     memset(fl,0,sizeof(struct func_list));
     fl->func=func;
     fl->msg=defined_msg;
+
+    // register function operates on list_head,
+    // the register process may also register other msg, 
+    // whose msg handler with be called on other thread, 
+    // this msg handler will also operate on list_head,
+    // therefore lock is needed.
+    emi_spin_lock(&__func_list_lock); 
     list_add(&fl->list,&__func_list);
+    emi_spin_unlock(&__func_list_lock);
 
     ret = 0;
 
@@ -159,7 +173,7 @@ int emi_msg_register(eu32 defined_msg,emi_func func){
     return __emi_msg_register(defined_msg,func, 0);
 }
 
-void *emi_retdata_alloc(const struct emi_msg *cmsg, eu32 size){
+void *emi_retdata_alloc(struct emi_msg const *cmsg, eu32 size){
 
     struct emi_msg *msg = (struct emi_msg *)cmsg;
 
@@ -197,7 +211,7 @@ void *emi_retdata_alloc(const struct emi_msg *cmsg, eu32 size){
     return addr->data;
 }
 
-int emi_load_retdata(const struct emi_msg *msg, const void *data, eu32 size) {
+int emi_load_retdata(struct emi_msg const *msg, void const *data, eu32 size) {
     
     void *ret = (void *)emi_retdata_alloc(msg, size);
     if(ret == NULL){
@@ -246,6 +260,8 @@ int emi_init(){
         emi_shm_destroy("emilib", emi_global.shm_id);
         return -1;
     }
+
+    emi_spin_init(&__func_list_lock);
 
     /*
      *  One problem is sigaction take too long time to be ready.

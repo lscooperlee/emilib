@@ -7,7 +7,7 @@
 #include "emi_dbg.h"
 
 
-void print_emi_msg(struct emi_msg *msg, char *buf){
+void print_emi_msg(struct emi_msg const *msg, char *buf){
     char *data = GET_ADDR(msg, msg->data_offset);
     sprintf(buf, "emi_msg: msg=%ud, cmd=%ud, size=%ud, offset = %lx, ret_offset = %lx ", 
             msg->msg, msg->cmd, msg->size, msg->data_offset, msg->retdata_offset);
@@ -45,12 +45,6 @@ void print_emi_msg(struct emi_msg *msg, char *buf){
 
 }
 
-
-void debug_emi_msg(struct emi_msg *msg){
-    char buf[4096];
-    print_emi_msg(msg, buf);
-    syslog(EMI_DEBUG, "%s", buf);
-}
 
 void _emilog(int priority, char *buf, const char *format, ...){
     if(priority <= DEDAULT_LOGLEVEL) {

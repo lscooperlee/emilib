@@ -54,7 +54,7 @@ static int split_ipaddr(const char *mixip, char *ip, int *port) {
     return ret;
 }
 
-static int emi_fill_addr(struct emi_addr *addr, const char *ip, int port) {
+static int emi_addr_init(struct emi_addr *addr, const char *ip, int port) {
 
     if ((addr->ipv4.sin_addr.s_addr = inet_addr(ip)) == INADDR_NONE)
         return -1;
@@ -65,13 +65,13 @@ static int emi_fill_addr(struct emi_addr *addr, const char *ip, int port) {
     return 0;
 }
 
-int emi_fill_msg(struct emi_msg *msg, const char *dest_ip, const void *data, eu32 cmd,
+int emi_msg_init(struct emi_msg *msg, const char *dest_ip, const void *data, eu32 cmd,
         eu32 defined_msg, eu32 flag) {
     if (dest_ip != NULL) {
         char newip[16];
         int port;
         split_ipaddr(dest_ip, newip, &port);
-        if (emi_fill_addr(&(msg->addr), dest_ip, port))
+        if (emi_addr_init(&(msg->addr), dest_ip, port))
             return -1;
     }
 

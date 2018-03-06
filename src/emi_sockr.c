@@ -54,7 +54,7 @@ struct sk_dpr *emi_accept(struct sk_dpr *sd,union emi_sock_addr *addr){
     return sd_dest;
 }
 
-int emi_msg_write_retdata(struct sk_dpr *sd, struct emi_msg *msg){
+static int emi_msg_write_retdata(struct sk_dpr *sd, struct emi_msg const *msg){
     struct emi_retdata *data;
     for_each_retdata(msg, data){
         if (emi_write(sd, data, data->size + sizeof(struct emi_retdata))) { 
@@ -65,7 +65,7 @@ int emi_msg_write_retdata(struct sk_dpr *sd, struct emi_msg *msg){
     return 0;
 }
 
-int emi_msg_write_ret(struct sk_dpr *sd, struct emi_msg *msg){
+int emi_msg_write_ret(struct sk_dpr *sd, struct emi_msg const *msg){
     if (emi_msg_write_payload(sd, msg)){
         return -1;
     }
@@ -77,7 +77,7 @@ int emi_msg_write_ret(struct sk_dpr *sd, struct emi_msg *msg){
     return 0;
 }
 
-int emi_msg_read_data(struct sk_dpr *sd, struct emi_msg *msg){
+static int emi_msg_read_data(struct sk_dpr *sd, struct emi_msg *msg){
     void *data = GET_ADDR(msg, msg->data_offset);
     if(emi_read(sd, data, msg->size)) {
         return -1;

@@ -303,6 +303,7 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(received, 1)
 
     def test_emi_msg_send_multiple_func(self):
+        received= Value('i', 0)
 
         emi_init()
 
@@ -310,11 +311,15 @@ class TestEmiLib(unittest.TestCase):
             self.assertEqual(func1.__name__, "func1")
             self.assertEqual(msg.msg, 8)
             self.assertEqual(msg.cmd, 1)
+            with received.get_lock():
+                received.value += 1
 
         def func2(msg):
             self.assertEqual(func2.__name__, "func2")
             self.assertEqual(msg.msg, 9)
             self.assertEqual(msg.cmd, 1)
+            with received.get_lock():
+                received.value += 1
 
         ret = emi_msg_register(8, func1)
         self.assertEqual(ret, 0)
@@ -331,6 +336,7 @@ class TestEmiLib(unittest.TestCase):
         self.assertEqual(ret, 0)
 
         time.sleep(1)
+        self.assertEqual(received.value, 2)
 
     def test_emi_msg_send_inside_msg_handler(self):
 

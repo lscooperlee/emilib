@@ -168,7 +168,7 @@ int main(int argc,char **argv){
             return -1;
         }
 
-        emi_fill_msg(msg, addr, sentdata, cmd, msgnum, 0);
+        emi_msg_init(msg, addr, sentdata, cmd, msgnum, 0);
 
         if(option&BLOCK_MODE){
             msg->flag |= EMI_MSG_MODE_BLOCK;

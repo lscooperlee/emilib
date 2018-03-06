@@ -10,13 +10,16 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
+      - llvm-toolchain-trusty
+
     packages:
-      - gcc-6
-      - g++-6
+      - gcc-7
+      - g++-7
       - clang
 
 install: 
-  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 90
+  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 90
 
 script:
     - make

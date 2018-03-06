@@ -27,7 +27,7 @@ extern "C" {
 
 using emi_msg_ptr = std::unique_ptr<emi_msg, std::function<decltype(emi_msg_free)>>;
 
-inline static emi_msg_ptr make_emi_msg_ptr(const char *dest_ip, eu32 msg_num, eu32 cmd, 
+inline static emi_msg_ptr make_emi_msg(const char *dest_ip, eu32 msg_num, eu32 cmd, 
         const void *data, eu32 data_size, eu32 flag = 0){
 
     auto msg = emi_msg_alloc(data_size);
@@ -37,14 +37,14 @@ inline static emi_msg_ptr make_emi_msg_ptr(const char *dest_ip, eu32 msg_num, eu
 
     auto p = emi_msg_ptr(msg, emi_msg_free);
 
-    emi_fill_msg(p.get(),dest_ip, data, cmd, msg_num, flag);
+    emi_msg_init(p.get(),dest_ip, data, cmd, msg_num, flag);
     return p;
 }
 
 template <typename C>
-emi_msg_ptr make_emi_msg_ptr(const char *dest_ip, eu32 msg_num, eu32 cmd, 
+emi_msg_ptr make_emi_msg(const char *dest_ip, eu32 msg_num, eu32 cmd, 
         const C& container, eu32 flag = 0){
-    return make_emi_msg_ptr(dest_ip, msg_num, cmd, container.data(), container.size(), flag);
+    return make_emi_msg(dest_ip, msg_num, cmd, container.data(), container.size(), flag);
 }
 
 inline static int emi_msg_send(emi_msg_ptr& msg){
@@ -52,21 +52,24 @@ inline static int emi_msg_send(emi_msg_ptr& msg){
 }
 
 template <typename C>
-int emi_load_retdata(struct emi_msg const *msg, const C& container){
+int emi_load_retdata(emi_msg const *msg, const C& container){
     return emi_load_retdata(msg, (void *)container.data(), container.size());
+}
+
+inline static emi_retdata *get_next_retdata(emi_msg_ptr& msg, const emi_retdata *data) {
+    return get_next_retdata(msg.get(), data);
 }
 
 #include <iostream>
 struct emi_retdata_iter {
-    emi_retdata_iter(struct emi_msg *msg_)
+    emi_retdata_iter(const emi_msg *msg_)
         : msg(msg_)
         , data(get_next_retdata(msg, nullptr))
     {
     }
 
     emi_retdata_iter()
-        : msg(nullptr)
-        , data(nullptr)
+        : emi_retdata_iter(nullptr)
     {
     }
 
@@ -74,7 +77,7 @@ struct emi_retdata_iter {
         data = get_next_retdata(msg, data);
     }
 
-    const struct emi_retdata* operator*(){
+    const emi_retdata* operator*(){
         return data;
     }
 
@@ -86,60 +89,35 @@ struct emi_retdata_iter {
     emi_retdata_iter(emi_retdata_iter&& other) = default;
 
 private:
-    struct emi_msg *msg;
-    struct emi_retdata *data;
+    const emi_msg *msg;
+    emi_retdata *data;
 };
 
 struct emi_retdata_container {
-    emi_retdata_container(emi_msg_ptr& msg_ptr)
-        : msg(msg_ptr.get())
+    emi_retdata_container(const emi_msg *msg_)
+        : msg(msg_)
     {
     }
 
-    struct emi_retdata_iter begin(){
+    emi_retdata_iter begin(){
         return emi_retdata_iter(msg);
     }
 
-    struct emi_retdata_iter end(){
+    emi_retdata_iter end(){
         return emi_retdata_iter();
     }
 
 private:
-    struct emi_msg *msg;
+    const emi_msg *msg;
 };
 
-/*
-struct emi_retdata_iter {
-    emi_retdata_iter(emi_msg_ptr& msg_)
-        : msg(msg_.get())
-        , data(get_next_retdata(msg, nullptr))
-    {
-        std::cerr<<"constructor: "<<data<<" " <<data->next_offset<<" "<<data->size<<std::endl;
-    }
+emi_retdata_container emi_msg::retdata() const {
+    return emi_retdata_container(this);
+}
 
-    struct emi_retdata *begin(){
-        std::cerr<<"begin: "<<data<<" "<<data->next_offset<<" "<<data->size<<std::endl;
-        return data;
-    }
-
-    void operator++(){
-        std::cerr<<"++ "<<data<<" "<<data->next_offset<<" "<<data->size<<std::endl;
-        data = get_next_retdata(msg, data);
-    }
-
-    struct emi_retdata *end(){
-        std::cerr<<"end: "<<data<<" "<<data->next_offset<<" "<<data->size<<std::endl;
-        return nullptr;
-    }
-
-    emi_retdata_iter(const emi_retdata_iter& other) = delete;
-    emi_retdata_iter(emi_retdata_iter&& other) = default;
-
-private:
-    struct emi_msg *msg;
-    struct emi_retdata *data;
-};
-*/
+const void *emi_msg::data() const {
+    return GET_DATA(this);
+}
 
 #endif
 

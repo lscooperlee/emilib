@@ -16,9 +16,8 @@ static void *thread_func(void *t){
 
     emi_lock(&thread->lock);
     while(1){
-
         emi_cond_wait(&thread->cond, &thread->lock);
-        
+
         //int state = PTHREAD_CANCEL_DISABLE;
         //pthread_setcancelstate(thread->thread, &state);
         //
@@ -78,7 +77,7 @@ void emi_thread_destroy(struct emi_thread *th){
     emi_cond_destroy(&th->cond);
 }
 
-struct emi_thread *emi_thread_create(struct emi_thread_pool *pool){
+static struct emi_thread *emi_thread_create(struct emi_thread_pool *pool){
     struct emi_thread *th = (struct emi_thread *)malloc(sizeof(struct emi_thread));
     
     if(th == NULL){
@@ -142,21 +141,6 @@ free:
     return -1;
 }
 
-struct emi_thread_pool *emi_thread_pool_create(size_t size){
-    struct emi_thread_pool *pool = (struct emi_thread_pool *)malloc(sizeof(struct emi_thread_pool));
-
-    if(pool == NULL){
-        return NULL;
-    }
-
-    if(emi_thread_pool_init(pool, size)){
-        free(pool);
-        return NULL;
-    }
-
-    return pool;
-}
-
 int emi_thread_pool_submit(struct emi_thread_pool *pool, emi_thread_func func, void *args){
 
     emi_spin_lock(&pool->spinlock);
@@ -166,7 +150,7 @@ int emi_thread_pool_submit(struct emi_thread_pool *pool, emi_thread_func func, v
     //Don't need lock for t->status
     if(t->status == THREAD_IDLE){
         t->status = THREAD_BUSY;
-
+        
         t->func = func;
         t->args = args;
 

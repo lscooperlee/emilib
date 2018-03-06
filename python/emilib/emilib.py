@@ -112,7 +112,7 @@ class emi_msg(ctypes.Structure):
 
         cdata = (ctypes.c_ubyte * self.size).from_buffer(bytearray(data))
 
-        _emilib.emi_fill_msg(
+        _emilib.emi_msg_init(
             ctypes.byref(self), cipaddr, cdata, ccmd, cmsgnum, cflag)
 
     @property

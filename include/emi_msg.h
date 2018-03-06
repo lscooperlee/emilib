@@ -12,6 +12,7 @@
 #include "emi_lock.h"
 #endif
 
+struct emi_retdata_container;
 
 struct emi_addr{
     struct sockaddr_in    ipv4;
@@ -60,6 +61,11 @@ struct emi_msg{
     eu32 count;
     espinlock_t lock;
 #endif
+
+#ifdef __cplusplus
+    const void *data() const;
+    emi_retdata_container retdata() const;
+#endif
 };
 
 #define EMI_MSG_PAYLOAD_SIZE    ((unsigned long)&((struct emi_msg *)0)->data_offset)
@@ -83,7 +89,7 @@ inline static void *GET_DATA(struct emi_msg const *msg) {
     return (void *)GET_ADDR(msg, ((struct emi_msg *)msg)->data_offset);
 }
 
-inline static struct emi_retdata *get_next_retdata(struct emi_msg const *msg, struct emi_retdata *data) {
+inline static struct emi_retdata *get_next_retdata(struct emi_msg const *msg, struct emi_retdata const *data) {
 
     if(msg->retsize == 0){
         return NULL;
