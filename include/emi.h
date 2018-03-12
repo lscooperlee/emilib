@@ -28,7 +28,7 @@ extern "C" {
 using emi_msg_ptr = std::unique_ptr<emi_msg, std::function<decltype(emi_msg_free)>>;
 
 inline static emi_msg_ptr make_emi_msg(const char *dest_ip, eu32 msg_num, eu32 cmd, 
-        const void *data, eu32 data_size, eu32 flag = 0){
+        const void *data, eu32 data_size, eu32 flag = 0) noexcept {
 
     auto msg = emi_msg_alloc(data_size);
     if(msg == nullptr){
@@ -43,45 +43,46 @@ inline static emi_msg_ptr make_emi_msg(const char *dest_ip, eu32 msg_num, eu32 c
 
 template <typename C>
 emi_msg_ptr make_emi_msg(const char *dest_ip, eu32 msg_num, eu32 cmd, 
-        const C& container, eu32 flag = 0){
+        const C& container, eu32 flag = 0) noexcept {
     return make_emi_msg(dest_ip, msg_num, cmd, container.data(), container.size(), flag);
 }
 
-inline static int emi_msg_send(emi_msg_ptr& msg){
+inline static int emi_msg_send(emi_msg_ptr& msg) noexcept {
     return emi_msg_send(msg.get());
 }
 
 template <typename C>
-int emi_load_retdata(emi_msg const *msg, const C& container){
+int emi_load_retdata(struct emi_msg const *msg, const C& container) noexcept {
     return emi_load_retdata(msg, (void *)container.data(), container.size());
 }
 
-inline static emi_retdata *get_next_retdata(emi_msg_ptr& msg, const emi_retdata *data) {
+inline static struct emi_retdata *get_next_retdata(emi_msg_ptr& msg, struct emi_retdata *data) noexcept {
     return get_next_retdata(msg.get(), data);
 }
 
 #include <iostream>
 struct emi_retdata_iter {
-    emi_retdata_iter(const emi_msg *msg_)
+    emi_retdata_iter(const struct emi_msg *msg_) noexcept
         : msg(msg_)
         , data(get_next_retdata(msg, nullptr))
     {
     }
 
-    emi_retdata_iter()
-        : emi_retdata_iter(nullptr)
+    emi_retdata_iter() noexcept
+        : msg(nullptr)
+        , data(nullptr)
     {
     }
 
-    void operator++(){
+    void operator++() noexcept {
         data = get_next_retdata(msg, data);
     }
 
-    const emi_retdata* operator*(){
+    const struct emi_retdata* operator*() noexcept {
         return data;
     }
 
-    bool operator!=(const emi_retdata_iter&){
+    bool operator!=(const emi_retdata_iter&) noexcept {
         return data != nullptr;
     }
 
@@ -94,16 +95,16 @@ private:
 };
 
 struct emi_retdata_container {
-    emi_retdata_container(const emi_msg *msg_)
+    emi_retdata_container(emi_msg *msg_) noexcept
         : msg(msg_)
     {
     }
 
-    emi_retdata_iter begin(){
+    emi_retdata_iter begin() noexcept { 
         return emi_retdata_iter(msg);
     }
 
-    emi_retdata_iter end(){
+    emi_retdata_iter end() noexcept {
         return emi_retdata_iter();
     }
 
@@ -111,11 +112,10 @@ private:
     const emi_msg *msg;
 };
 
-emi_retdata_container emi_msg::retdata() const {
+emi_retdata_container emi_msg::retdata() noexcept {
     return emi_retdata_container(this);
 }
-
-const void *emi_msg::data() const {
+void *emi_msg::data() const noexcept {
     return GET_DATA(this);
 }
 

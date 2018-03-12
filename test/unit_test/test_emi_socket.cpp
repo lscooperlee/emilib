@@ -100,8 +100,8 @@ TEST_CASE("emi_read"){
         std::generate(data.begin(), data.end(), std::rand);
 
         std::promise<unsigned short> promise;
-        std::thread rthread(receiver, std::ref(data), std::ref(promise));
-        std::thread sthread(sender, std::ref(data), promise.get_future());
+        std::thread rthread(receiver, data, std::ref(promise));
+        std::thread sthread(sender, data, promise.get_future());
 
         rthread.join();
         sthread.join();

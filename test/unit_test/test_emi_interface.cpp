@@ -108,8 +108,8 @@ TEST_CASE("emi_msg_send"){
     SECTION("emi_msg_send without data"){
         const std::vector<char> data;
         std::promise<void> promise;
-        std::thread rthread(receiver, std::ref(data), std::ref(promise));
-        std::thread sthread(sender, std::ref(data), promise.get_future());
+        std::thread rthread(receiver, data, std::ref(promise));
+        std::thread sthread(sender, data, promise.get_future());
 
         rthread.join();
         sthread.join();
@@ -118,8 +118,8 @@ TEST_CASE("emi_msg_send"){
     SECTION("emi_msg_send with send data"){
         const std::vector<char> data={'t','m','q','n'};
         std::promise<void> promise;
-        std::thread rthread(receiver, std::ref(data), std::ref(promise));
-        std::thread sthread(sender, std::ref(data), promise.get_future());
+        std::thread rthread(receiver, data, std::ref(promise));
+        std::thread sthread(sender, data, promise.get_future());
 
         rthread.join();
         sthread.join();
@@ -128,8 +128,8 @@ TEST_CASE("emi_msg_send"){
     SECTION("emi_msg_send with ret data"){
         const std::vector<char> data={'t','m','q','n'};
         std::promise<void> promise;
-        std::thread rthread(receiver, std::ref(data), std::ref(promise));
-        std::thread sthread(sender, std::ref(data), promise.get_future(), EMI_MSG_MODE_BLOCK);
+        std::thread rthread(receiver, data, std::ref(promise));
+        std::thread sthread(sender, data, promise.get_future(), EMI_MSG_MODE_BLOCK);
 
         rthread.join();
         sthread.join();

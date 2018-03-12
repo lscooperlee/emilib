@@ -14,20 +14,19 @@ static void *thread_func(void *t){
     struct emi_thread *thread = (struct emi_thread *)t;
     struct emi_thread_pool *pool = thread->pool;
 
-    emi_lock(&thread->lock);
+    emi_mutex_lock(&thread->lock);
     while(1){
-        emi_cond_wait(&thread->cond, &thread->lock);
-
-        //int state = PTHREAD_CANCEL_DISABLE;
-        //pthread_setcancelstate(thread->thread, &state);
-        //
-        if(thread->func != NULL){
-            thread->func(thread->args);
+        while(thread->func == NULL){
+            emi_cond_wait(&thread->cond, &thread->lock);
+            if(thread->status == THREAD_EXIT){
+                goto out;
+            }
         }
 
-        //state = PTHREAD_CANCEL_ENABLE;
-        //pthread_setcancelstate(thread->thread, &state);
+        thread->func(thread->args);
 
+        //Don't need lock, indirectly seperated by pool->spinlock
+        thread->func = NULL;
         thread->status = THREAD_IDLE;
 
         emi_spin_lock(&pool->spinlock);
@@ -36,22 +35,24 @@ static void *thread_func(void *t){
 
     };
 
-    emi_unlock(&thread->lock);
+out:
+    emi_mutex_unlock(&thread->lock);
     return NULL;    
 }
 
-int emi_thread_init(struct emi_thread *th, struct emi_thread_pool *pool){
+static int emi_thread_init(struct emi_thread *th, struct emi_thread_pool *pool){
     if(emi_cond_init(&th->cond)){
         goto out;
     }
 
-    if(emi_lock_init(&th->lock)){
+    if(emi_mutex_init(&th->lock)){
         goto out_cond;
     }
 
     INIT_LIST_HEAD(&th->list);
     th->status = THREAD_IDLE;
     th->pool = pool;
+    th->func = NULL;
 
     if(pthread_create(&th->thread, NULL, thread_func, (void *)th)){
         goto out_lock;
@@ -60,20 +61,26 @@ int emi_thread_init(struct emi_thread *th, struct emi_thread_pool *pool){
     return 0;
 
 out_lock:
-    emi_lock_destroy(&th->lock);
+    emi_mutex_destroy(&th->lock);
 out_cond:
     emi_cond_destroy(&th->cond);
 out:
     return -1;
 }
 
-void emi_thread_destroy(struct emi_thread *th){
+static void emi_thread_destroy(struct emi_thread *th){
     list_del(&th->list);
 
-    pthread_cancel(th->thread);
+    emi_mutex_lock(&th->lock);
 
-    emi_unlock(&th->lock);
-    emi_lock_destroy(&th->lock);
+    th->status = THREAD_EXIT;
+    emi_cond_signal(&th->cond);
+
+    emi_mutex_unlock(&th->lock);
+
+    pthread_join(th->thread, NULL);
+
+    emi_mutex_destroy(&th->lock);
     emi_cond_destroy(&th->cond);
 }
 
@@ -92,9 +99,8 @@ static struct emi_thread *emi_thread_create(struct emi_thread_pool *pool){
     return th;
 }
 
-void emi_thread_free(struct emi_thread *th){
+static void emi_thread_free(struct emi_thread *th){
     emi_thread_destroy(th);
-    pthread_join(th->thread, NULL);
     free(th);
 }
 
@@ -147,7 +153,10 @@ int emi_thread_pool_submit(struct emi_thread_pool *pool, emi_thread_func func, v
     
     struct emi_thread *t = list_first_entry(&pool->head, struct emi_thread, list);
 
-    //Don't need lock for t->status
+    //Don't need lock for t->status, only thread itself will change IDLE, 
+    //only submit will change BUSY,
+    //They are indirectly synced by pool->spinlock
+    //critical condition may happen, we may miss an idle thread, but that's OK.
     if(t->status == THREAD_IDLE){
         t->status = THREAD_BUSY;
         
@@ -157,7 +166,7 @@ int emi_thread_pool_submit(struct emi_thread_pool *pool, emi_thread_func func, v
         list_move_tail(&t->list, &pool->head);
 
         emi_spin_unlock(&pool->spinlock);
-
+        
         emi_cond_signal(&t->cond);
 
         emilog(EMI_DEBUG, "thread pool submit \n");

@@ -10,6 +10,7 @@
 enum {
     THREAD_BUSY,
     THREAD_IDLE,
+    THREAD_EXIT,
 };
 
 typedef void (*emi_thread_func)(void *);
@@ -17,7 +18,7 @@ typedef void (*emi_thread_func)(void *);
 struct emi_thread {
     struct list_head list;
     pthread_t thread;
-    elock_t lock;
+    emutex_t lock;
     econd_t cond;
     int status;
     emi_thread_func func;
@@ -28,7 +29,6 @@ struct emi_thread {
 struct emi_thread_pool {
     espinlock_t spinlock;
     eu32 pool_size;
-    eu32 threads_num;
     struct list_head head;
 };
 

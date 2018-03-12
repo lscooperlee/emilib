@@ -63,8 +63,8 @@ struct emi_msg{
 #endif
 
 #ifdef __cplusplus
-    const void *data() const;
-    emi_retdata_container retdata() const;
+    void *data() const noexcept;
+    emi_retdata_container retdata() noexcept;
 #endif
 };
 

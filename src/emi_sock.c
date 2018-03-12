@@ -40,16 +40,11 @@ void emi_close(struct sk_dpr *sd){
     }
 }
 
-int emi_connect(struct sk_dpr *sd,struct emi_addr *dest_addr,eu32 retry){
-    unsigned int i;
+int emi_connect(struct sk_dpr *sd,struct emi_addr *dest_addr){
     switch(sd->af){
         case AF_INET:
-            for(i=1; i<=(2^retry); i<<=1){
-                if(connect(sd->d, (const struct sockaddr *)&(dest_addr->ipv4), sizeof(struct sockaddr_in)) == 0)
-                    return 0;
-                if(i<(2^retry))
-                    usleep(1000*(i<<3));
-            }
+            if(connect(sd->d, (const struct sockaddr *)&(dest_addr->ipv4), sizeof(struct sockaddr_in)) == 0)
+                return 0;
             return -1;
         default:
             return -1;

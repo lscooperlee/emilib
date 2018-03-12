@@ -10,7 +10,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include <errno.h>
-#include <sys/ipc.h>
+#include <time.h>
 
 #include "emi_ifr.h"
 #include "emi_msg.h"
@@ -128,7 +128,7 @@ static int __emi_msg_register(eu32 defined_msg,emi_func func, eu32 flag){
     cmd.msg=defined_msg;
     cmd.flag=flag | EMI_MSG_CMD_REGISTER;
 
-    if(emi_connect(sd,&cmd.addr,1)){
+    if(emi_connect(sd,&cmd.addr)){
         goto out;
     }
 
@@ -283,7 +283,8 @@ int emi_init(){
 
      */
 
-    usleep(100000);
+    struct timespec req = {0, 1000*1000*100};
+    nanosleep(&req, NULL);
 
     return 0;
 }

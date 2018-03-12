@@ -33,7 +33,7 @@ endif
 
 CHECKFLAGS = --enable=all -I include --suppress=missingIncludeSystem -q
 
-CFLAGS = $(DEBUG) -O2 -Wextra -Wall -I./include -D$(SHMEM) -DEMI_ORDER_NUM=$(EMI_ORDER_NUM)
+CFLAGS = $(DEBUG) -O2 -Wextra -Wall -I./include -D$(SHMEM) -DEMI_ORDER_NUM=$(EMI_ORDER_NUM) -std=c11 -D_POSIX_C_SOURCE=200809
 LIBCFLAGS = $(CFLAGS) -fpic
 
 LDFLAGS = -L$(LIBDIR) -lemi 

@@ -12,8 +12,8 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
-#include <sys/ipc.h>
 #include <pthread.h>
+#include <time.h>
 
 #include "emi_msg.h"
 #include "emi_hash.h"
@@ -171,7 +171,7 @@ static int emi_receive_operation(void *client_sd){
         if((ret = emi_hinsert_unique_lock(msg_table_head, p)) < 0){
             msg_pos->flag &= ~EMI_MSG_RET_SUCCEEDED;
         }else{
-            emi_lock_init(&core_shmem_mgr.pididx_lock[p->pid]);
+            emi_mutex_init(&core_shmem_mgr.pididx_lock[p->pid]);
             msg_pos->flag |= EMI_MSG_RET_SUCCEEDED;
         }
 
@@ -211,7 +211,7 @@ static int emi_receive_operation(void *client_sd){
             emi_hsearch(msg_table_head, map, node, msg_pos->msg){
                 if(map->msg == msg_pos->msg){
                     pid_num_addr = &core_shmem_mgr.pididx[map->pid];
-                    emi_lock(&core_shmem_mgr.pididx_lock[map->pid]);
+                    emi_mutex_lock(&core_shmem_mgr.pididx_lock[map->pid]);
                     emilog(EMI_DEBUG, "pid %d found, for msg %d, cmd %d\n", map->pid, msg_pos->msg, msg_pos->cmd);
 
                     *pid_num_addr = nth;
@@ -227,7 +227,7 @@ static int emi_receive_operation(void *client_sd){
                         sched_yield(); //Need discussion
                     };
 
-                    emi_unlock(&core_shmem_mgr.pididx_lock[map->pid]);
+                    emi_mutex_unlock(&core_shmem_mgr.pididx_lock[map->pid]);
                 }
             }
 
@@ -257,7 +257,8 @@ static int emi_receive_operation(void *client_sd){
 
                 emi_rwlock_unlock(&msg_table_lock);
 
-                usleep(10);
+                struct timespec req = {0, 1000*1000*10};
+                nanosleep(&req, NULL);
             }
 
             if(max_exit_receiver == 0){ //all receivers are exit receiver, return false

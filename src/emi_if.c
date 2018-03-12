@@ -96,7 +96,7 @@ int emi_msg_send(struct emi_msg *msg) {
     if ((sd = emi_open(AF_INET)) == NULL) {
         return -1;
     }
-    if ((emi_connect(sd, &(msg->addr), 1)) < 0) {
+    if ((emi_connect(sd, &(msg->addr))) < 0) {
         goto out;
     }
 

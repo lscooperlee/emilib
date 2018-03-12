@@ -16,7 +16,7 @@ union emi_sock_addr {
 
 extern struct sk_dpr *emi_open(int addr_family);
 extern void emi_close(struct sk_dpr *sd);
-extern int emi_connect(struct sk_dpr *sd,struct emi_addr *dest_addr,eu32 retry);
+extern int emi_connect(struct sk_dpr *sd,struct emi_addr *dest_addr);
 extern int emi_read(struct sk_dpr *sd,void *buf,eu32 size);
 extern int emi_write(struct sk_dpr *sd,void *buf,eu32 size);
 

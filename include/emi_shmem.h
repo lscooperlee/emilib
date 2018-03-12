@@ -19,14 +19,14 @@ extern int emi_shm_destroy(const char *name, int id);
 #define MSGBUF_SHM_SIZE             (2 * (sizeof(struct emi_buf)<<EMI_ORDER_NUM))
 #define MSGBUF_LOCK_SHM_SIZE        (sizeof(espinlock_t))
 #define PIDIDX_SHM_SIZE(pid_max)    ((pid_max) * sizeof(eu32))
-#define PIDLOCK_SHM_SIZE(pid_max)    ((pid_max) * sizeof(elock_t))
+#define PIDLOCK_SHM_SIZE(pid_max)    ((pid_max) * sizeof(emutex_t))
 
 
 #define GET_MSG_BASE(addr)                  (void *)(addr)
 #define GET_MSGBUF_BASE(addr)               (struct emi_buf *)((char *)GET_MSG_BASE(addr) + MSG_SHM_SIZE)
 #define GET_MSGBUF_LOCK_BASE(addr)          (espinlock_t *)((char *)GET_MSGBUF_BASE(addr) + MSGBUF_SHM_SIZE)
 #define GET_PIDIDX_BASE(addr)               (eu32 *)((char *)GET_MSGBUF_LOCK_BASE(addr)  + MSGBUF_LOCK_SHM_SIZE)
-#define GET_PIDLOCK_BASE(addr, pid_max)     (elock_t *)((char *)GET_PIDIDX_BASE(addr) + PIDIDX_SHM_SIZE(pid_max))
+#define GET_PIDLOCK_BASE(addr, pid_max)     (emutex_t *)((char *)GET_PIDIDX_BASE(addr) + PIDIDX_SHM_SIZE(pid_max))
 
 #define GET_SHM_SIZE(pid_max)       (MSG_SHM_SIZE + MSGBUF_SHM_SIZE + MSGBUF_LOCK_SHM_SIZE + \
                                         PIDIDX_SHM_SIZE(pid_max) + PIDLOCK_SHM_SIZE(pid_max))
@@ -37,7 +37,7 @@ struct emi_shmem_mgr {
     struct emi_buf *msgbuf;
     espinlock_t *msgbuf_lock;
     eu32 *pididx;
-    elock_t *pididx_lock;
+    emutex_t *pididx_lock;
 };
 
 static inline void emi_shmem_mgr_init(struct emi_shmem_mgr *mgr, void *base, eu32 pid_max){

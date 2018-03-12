@@ -29,14 +29,11 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #include <pthread.h>
 
 #include "emi_msg.h"
 #include "emi_shbuf.h"
 #include "emi_sock.h"
-#include "emi_lock.h"
 #include "emi_dbg.h"
 #include "emi_config.h"
 #include "emi_core.h"

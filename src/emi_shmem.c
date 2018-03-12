@@ -81,7 +81,7 @@ int emi_shm_init(const char *name, size_t size, int mode){
         return -1;
     }
 
-    int page_size = getpagesize();
+    long page_size = sysconf(_SC_PAGESIZE);
     size = ( (size+page_size) / page_size ) * page_size;
     shmem_size = size;
 
@@ -103,45 +103,7 @@ int emi_shm_destroy(const char *name, int id){
     return 0;
 }
 
-
-#elif defined(ANDROID_SHMEM)
-
-#include <linux/ashmem.h>
-
-#define ASHMEM_DEVICE "/dev/ashmem"
-
-int emi_shm_init(const char *name, size_t size, int mode){
-	int fd, ret;
-
-	fd = open(ASHMEM_DEVICE, O_RDWR);
-	if (fd < 0)
-		return fd;
-
-	if (name) {
-		char buf[ASHMEM_NAME_LEN];
-
-		strlcpy(buf, name, sizeof(buf));
-		ret = ioctl(fd, ASHMEM_SET_NAME, buf);
-		if (ret < 0)
-			goto error;
-	}
-
-	ret = ioctl(fd, ASHMEM_SET_SIZE, size);
-	if (ret < 0)
-		goto error;
-
-	return fd;
-
-error:
-	close(fd);
-	return ret;
-}
-
-int emi_shm_destroy(const char *name, int id){
-    return 0;
-}
-
-#else
+#else //FILE SHMEM
 
 int emi_shm_init(const char *name, size_t size, int mode){
     int fd;
@@ -159,7 +121,7 @@ int emi_shm_init(const char *name, size_t size, int mode){
         return -1;
     }
 
-    int page_size = getpagesize();
+    long page_size = sysconf(_SC_PAGESIZE);
     size = ( (size+page_size) / page_size ) * page_size;
     shmem_size = size;
 
