@@ -41,7 +41,7 @@ static struct emi_thread_pool __recv_pool;
 static struct emi_shmem_mgr __recv_mgr;
 static eu32 __recv_pid;
 
-void __func_sterotype(void *nth);
+void *__func_sterotype(void *args);
 void func_sterotype(){
     int nth;
     nth=__recv_mgr.pididx[__recv_pid];
@@ -56,7 +56,7 @@ void func_sterotype(){
 
 }
 
-void __func_sterotype(void *args){
+void *__func_sterotype(void *args){
     struct emi_msg *shmsg = (struct emi_msg *)args;
     struct list_head *lh;
 
@@ -105,7 +105,7 @@ void __func_sterotype(void *args){
     shmsg->count--;
     emi_spin_unlock(&shmsg->lock);
 
-    return;
+    return NULL;
 }
 
 static int __emi_msg_register(eu32 defined_msg,emi_func func, eu32 flag){

@@ -48,16 +48,17 @@ int main(){
 }
 */
 
-bool check_thread(struct emi_thread_pool *pool){
+int check_thread(struct emi_thread_pool *pool) {
+    int free_thread_num = 0;
 
     struct emi_thread *pos;
     list_for_each_entry(pos, &pool->head, list){
-        if(pos->status == THREAD_BUSY){
-            return false;
+        if(pos->status == THREAD_IDLE){
+            free_thread_num++;
         }
     }
 
-    return true;
+    return free_thread_num;
 }
 
 TEST_CASE("emi_thread_pool_init"){
@@ -67,7 +68,6 @@ TEST_CASE("emi_thread_pool_init"){
     sleep(1);
     emi_thread_pool_destroy(&pool1);
 }
-
 
 TEST_CASE("emi_thread_pool_submit"){
     using namespace std::chrono_literals;
@@ -81,6 +81,8 @@ TEST_CASE("emi_thread_pool_submit"){
     auto thread_func1 = [](void *args){
         std::atomic<int>& counter = *reinterpret_cast<std::atomic<int> *>(args);
         counter += 1;
+        sleep_for(200ms);
+        return (void *)0;
     };
 
     sleep_for(100ms); //waiting for emi_thread_pool_init ready
@@ -88,17 +90,20 @@ TEST_CASE("emi_thread_pool_submit"){
     SECTION("emi_thread_pool_submit 1"){
         CHECK(emi_thread_pool_submit(&pool, thread_func1, (void *)&counter) == 0);
         CHECK(emi_thread_pool_submit(&pool, thread_func1, (void *)&counter) == 0);
+
+        sleep_for(100ms);
+        CHECK(check_thread(&pool) == 1);
+
         CHECK(emi_thread_pool_submit(&pool, thread_func1, (void *)&counter) == 0);
         CHECK(emi_thread_pool_submit(&pool, thread_func1, (void *)&counter) == 0);
 
-        sleep_for(100ms);
+        sleep_for(300ms);
         CHECK(counter == 4);
-        CHECK(check_thread(&pool));
+        CHECK(check_thread(&pool) == pool.pool_size);
     }
 
     emi_thread_pool_destroy(&pool);
 }
-
 
 TEST_CASE("emi_thread_pool_destroy"){
     using namespace std::chrono_literals;
@@ -106,6 +111,7 @@ TEST_CASE("emi_thread_pool_destroy"){
 
     struct emi_thread_pool pool;
     int ret = emi_thread_pool_init(&pool, 3);
+    CHECK(ret == 0);
 
     sleep_for(100ms); //waiting for emi_thread_pool_init ready
     

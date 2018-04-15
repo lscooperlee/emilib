@@ -24,5 +24,9 @@ __pycache__
 !/test/unit_test/*.c
 !/test/unit_test/*.cpp
 
+/test/stress_test/*
+!/test/stress_test/*.cpp
+!/test/stress_test/*.c
+
 examples/simple/cppreceiver
 examples/simple/cppsender

@@ -175,7 +175,7 @@ int emi_thread_pool_submit(struct emi_thread_pool *pool, emi_thread_func func, v
         emi_spin_unlock(&pool->spinlock);
         
         pthread_t th;
-        if(pthread_create(&th, NULL, (void *(*)(void *))func, args)){
+        if(pthread_create(&th, NULL, func, args)){
             return -1;
         }
         pthread_detach(th);

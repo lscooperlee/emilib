@@ -30,12 +30,11 @@ bool check_msg_table(struct hlist_head msg_table[],
     return hashed == map;
 }
 
-/*
 void print_msg_table(struct hlist_head msg_table[]){
     int i;
     struct msg_map *map;
 
-    printf("msg_table: size = %lu\n", EMI_MSG_TABLE_SIZE);
+    printf("msg_table: size = %u\n", EMI_MSG_TABLE_SIZE);
 
 	for(i=0; i<EMI_MSG_TABLE_SIZE; i++){
         struct hlist_head *head = &msg_table[i];
@@ -55,6 +54,8 @@ void print_msg_table(struct hlist_head msg_table[]){
 }
 
 void test_hash(){
+    struct hlist_head test_msg_table_head[EMI_MSG_TABLE_SIZE];
+
     int ret = init_msg_table_lock(test_msg_table_head, &msg_table_lock);
     printf("init \n");
 
@@ -93,7 +94,7 @@ void test_hash(){
     emi_hinsert(test_msg_table_head, &map4);
     print_msg_table(test_msg_table_head);
     
-    int i;
+    unsigned int i;
     emi_traverse(test_msg_table_head, i, tmp, map, node){
         if(map->pid == 1){
             emi_hdelete(map);
@@ -106,7 +107,7 @@ void test_hash(){
     ret = emi_hinsert_unique_lock(test_msg_table_head, &map6);
     printf("%d\n", ret);
 }
-*/
+
 
 TEST_CASE("emi_hinsert") {
 

@@ -7,13 +7,24 @@
 #include <random>
 
 
-#define EMI_ORDER_NUM 4
+#ifdef EMI_ORDER_NUM
+#undef EMI_ORDER_NUM
+#endif
+#define EMI_ORDER_NUM 3
+
+#define BUDDY_SHIFT 7
+#define MIN_BLOCK_SIZE  (1<<BUDDY_SHIFT)
+
 
 #include "emi_shbuf.h"
 
 #include "emi_shbuf.c"
 
 #include "../catch.hpp"
+
+constexpr int get_buf_size(){
+    return (1<<(EMI_ORDER_NUM + 1)) - 1;
+}
 
 constexpr int get_reverse_order(int s){
     int size = s+1;
@@ -26,10 +37,10 @@ constexpr int get_reverse_order(int s){
 }
 
 constexpr int get_order_from_idx(int s){
-    return EMI_ORDER_NUM - get_reverse_order(s);
+    return EMI_ORDER_NUM - get_reverse_order(s) + 1;
 }
 constexpr int get_blkoffset_from_idx(int s){
-    int span = 1 << (EMI_ORDER_NUM - 1);
+    int span = 1 << (EMI_ORDER_NUM);
     int rorder = get_reverse_order(s);
     int num_in_level = 1 << (rorder - 1);
     
@@ -39,9 +50,9 @@ constexpr int get_blkoffset_from_idx(int s){
 void print_emi_buf(struct emi_buf *mgr){
     int k;
     int t=0;
-    for(k=0;k<(1<<EMI_ORDER_NUM)-1; k++){
+    for(k=0;k<(1<<(EMI_ORDER_NUM + 1))-1; k++){
         struct emi_buf *tmp = &mgr[k];
-        printf("ofst:%d,odr:%d  ", tmp->blk_offset, tmp->order);
+        printf("offset:%d,order:%d  ", tmp->blk_offset, tmp->order);
 
         if(t==0){
             printf("\n");
@@ -50,10 +61,6 @@ void print_emi_buf(struct emi_buf *mgr){
             t--;
     }
     printf("\n\n");
-}
-
-constexpr int get_buf_size(){
-    return (1<<EMI_ORDER_NUM) - 1;
 }
 
 bool check_emi_buf(struct emi_buf *mgr, const std::unordered_map<int, int>& map = {}){
@@ -77,36 +84,36 @@ bool check_emi_buf(struct emi_buf *mgr, const std::unordered_map<int, int>& map 
 
 void test_example(){
 
-    void *base_addr = malloc(BUDDY_SIZE << EMI_ORDER_NUM);
-    struct emi_buf array[(1<<EMI_ORDER_NUM) - 1] = {};
+    void *base_addr = malloc(MIN_BLOCK_SIZE << EMI_ORDER_NUM);
+    struct emi_buf emi_buf_array[get_buf_size()] = {};
     struct emi_buf *a,*b,*c,*d;
 
-    init_emi_buf(base_addr, array);
-    print_emi_buf(array);
+    init_emi_buf(base_addr, emi_buf_array);
+    print_emi_buf(emi_buf_array);
 
-    a = alloc_emi_buf(BUDDY_SIZE>>1);
-    print_emi_buf(array);
+    a = alloc_emi_buf(MIN_BLOCK_SIZE>>1);
+    print_emi_buf(emi_buf_array);
 
-    b = alloc_emi_buf(BUDDY_SIZE/2 + BUDDY_SIZE);
-    print_emi_buf(array);
+    b = alloc_emi_buf(MIN_BLOCK_SIZE/2 + MIN_BLOCK_SIZE);
+    print_emi_buf(emi_buf_array);
 
-    c = alloc_emi_buf(BUDDY_SIZE/2);
-    print_emi_buf(array);
+    c = alloc_emi_buf(MIN_BLOCK_SIZE/2);
+    print_emi_buf(emi_buf_array);
 
-    d = alloc_emi_buf(BUDDY_SIZE/2 + BUDDY_SIZE);
-    print_emi_buf(array);
+    d = alloc_emi_buf(MIN_BLOCK_SIZE/2 + MIN_BLOCK_SIZE);
+    print_emi_buf(emi_buf_array);
 
     free_emi_buf(b);
-    print_emi_buf(array);
+    print_emi_buf(emi_buf_array);
     
     free_emi_buf(d);
-    print_emi_buf(array);
+    print_emi_buf(emi_buf_array);
 
     free_emi_buf(a);
-    print_emi_buf(array);
+    print_emi_buf(emi_buf_array);
 
     free_emi_buf(c);
-    print_emi_buf(array);
+    print_emi_buf(emi_buf_array);
 
 }
 
@@ -253,16 +260,16 @@ TEST_CASE("__free_emi_buf") {
 }
 
 TEST_CASE("size_to_order") {
-    CHECK(size_to_order(BUDDY_SIZE - 1) == 0);
-    CHECK(size_to_order(BUDDY_SIZE + 1) == 1);
-    CHECK(size_to_order(2 * BUDDY_SIZE) == 1);
-    CHECK(size_to_order(3 * BUDDY_SIZE) == 2);
-    CHECK(size_to_order(4 * BUDDY_SIZE + 1) == 3);
+    CHECK(size_to_order(MIN_BLOCK_SIZE - 1) == 0);
+    CHECK(size_to_order(MIN_BLOCK_SIZE + 1) == 1);
+    CHECK(size_to_order(2 * MIN_BLOCK_SIZE) == 1);
+    CHECK(size_to_order(3 * MIN_BLOCK_SIZE) == 2);
+    CHECK(size_to_order(4 * MIN_BLOCK_SIZE + 1) == 3);
 }
 
 TEST_CASE("emi_alloc") {
     struct emi_buf emi_buf_top[get_buf_size()] = {};
-    void *base = malloc(BUDDY_SIZE * 1<<(BUDDY_SHIFT - 1));
+    void *base = malloc(MIN_BLOCK_SIZE * 1<<(BUDDY_SHIFT - 1));
     espinlock_t buf_lock;
 
     int ret = init_emi_buf_lock(base, emi_buf_top, &buf_lock);
@@ -275,12 +282,12 @@ TEST_CASE("emi_alloc") {
         mem = emi_alloc(0);
         CHECK(mem == NULL);
 
-        mem = emi_alloc(BUDDY_SIZE << BUDDY_SHIFT);
+        mem = emi_alloc(MIN_BLOCK_SIZE << BUDDY_SHIFT);
         CHECK(mem == NULL);
     }
 
     SECTION("emi_alloc 1 block") {
-        void *mem = emi_alloc(BUDDY_SIZE - 37);
+        void *mem = emi_alloc(MIN_BLOCK_SIZE - 37);
 
         struct emi_buf *buf = GET_BUF_ADDR(mem) + emi_buf_top;
         
@@ -290,19 +297,19 @@ TEST_CASE("emi_alloc") {
 
     SECTION("emi_alloc 2 block") {
         void *mem;
-        mem = emi_alloc(BUDDY_SIZE - 37);
-        mem = emi_alloc(BUDDY_SIZE + BUDDY_SIZE - 43);
+        emi_alloc(MIN_BLOCK_SIZE - 37);
+        mem = emi_alloc(MIN_BLOCK_SIZE + MIN_BLOCK_SIZE - 43);
 
         struct emi_buf *buf = GET_BUF_ADDR(mem) + emi_buf_top;
         
-        CHECK(((char *)base + BUDDY_SIZE*2) == ((char *)(mem) - 4));
+        CHECK(((char *)base + MIN_BLOCK_SIZE*2) == ((char *)(mem) - 4));
         CHECK(buf == &emi_buf_top[4]);
     }
 }
 
 TEST_CASE("emi_free") {
     struct emi_buf emi_buf_top[get_buf_size()] = {};
-    void *base = malloc(BUDDY_SIZE * 1<<(BUDDY_SHIFT - 1));
+    void *base = malloc(MIN_BLOCK_SIZE * 1<<(BUDDY_SHIFT - 1));
     espinlock_t buf_lock;
 
     int ret = init_emi_buf_lock(base, emi_buf_top, &buf_lock);

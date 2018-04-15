@@ -9,12 +9,13 @@
 #include "emi_config.h"
 
 
-#ifndef EMI_ORDER_NUM // maximum order = EMI_ORDER_NUM - 1
+#ifndef EMI_ORDER_NUM // EMI_ORDER_NUM is maximum order 
 #define EMI_ORDER_NUM 10
 #endif
 
-#define BUDDY_SHIFT 8
-#define BUDDY_SIZE  (1<<BUDDY_SHIFT)
+#ifndef BUDDY_SHIFT
+#define BUDDY_SHIFT 8 // 1<<BUDDY_SHIFT has to be larger than sizeof(struct emi_msg)
+#endif
 
 struct emi_buf{
     int blk_offset;

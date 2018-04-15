@@ -67,7 +67,7 @@ public:
     }
 
     ~EmiTestCore(){
-        if(system("killall -9 emi_core")){
+        if(system("pkill -9 emi_core")){
             exit(-1);
         }
         pclose(p);

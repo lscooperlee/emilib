@@ -16,6 +16,7 @@ addons:
       - gcc-7
       - g++-7
       - clang
+      - cppcheck
 
 install: 
   - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 90
@@ -26,3 +27,4 @@ script:
     - make emi_test
     - make python_test
     - make unit_test
+    - make cpp_check

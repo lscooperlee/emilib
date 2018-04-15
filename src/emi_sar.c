@@ -81,7 +81,7 @@ void usage(void){
 
 int main(int argc,char **argv){
 
-    char opt;
+    char opt=0;
     int option=0;
     long msgr=-1,msgnum=-1;
     unsigned long cmd=0;

@@ -19,24 +19,12 @@ LIBEMI = libemi.so 	#libemi for all
 
 #########################
 
-ifeq ($(strip $(STATIC)),y)
-STATIC = -static
-else
-STATIC =
-endif
+CHECKFLAGS = --enable=all --language=c++ -I include -I src --suppress=missingIncludeSystem --suppressions-list=suppressions.txt --inconclusive -q --std=c++14
 
-ifeq ($(strip $(DEBUG)),y)
-DEBUG = -g -DDEBUG
-else
-DEBUG = 
-endif
-
-CHECKFLAGS = --enable=all -I include --suppress=missingIncludeSystem -q
-
-CFLAGS = $(DEBUG) -O2 -Wextra -Wall -I./include -D$(SHMEM) -DEMI_ORDER_NUM=$(EMI_ORDER_NUM) -std=c11 -D_POSIX_C_SOURCE=200809
+CFLAGS += -I./include
 LIBCFLAGS = $(CFLAGS) -fpic
 
-LDFLAGS = -L$(LIBDIR) -lemi 
+LDFLAGS += -L$(LIBDIR)
 LIBLDFLAGS = -lpthread
 
 ifeq ($(strip $(SHMEM)),POSIX_SHMEM)
@@ -127,6 +115,9 @@ python_test:
 
 unit_test:
 	@./test/emi_unit_test
+
+stress_test:
+	@./tools/stress_test.sh
 
 install:
 	install -d /usr/include/emi/

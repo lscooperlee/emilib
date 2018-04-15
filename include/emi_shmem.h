@@ -15,7 +15,7 @@ extern void *emi_shm_alloc(int id, int flag);
 extern int emi_shm_free(void *addr);
 extern int emi_shm_destroy(const char *name, int id);
 
-#define MSG_SHM_SIZE                (BUDDY_SIZE << EMI_ORDER_NUM)
+#define MSG_SHM_SIZE                ((1<<BUDDY_SHIFT) << EMI_ORDER_NUM)
 #define MSGBUF_SHM_SIZE             (2 * (sizeof(struct emi_buf)<<EMI_ORDER_NUM))
 #define MSGBUF_LOCK_SHM_SIZE        (sizeof(espinlock_t))
 #define PIDIDX_SHM_SIZE(pid_max)    ((pid_max) * sizeof(eu32))

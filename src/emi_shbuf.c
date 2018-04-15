@@ -20,14 +20,14 @@ static struct emi_buf *emi_buf_vector = NULL;
 #define SIBLING(buf, top)                       (PARENT(buf, top) == PARENT(buf + 1, top) ? (buf) + 1 : (buf) - 1)
 #define LEFT_MOST_OFFSPRING(order, top)         ((order) + (top) - 1)
 
-#define MARK_AS_USED(order)                     (-(order)  - 1)
+#define FLIP_ORDER(order)                     (-(order)  - 1)
 
-static inline struct emi_buf *get_emi_buf(struct emi_buf *top, int order, int order_num){
+static inline struct emi_buf *get_emi_buf(struct emi_buf *top, int order, int max_order){
     struct emi_buf *tmp = top;
     if(tmp->order < order)
         return NULL;
 
-    int level = order_num;
+    int level = max_order + 1;
     while(--level > order){
         struct emi_buf *son = SON(tmp, top);
         struct emi_buf *daughter = DAUGHTER(tmp, top);
@@ -47,14 +47,14 @@ static inline struct emi_buf *get_emi_buf(struct emi_buf *top, int order, int or
     return tmp;
 }
 
-static void update_buf_order(struct emi_buf *buf, struct emi_buf *top, int order, int order_num){
+static void update_buf_order(struct emi_buf *buf, struct emi_buf *top, int order, int max_order){
 
-    while(++order < order_num){
+    while(++order < max_order + 1){
         struct emi_buf *sibling = SIBLING(buf, top);
         struct emi_buf *parent = PARENT(buf, top);
 
         if(sibling->order < 0 && buf->order < 0){
-            parent->order = MARK_AS_USED(order);
+            parent->order = FLIP_ORDER(order);
         }else if(sibling->order == buf->order){
             parent->order++;
         }else{
@@ -66,38 +66,38 @@ static void update_buf_order(struct emi_buf *buf, struct emi_buf *top, int order
 
 static int __init_emi_buf(struct emi_buf *top, int maximum_order){
     int i;
-    for (i = 0; i < maximum_order; i++){
+    for (i = 0; i <= maximum_order; i++){
         int j;
         int current_order = 1<<i;
         struct emi_buf *tmp = LEFT_MOST_OFFSPRING(current_order, top);
         for (j = 0; j < current_order; j++, tmp++)
         {
-            tmp->blk_offset = j * (1 << (maximum_order - i - 1));
-            tmp->order = maximum_order - i - 1;
+            tmp->blk_offset = j * (1 << (maximum_order - i));
+            tmp->order = maximum_order - i;
         }
     }
 
     return 0;
 }
 
-static struct emi_buf *__alloc_emi_buf(struct emi_buf *top, int order, int order_num){
-    struct emi_buf *tmp = get_emi_buf(top, order, order_num);
+static struct emi_buf *__alloc_emi_buf(struct emi_buf *top, int order, int max_order){
+    struct emi_buf *tmp = get_emi_buf(top, order, max_order);
 
     if(tmp == NULL)
         return NULL;
 
-    tmp->order = MARK_AS_USED(order);
+    tmp->order = FLIP_ORDER(order);
 
-    update_buf_order(tmp, top, order, order_num);
+    update_buf_order(tmp, top, order, max_order);
 
     return tmp;
 }
 
-static void __free_emi_buf(struct emi_buf *buf, struct emi_buf *top, int order, int order_num){
+static void __free_emi_buf(struct emi_buf *buf, struct emi_buf *top, int order, int max_order){
 
     buf->order = order;
 
-    update_buf_order(buf, top, order, order_num);
+    update_buf_order(buf, top, order, max_order);
 }
 
 static int size_to_order(int size){
@@ -129,7 +129,7 @@ struct emi_buf *alloc_emi_buf(size_t size){
 }
 
 void free_emi_buf(struct emi_buf *buf){
-    int order = -buf->order - 1;
+    int order = FLIP_ORDER(buf->order);
 
     __free_emi_buf(buf, emi_buf_vector, order, EMI_ORDER_NUM);
 }
@@ -156,25 +156,27 @@ void update_emi_buf_lock(void *base, void *emi_buf_top, espinlock_t *lock){
 }
 
 void *emi_alloc(size_t size){
-    if (size <= 0)
-        return NULL;
+    if (size > 0) {
 
-    emi_spin_lock(emi_buf_lock);
+        emi_spin_lock(emi_buf_lock);
 
-    struct emi_buf *buf = alloc_emi_buf(size + ADDR_BUF_OFFSET);
+        struct emi_buf *buf = alloc_emi_buf(size + ADDR_BUF_OFFSET);
 
-    emi_spin_unlock(emi_buf_lock);
+        emi_spin_unlock(emi_buf_lock);
 
-    if(buf == NULL)
-        return NULL;
-    
-    void *addr = GET_ALLOC_ADDR(buf);
-    
-    GET_BUF_ADDR(addr) = buf - emi_buf_vector;
+        if(buf == NULL)
+            return NULL;
+        
+        void *addr = GET_ALLOC_ADDR(buf);
+        
+        GET_BUF_ADDR(addr) = buf - emi_buf_vector;
 
-    emilog(EMI_DEBUG, "size = %ld, buf->blk_offset = %d, buf->order = %d, addr = %p\n", size, buf->blk_offset, buf->order, addr);
+        emilog(EMI_DEBUG, "size = %ld, buf->blk_offset = %d, buf->order = %d, addr = %p\n", size, buf->blk_offset, buf->order, addr);
 
-    return addr;
+        return addr;
+    }
+
+    return NULL;
 }
 
 void emi_free(void *addr){
@@ -224,7 +226,7 @@ struct emi_msg *realloc_shared_msg(struct emi_msg *msg){
     int newsize =msg->size + sizeof(struct emi_msg);
     
     struct emi_buf *buf = GET_BUF_ADDR(msg) + emi_buf_vector;
-    int order = -buf->order - 1;
+    int order = FLIP_ORDER(buf->order);
 
     int oldsize = ((1<<order) << BUDDY_SHIFT) - ADDR_BUF_OFFSET;
 
@@ -235,6 +237,7 @@ struct emi_msg *realloc_shared_msg(struct emi_msg *msg){
     void *data = emi_alloc(msg->size);
     if(data == NULL){
         msg->flag &= ~EMI_MSG_RET_SUCCEEDED;
+        emilog(EMI_ERROR, "emi realloc error, memory possibly exhausted\n");
         return NULL;
     }else{
         if(msg->flag & EMI_MSG_FLAG_ALLOCDATA){ // The old msg may or may not have data alloced

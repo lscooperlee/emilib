@@ -12,6 +12,14 @@
 #include <arpa/inet.h>
 #include <string.h>
 
+// Use FILE_SHMEM for test
+#ifdef SYSV_SHMEM
+#undef SYSV_SHMEM
+#endif
+#ifdef POSIX_SHMEM
+#undef POSIX_SHMEM
+#endif
+
 #include "emi_config.c"
 #include "emi_dbg.c"
 #include "emi_shmem.c"

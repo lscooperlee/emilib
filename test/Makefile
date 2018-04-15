@@ -1,15 +1,12 @@
 include ../config.mk
 
-ifeq ($(strip $(DEBUG)),y)
-DEBUG = -g -DDEBUG
-else
-DEBUG =
+CFLAGS += -I../include/ -I../src/
+CPPFLAGS += -I../include/ -I../src/
+
+LDFLAGS += -L../.out/lib/ -pthread
+ifeq ($(strip $(SHMEM)),POSIX_SHMEM)
+#LDFLAGS += -lrt
 endif
-
-CFLAGS = -O2 -Wall $(DEBUG) -I../include/ -I../src/
-CPPFLAGS = -std=c++17 $(CFLAGS)
-
-LDFLAGS = -L../.out/lib/ -lemi -pthread
 
 CSRCS=$(shell find unit_test/ -name "*.c")
 COBJS=$(patsubst %.c, $(BUILDPATH)%.o, $(CSRCS))
@@ -27,7 +24,11 @@ EMIUNITTESTSRC=emi_unit_test.cpp
 EMIUNITTESTOBJ=$(EMIUNITTESTSRC:.cpp=.o)
 EMIUNITTESTEXEC=$(EMIUNITTESTSRC:.cpp=)
 
-all: $(EMITESTEXEC) $(EMIUNITTESTEXEC) 
+EMISTRESSTESTSRCS=$(shell find stress_test/ -name "*.cpp")
+EMISTRESSTESTOBJS=$(patsubst %.cpp, $(BUILDPATH)%.o, $(EMISTRESSTESTSRCS))
+EMISTRESSTESTEXES=$(patsubst %.o, $(BUILDPATH)%, $(EMISTRESSTESTOBJS))
+
+all: $(EMITESTEXEC) $(EMIUNITTESTEXEC) $(EMISTRESSTESTEXES)
 
 $(EMITESTEXEC): $(EMITESTSRC)
 	@echo LD 	$@
@@ -47,5 +48,9 @@ $(CPPOBJS) $(EMIUNITTESTOBJ):%.o: %.cpp
 	@mkdir -p $(dir $@)
 	@$(CXX) $(CPPFLAGS) -c $< -o $@
 
+$(EMISTRESSTESTEXES):%: %.cpp
+	@echo CXX 	$@
+	@$(CXX) $(CPPFLAGS) $< -o $@ $(LDFLAGS)
+
 clean:
-	rm -rf $(COBJS) $(CPPOBJS) $(CEXES) $(CPPEXES) $(EMITESTEXEC) $(EMIUNITTESTEXEC) $(EMIUNITTESTOBJ)
+	@rm -rf $(COBJS) $(CPPOBJS) $(CEXES) $(CPPEXES) $(EMITESTEXEC) $(EMIUNITTESTEXEC) $(EMIUNITTESTOBJ) $(EMISTRESSTESTEXES)

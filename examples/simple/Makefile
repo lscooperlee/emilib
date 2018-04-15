@@ -1,16 +1,17 @@
+include ../../config.mk
 
-CFLAGS = -std=c++17 -O2 -Wextra -Wall -I../../include
-LDFLAGS = -L../../.out/lib/ -lemi 
+CPPFLAGS += -I../../include
+LDFLAGS += -L../../.out/lib/
 
 all: cppsender cppreceiver
 
 cppsender: cppsender.cpp
 	@echo CXX $@
-	@$(CXX) $(CFLAGS) -o $@ $? $(LDFLAGS)
+	@$(CXX) $(CPPFLAGS) -o $@ $? $(LDFLAGS)
 
 cppreceiver: cppreceiver.cpp
 	@echo CXX $@
-	@$(CXX) $(CFLAGS) -o $@ $? $(LDFLAGS)
+	@$(CXX) $(CPPFLAGS) -o $@ $? $(LDFLAGS)
 
 clean:
 	rm -f cppsender cppreceiver

@@ -1,0 +1,4 @@
+*:test/catch.hpp
+*:test/*
+memleak:src/emi_sock.c:153
+functionStatic:include/emi.h:107

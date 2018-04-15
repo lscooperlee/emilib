@@ -13,7 +13,7 @@ enum {
     THREAD_EXIT,
 };
 
-typedef void (*emi_thread_func)(void *);
+typedef void *(*emi_thread_func)(void *);
 
 struct emi_thread {
     struct list_head list;

@@ -26,7 +26,7 @@
 #include "emi_thread.h"
 
 
-static int emi_receive_operation(void *args);
+static void *emi_receive_operation(void *client_sd);
 
 
 static int core_shmid=-1;
@@ -130,8 +130,7 @@ static int __emi_core(void){
     }
 }
 
-static int emi_receive_operation(void *client_sd){
-    int ret = -1;
+static void *emi_receive_operation(void *client_sd){
     struct emi_msg *msg_pos;
 
 /*
@@ -146,7 +145,7 @@ static int emi_receive_operation(void *client_sd){
  * read the remote msg into this alloced memory, if this one got an error, probably emi_init has sent a guess message to emi_core, which
  * is a connection to emi_core without any data transfered.
  */
-    if((ret=emi_msg_read((struct sk_dpr *)client_sd, msg_pos)) < 0){
+    if(emi_msg_read((struct sk_dpr *)client_sd, msg_pos) < 0){
         emilog(EMI_INFO, "emi_read from client error or emi_init is guessing port\n");
         goto e0;
     }
@@ -168,7 +167,8 @@ static int emi_receive_operation(void *client_sd){
          * Make sure msg_map with the same pid and msgnum are not in msg_table,
          * this prevents one process register multiple functions to the same msg number.
          */
-        if((ret = emi_hinsert_unique_lock(msg_table_head, p)) < 0){
+        if(emi_hinsert_unique_lock(msg_table_head, p) < 0){
+            emilog(EMI_ERROR, "process with same msg number already in msg_map\n");
             msg_pos->flag &= ~EMI_MSG_RET_SUCCEEDED;
         }else{
             emi_mutex_init(&core_shmem_mgr.pididx_lock[p->pid]);
@@ -176,8 +176,8 @@ static int emi_receive_operation(void *client_sd){
         }
 
         emilog(EMI_DEBUG, "Insert msg to msg_table done");
-        if((ret=emi_msg_write_payload((struct sk_dpr *)client_sd, msg_pos)) < 0){
-            emilog(EMI_WARNING, "emi read payload from client error\n");
+        if(emi_msg_write_payload((struct sk_dpr *)client_sd, msg_pos) < 0){
+            emilog(EMI_ERROR, "emi read payload from client error\n");
         }
 
         emilog(EMI_DEBUG, "Register msg finished");
@@ -262,18 +262,20 @@ static int emi_receive_operation(void *client_sd){
             }
 
             if(max_exit_receiver == 0){ //all receivers are exit receiver, return false
+                emilog(EMI_ERROR, "All receivers are exit receivers\n");
                 msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
             }
 
         }else{
+            emilog(EMI_ERROR, "msg count is zero, no receiver process responded\n");
             msg_pos->flag&=~EMI_MSG_RET_SUCCEEDED;
         }
 
-        emilog(EMI_DEBUG, "msg_pos->flag = %x\n", msg_pos->flag);
         if(msg_pos->flag&EMI_MSG_MODE_BLOCK){
             emilog(EMI_DEBUG, "Return the state and possible data for block mode\n");
 
-            if((ret = emi_msg_write_ret((struct sk_dpr *)client_sd, msg_pos))< 0){
+            if(emi_msg_write_ret((struct sk_dpr *)client_sd, msg_pos)< 0){
+                emilog(EMI_ERROR, "Write data back to client\n");
                 goto e0;
             }
 
@@ -287,5 +289,5 @@ e0:
     free_shared_msg(msg_pos);
 e1:
     emi_close((struct sk_dpr *)client_sd);
-    return ret;
+    return NULL;
 }
