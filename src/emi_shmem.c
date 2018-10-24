@@ -1,4 +1,4 @@
-#include <linux/limits.h>
+#include <limits.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <fcntl.h>

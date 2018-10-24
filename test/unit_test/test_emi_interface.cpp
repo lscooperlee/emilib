@@ -89,7 +89,7 @@ TEST_CASE("emi_msg_send"){
         auto data_addr = container.data();
 
         struct emi_msg *msg = emi_msg_alloc(size);
-        emi_msg_init(msg, "127.0.0.1", data_addr, 1, 2, flag);
+        emi_msg_init(msg, "127.0.0.1", 2, 1, flag, size, data_addr);
 
         future.wait();
 

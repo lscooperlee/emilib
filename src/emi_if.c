@@ -47,7 +47,7 @@ static int split_ipaddr(const char *mixip, char *ip, int *port) {
         *p = '\0';
         *port = atoi(++p);
     } else {
-        *port = USR_EMI_PORT;
+        *port = emi_config->emi_port;
         ret = -1;
     }
     strcpy(ip, sip);
@@ -65,8 +65,9 @@ static int emi_addr_init(struct emi_addr *addr, const char *ip, int port) {
     return 0;
 }
 
-int emi_msg_init(struct emi_msg *msg, const char *dest_ip, const void *data, eu32 cmd,
-        eu32 defined_msg, eu32 flag) {
+int emi_msg_init(struct emi_msg *msg, const char *dest_ip, eu32 msg_num, 
+                eu32 cmd, eu32 flag, eu32 data_size, const void *data) {
+
     if (dest_ip != NULL) {
         char newip[16];
         int port;
@@ -75,14 +76,15 @@ int emi_msg_init(struct emi_msg *msg, const char *dest_ip, const void *data, eu3
             return -1;
     }
 
+    msg->cmd = cmd;
+    msg->msg = msg_num;
+    msg->flag |= flag;
+
+    msg->size = data_size;
     if (data != NULL) {
         void *msgdata = GET_ADDR(msg, msg->data_offset);
         memcpy(msgdata, data, msg->size);
     }
-
-    msg->cmd = cmd;
-    msg->msg = defined_msg;
-    msg->flag |= flag;
 
     return 0;
 }

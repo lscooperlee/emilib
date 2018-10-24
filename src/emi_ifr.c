@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <time.h>
 
+#include "emi_if.h"
 #include "emi_ifr.h"
 #include "emi_msg.h"
 #include "emi_sock.h"
@@ -108,39 +109,35 @@ void *__func_sterotype(void *args){
     return NULL;
 }
 
-static int __emi_msg_register(eu32 defined_msg,emi_func func, eu32 flag){
+static int __emi_msg_register(eu32 msg_num, emi_func func, eu32 flag){
     struct sk_dpr *sd;
     int ret = -1;
     struct func_list *fl;
     struct emi_msg cmd;
 
+    cmd.size = 0;
+    emi_msg_init(&cmd, "127.0.0.1", msg_num, getpid(), flag|EMI_MSG_CMD_REGISTER, 0, NULL);
 
     if((sd=emi_open(AF_INET))==NULL){
         return -1;
     }
-    memset(&cmd,0,sizeof(struct emi_msg));
-
-    cmd.addr.ipv4.sin_addr.s_addr=inet_addr("127.0.0.1");
-    cmd.addr.ipv4.sin_port=htons(emi_config->emi_port);
-    cmd.addr.ipv4.sin_family=AF_INET;
-    cmd.addr.pid=getpid();
-
-    cmd.msg=defined_msg;
-    cmd.flag=flag | EMI_MSG_CMD_REGISTER;
-
     if(emi_connect(sd,&cmd.addr)){
+        emilog(EMI_DEBUG, "emi register msg connect error\n");
         goto out;
     }
 
     if(emi_msg_write_payload(sd,&cmd)){
+        emilog(EMI_DEBUG, "emi register msg write payload error\n");
         goto out;
     }
 
     if(emi_msg_read_payload(sd, &cmd)){
+        emilog(EMI_DEBUG, "emi register msg read payload error\n");
         goto out;
     }
 
     if(!(cmd.flag&EMI_MSG_RET_SUCCEEDED)){
+        emilog(EMI_DEBUG, "emi register msg failed\n");
         goto out;
     }
 
@@ -149,7 +146,7 @@ static int __emi_msg_register(eu32 defined_msg,emi_func func, eu32 flag){
     }
     memset(fl,0,sizeof(struct func_list));
     fl->func=func;
-    fl->msg=defined_msg;
+    fl->msg=msg_num;
 
     // register function operates on list_head,
     // the register process may also register other msg, 

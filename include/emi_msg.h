@@ -22,9 +22,7 @@ struct emi_addr{
 
 
 struct emi_msg{
-    struct emi_addr addr;
     eu32 flag;
-
 
 /*
  * the default msg is  ~BLOCK, unless this FLAG was set.
@@ -57,6 +55,8 @@ struct emi_msg{
     es64 data_offset;
     es64 retdata_offset;
 
+    struct emi_addr addr;
+
 #ifndef SEND_ONLY
     eu32 count;
     espinlock_t lock;
@@ -68,7 +68,7 @@ struct emi_msg{
 #endif
 };
 
-#define EMI_MSG_PAYLOAD_SIZE    ((unsigned long)&((struct emi_msg *)0)->data_offset)
+#define EMI_MSG_PAYLOAD_SIZE    20
 
 
 struct emi_retdata {

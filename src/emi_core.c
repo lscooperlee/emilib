@@ -153,7 +153,7 @@ static void *emi_receive_operation(void *client_sd){
 
     if(msg_pos->flag&EMI_MSG_CMD_REGISTER){
         emilog(EMI_DEBUG, "Received a register msg with num %d and pid %d\n",
-                msg_pos->msg, msg_pos->addr.pid);
+                msg_pos->msg, msg_pos->cmd);
         
         // FIXME
         struct msg_map *p = alloc_msg_map();
@@ -161,7 +161,7 @@ static void *emi_receive_operation(void *client_sd){
             goto e0;
         }
 
-        msg_map_init(p,msg_pos->msg,msg_pos->addr.pid);
+        msg_map_init(p,msg_pos->msg,msg_pos->cmd);
 
         /*
          * Make sure msg_map with the same pid and msgnum are not in msg_table,

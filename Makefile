@@ -5,6 +5,7 @@ CHECK = cppcheck
 MKDIR = mkdir -p
 DIRNAME = dirname
 RM = rm -rf
+AR = ar
 
 #########################
 
@@ -16,6 +17,7 @@ CORE = emi_core
 SAR = emi_sar
 LIBSENDER = libemis.so 		#libemi only for sender
 LIBEMI = libemi.so 	#libemi for all
+LIBSTATICEMI = libemi.a
 
 #########################
 
@@ -24,11 +26,15 @@ CHECKFLAGS = --enable=all --language=c++ -I include -I src --suppress=missingInc
 CFLAGS += -I./include
 LIBCFLAGS = $(CFLAGS) -fpic
 
-LDFLAGS += -L$(LIBDIR)
-LIBLDFLAGS = -lpthread
+LIBLDFLAGS = -pthread
 
 ifeq ($(strip $(SHMEM)),POSIX_SHMEM)
 LIBLDFLAGS += -lrt
+endif
+
+LDFLAGS += -L$(LIBDIR)
+ifeq ($(strip $(STATIC)),y)
+LDFLAGS += $(LIBLDFLAGS)
 endif
 
 LIBSENDERSRCS=src/emi_if.c src/emi_sock.c src/emi_dbg.c src/emi_config.c
@@ -53,7 +59,7 @@ export PYTHONPATH := ${PWD}/python/emilib
 
 .PHONY:all clean
 
-all:$(LIBSENDER) $(LIBEMI) $(CORE) $(SAR) PYTHON TEST EXAMPLE
+all:$(LIBSENDER) $(LIBSTATICEMI) $(LIBEMI) $(CORE) $(SAR) PYTHON TEST EXAMPLE
 
 $(LIBSENDER):$(LIBSENDEROBJS)
 	@echo LD		$(LIBSENDER)
@@ -65,15 +71,20 @@ $(LIBEMI):$(LIBEMIOBJS)
 	@$(MKDIR) $(LIBDIR)
 	@$(CC) -shared -o $(LIBDIR)/$@ $? $(LIBLDFLAGS)
 
+$(LIBSTATICEMI):$(LIBEMIOBJS)
+	@echo AR		$(LIBSTATICEMI)
+	@$(MKDIR) $(LIBDIR)
+	@$(AR) rcs $(LIBDIR)/$@ $?
+
 $(CORE):$(COREOBJS)
 	@echo LD		$(CORE)
 	@$(MKDIR) $(BINDIR)
-	@$(CC) $(STATIC) -o $(BINDIR)/$@ $? $(LDFLAGS)
+	@$(CC) $(STATICFLAG) -o $(BINDIR)/$@ $? $(LDFLAGS)
 
 $(SAR):$(SAROBJS)
 	@echo LD		$(SAR)
 	@$(MKDIR) $(BINDIR)
-	@$(CC) $(STATIC) -o $(BINDIR)/$@ $? $(LDFLAGS)
+	@$(CC) $(STATICFLAG) -o $(BINDIR)/$@ $? $(LDFLAGS)
 
 $(COREOBJS):$(TMPDIR)/%.o:%.c
 	@echo CC		$^

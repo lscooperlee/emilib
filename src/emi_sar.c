@@ -81,7 +81,8 @@ void usage(void){
 
 int main(int argc,char **argv){
 
-    char opt=0;
+    char opt;
+
     int option=0;
     long msgr=-1,msgnum=-1;
     unsigned long cmd=0;
@@ -168,7 +169,7 @@ int main(int argc,char **argv){
             return -1;
         }
 
-        emi_msg_init(msg, addr, sentdata, cmd, msgnum, 0);
+        emi_msg_init(msg, addr, msgnum, cmd, 0, sentsize, sentdata);
 
         if(option&BLOCK_MODE){
             msg->flag |= EMI_MSG_MODE_BLOCK;
@@ -181,9 +182,9 @@ int main(int argc,char **argv){
                 return -1;
             }
             
-            struct emi_retdata *retdata;
-            for_each_retdata(msg, retdata){
-                print_data(retdata->size, retdata->data);
+            struct emi_retdata *emi_retdata;
+            for_each_retdata(msg, emi_retdata){
+                print_data(emi_retdata->size, emi_retdata->data);
             }
 
         }else{

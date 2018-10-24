@@ -45,6 +45,11 @@ public:
         waitpid(pid, NULL, 0);
     }
 
+    void Kill(){
+        kill(pid, SIGKILL);
+        Join();
+    }
+
 private:
     std::function<void(void)> target;
     pid_t pid;
@@ -55,22 +60,16 @@ private:
 class EmiTestCore
 {
     
-    FILE *p = nullptr;
+    Process p;
 
 public:
-    EmiTestCore(){
-        p = popen("emi_core -d", "r");
-        if(p == nullptr){
-            throw "open emi_core failed";
-        }
+    EmiTestCore():p([](){emi_core(nullptr);}){
+        p.Start();
         usleep(1000*500);
     }
 
     ~EmiTestCore(){
-        if(system("pkill -9 emi_core")){
-            exit(-1);
-        }
-        pclose(p);
+        p.Kill();
         usleep(1000*500);
     }
     
@@ -121,7 +120,7 @@ void test_emi_msg_send_unblock_nosenddata(){
 
     int ret;
     struct emi_msg *msg = emi_msg_alloc(0);
-    emi_msg_init(msg, ipaddr, NULL, 1, 2, 0);
+    emi_msg_init(msg, ipaddr, 2, 1, 0, 0, NULL);
     ret = emi_msg_send(msg);
 
     ASSERT(ret == 0);
@@ -159,7 +158,7 @@ void test_emi_msg_send_unblock_senddata(){
 
     int ret;
     struct emi_msg *msg = emi_msg_alloc(strlen("11112222"));
-    emi_msg_init(msg, ipaddr, "11112222", 1, 3, 0);
+    emi_msg_init(msg, ipaddr, 3, 1, 0, strlen("11112222"), "11112222");
     ret = emi_msg_send(msg);
 
     ASSERT(ret == 0);
@@ -206,7 +205,7 @@ void test_emi_msg_send_block_noretdata(){
     char buf[4096];
     memset(buf, 't', sizeof(buf));
     struct emi_msg *msg = emi_msg_alloc(sizeof(buf));
-    emi_msg_init(msg, ipaddr, buf, 1, 4, EMI_MSG_MODE_BLOCK);
+    emi_msg_init(msg, ipaddr, 4, 1, EMI_MSG_MODE_BLOCK, sizeof(buf), buf);
     ret = emi_msg_send(msg);
 
     ASSERT(ret == 0);
@@ -246,7 +245,7 @@ void test_emi_msg_send_block_noretdata(){
 
     sleep(1);
 
-    emi_msg_init(msg, ipaddr, buf, 1, 4, EMI_MSG_MODE_BLOCK);
+    emi_msg_init(msg, ipaddr, 4, 1, EMI_MSG_MODE_BLOCK, sizeof(buf), buf);
     ret = emi_msg_send(msg);
 
     ASSERT(ret == -1);
@@ -296,7 +295,7 @@ void test_emi_msg_send_block_retdata(){
     char buf[4096];
     memset(buf, 't', sizeof(buf));
     struct emi_msg *msg = emi_msg_alloc(sizeof(buf));
-    emi_msg_init(msg, ipaddr, buf, 1, 5, EMI_MSG_MODE_BLOCK);
+    emi_msg_init(msg, ipaddr, 5, 1, EMI_MSG_MODE_BLOCK, sizeof(buf), buf);
     ret = emi_msg_send(msg);
 
     ASSERT(ret == 0);

@@ -12,9 +12,9 @@ EMI_ORDER_NUM ?= 16
 #####################################
 
 ifeq ($(strip $(STATIC)),y)
-STATIC = -static
+STATICFLAG = -static
 else
-STATIC =
+STATICFLAG =
 endif
 
 ifeq ($(strip $(DEBUG)),y)

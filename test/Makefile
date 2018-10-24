@@ -5,7 +5,7 @@ CPPFLAGS += -I../include/ -I../src/
 
 LDFLAGS += -L../.out/lib/ -pthread
 ifeq ($(strip $(SHMEM)),POSIX_SHMEM)
-#LDFLAGS += -lrt
+LDFLAGS += -lrt
 endif
 
 CSRCS=$(shell find unit_test/ -name "*.c")
@@ -32,11 +32,11 @@ all: $(EMITESTEXEC) $(EMIUNITTESTEXEC) $(EMISTRESSTESTEXES)
 
 $(EMITESTEXEC): $(EMITESTSRC)
 	@echo LD 	$@
-	@$(CXX) $(CPPFLAGS) $? -o $@ $(LDFLAGS)
+	@$(CXX) $(STATICFLAG) $(CPPFLAGS) $? -o $@ $(LDFLAGS)
 
 $(EMIUNITTESTEXEC): $(EMIUNITTESTOBJ) $(CPPOBJS)
 	@echo LD 	$@
-	@$(CXX) $(CPPFLAGS) $(EMIUNITTESTOBJ) $(CPPOBJS) -o $@ $(LDFLAGS)
+	@$(CXX) $(STATICFLAG) $(CPPFLAGS) $(EMIUNITTESTOBJ) $(CPPOBJS) -o $@ $(LDFLAGS)
 
 $(CEXES):%: %.c
 	@echo CC 	$@
@@ -50,7 +50,7 @@ $(CPPOBJS) $(EMIUNITTESTOBJ):%.o: %.cpp
 
 $(EMISTRESSTESTEXES):%: %.cpp
 	@echo CXX 	$@
-	@$(CXX) $(CPPFLAGS) $< -o $@ $(LDFLAGS)
+	@$(CXX) $(STATICFLAG) $(CPPFLAGS) $< -o $@ $(LDFLAGS)
 
 clean:
 	@rm -rf $(COBJS) $(CPPOBJS) $(CEXES) $(CPPEXES) $(EMITESTEXEC) $(EMIUNITTESTEXEC) $(EMIUNITTESTOBJ) $(EMISTRESSTESTEXES)

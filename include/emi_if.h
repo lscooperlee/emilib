@@ -13,7 +13,7 @@ extern void emi_msg_free(struct emi_msg *msg);
 
 extern int emi_msg_send(struct emi_msg *msg);
 
-extern int emi_msg_init(struct emi_msg *msg,const char *dest_ip,const void *data,
-        eu32 cmd,eu32 defined_msg,eu32 flag);
+extern int emi_msg_init(struct emi_msg *msg, const char *dest_ip, eu32 msg_num, 
+                eu32 cmd, eu32 flag, eu32 data_size, const void *data);
 
 #endif

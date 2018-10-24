@@ -11,6 +11,7 @@ extern "C" {
 
 #ifndef SEND_ONLY
 #include "emi_ifr.h"
+#include "emi_core.h"
 #endif
 
 
@@ -37,7 +38,8 @@ inline static emi_msg_ptr make_emi_msg(const char *dest_ip, eu32 msg_num, eu32 c
 
     auto p = emi_msg_ptr(msg, emi_msg_free);
 
-    emi_msg_init(p.get(),dest_ip, data, cmd, msg_num, flag);
+    emi_msg_init(p.get(), dest_ip, msg_num, cmd, flag, data_size, data);
+
     return p;
 }
 
