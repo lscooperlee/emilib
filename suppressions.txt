@@ -1,4 +1,7 @@
 *:test/catch.hpp
 *:test/*
 memleak:src/emi_sock.c:153
-functionStatic:include/emi.h:107
+functionStatic:include/emi.h:109
+nullPointer:src/emi_ifr.c:73
+nullPointer:src/emi_thread.c:112
+nullPointer:src/emi_thread.c:154
