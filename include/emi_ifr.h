@@ -17,7 +17,5 @@ extern int emi_load_retdata(struct emi_msg const *msg, void const *data, eu32 si
 
 extern int emi_init(void);
 
-extern void emi_loop(void);
-
 
 #endif

@@ -21,7 +21,7 @@ LIBSTATICEMI = libemi.a
 
 #########################
 
-CHECKFLAGS = --enable=all --language=c++ -I include -I src --suppress=missingIncludeSystem --suppressions-list=suppressions.txt --inconclusive -q --std=c++14
+CHECKFLAGS = --enable=all --language=c++ -I include -I src --suppress=missingIncludeSystem --suppressions-list=suppressions.txt --inconclusive -q --std=c++17
 
 CFLAGS += -I./include
 LIBCFLAGS = $(CFLAGS) -fpic

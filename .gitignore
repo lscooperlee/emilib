@@ -19,6 +19,8 @@ __pycache__
 .settings
 .pydevproject
 
+python/dist/
+python/emilib.egg-info/
 
 /test/emi_test
 /test/emi_unit_test

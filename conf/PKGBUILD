@@ -1,0 +1,29 @@
+# Maintainer: Cooper Li <davidontech@gmail.com>
+_pkgname=emilib
+pkgname=$_pkgname-git
+pkgver=0.01
+pkgrel=1
+pkgdesc="emilib"
+arch=('i686' 'x86_64' 'armv6h' 'armv7h')
+license=('LGPL')
+makedepends=('git' 'make' 'gcc')
+depends=('python3')
+source=("git+https://github.com/lscooperlee/emilib.git")
+md5sums=(SKIP)
+
+build() {
+	cd "$srcdir/$_pkgname"
+	make
+}
+
+
+package() {
+	cd "$srcdir/$_pkgname"
+    mkdir -p "$pkgdir"/usr/bin/ "$pkgdir"/usr/lib/ "$pkgdir"/usr/include/emi/
+    install -Dm755 .out/bin/* "$pkgdir"/usr/bin/
+    install -Dm755 .out/lib/* "$pkgdir"/usr/lib/
+    cp -a include/* "$pkgdir"/usr/include/emi/
+
+	cd "$srcdir/$_pkgname"/python/
+    python3 setup.py install --root "$pkgdir"
+}

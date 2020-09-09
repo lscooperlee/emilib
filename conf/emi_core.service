@@ -1,0 +1,10 @@
+[Unit]
+Description=emi_core daemon
+
+[Service]
+ExecStart=/usr/bin/emi_core
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+
+[Install]                                                                                                                                                     
+WantedBy=multi-user.target

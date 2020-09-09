@@ -1,7 +1,7 @@
 
 #include <iostream>
-#include <vector>
 #include <algorithm>
+#include <unistd.h>
 
 #include "emi.h"
 
@@ -25,5 +25,7 @@ int main(void){
 
     emi_msg_register(1, recv);
 
-    emi_loop();
+    while(1){
+        pause();
+    }
 }

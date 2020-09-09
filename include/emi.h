@@ -29,7 +29,7 @@ extern "C" {
 using emi_msg_ptr = std::unique_ptr<emi_msg, std::function<decltype(emi_msg_free)>>;
 
 inline static emi_msg_ptr make_emi_msg(const char *dest_ip, eu32 msg_num, eu32 cmd, 
-        const void *data, eu32 data_size, eu32 flag = 0) noexcept {
+        const void *data = nullptr, eu32 data_size = 0, eu32 flag = 0) noexcept {
 
     auto msg = emi_msg_alloc(data_size);
     if(msg == nullptr){
@@ -62,7 +62,6 @@ inline static struct emi_retdata *get_next_retdata(emi_msg_ptr& msg, struct emi_
     return get_next_retdata(msg.get(), data);
 }
 
-#include <iostream>
 struct emi_retdata_iter {
     explicit emi_retdata_iter(const struct emi_msg *msg_) noexcept
         : msg(msg_)
@@ -114,10 +113,10 @@ private:
     const emi_msg *msg;
 };
 
-emi_retdata_container emi_msg::retdata() noexcept {
+inline emi_retdata_container emi_msg::retdata() noexcept {
     return emi_retdata_container(this);
 }
-void *emi_msg::data() const noexcept {
+inline void *emi_msg::data() const noexcept {
     return GET_DATA(this);
 }
 

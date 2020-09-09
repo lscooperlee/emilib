@@ -48,8 +48,8 @@ int main(){
 }
 */
 
-int check_thread(struct emi_thread_pool *pool) {
-    int free_thread_num = 0;
+unsigned int check_thread(struct emi_thread_pool *pool) {
+    unsigned int free_thread_num = 0;
 
     struct emi_thread *pos;
     list_for_each_entry(pos, &pool->head, list){

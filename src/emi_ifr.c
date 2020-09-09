@@ -286,9 +286,4 @@ int emi_init(){
     return 0;
 }
 
-void emi_loop(void){
-    while(1){
-        pause();
-    }
-}
 
