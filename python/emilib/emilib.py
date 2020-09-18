@@ -212,10 +212,6 @@ def emi_load_retdata(msg, retbytes):
     return _emilib.emi_load_retdata(msgaddr, ctypes.byref(rdata), rsize)
 
 
-def emi_loop():
-    while True:
-        signal.pause()
-
 
 recorded_func = {}
 
@@ -236,4 +232,5 @@ def emi_run(loop=True):
             raise EMIError("register failed")
 
     if loop:
-        emi_loop()
+        while True:
+            signal.pause()
