@@ -15,9 +15,7 @@
 /*global emi_config using default value,
  */
 /**
- *some parameters may not suit for user configuration using config files.for example,emi_port should use a unique value especially for remote connection.another example is emi_data_size_per_msg,this parameter defines the max data size in each massage,if two sides use different parameter,it may cause data transmit error.so be causion with these parameters.
-
-the obsolete parameter emi_max_data is defined for max data ,because new design append massage data space for each massage, so it will be not used again.
+ *some parameters may not suit for user configuration using config files. For example,emi_port should use a unique value especially for remote connection.
 
  */
 static struct emi_config __emi_config={
@@ -40,9 +38,9 @@ struct emi_config *get_config(void){
     struct stat sb;
     char *addr;
 
-    const char *terms[]={"EMI_PORT",
-                    "EMI_DATA_SIZE_PER_MSG",
-                    "EMI_KEY"};
+    const char *terms[]={
+                        "EMI_PORT",
+                        };
     const char *name[]={"emi.conf","$HOME/.emi.conf","$HOME/emi.conf","/etc/emi.conf"};
 
 

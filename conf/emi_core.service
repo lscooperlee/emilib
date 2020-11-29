@@ -1,0 +1,8 @@
+[Unit]
+Description=emi_core daemon
+
+[Service]
+ExecStart=/usr/bin/emi_core -d
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=always

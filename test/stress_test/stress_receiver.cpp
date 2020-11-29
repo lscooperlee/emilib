@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <unistd.h>
 
 #include "emi.h"
 
@@ -30,6 +31,7 @@ int main(void){
     emi_init();
 
     block_receive(100);
-
-    emi_loop();
+    
+    while(1)
+        pause();
 }
